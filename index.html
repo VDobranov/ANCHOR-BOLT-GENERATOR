@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генератор Анкерных Болтов - ГОСТ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Генератор Анкерных Болтов</h1>
+            <p>ГОСТ 24379.1-2012 | IFC4 ADD2 TC1</p>
+        </header>
+
+        <main class="main-grid">
+            <!-- Левая часть: форма -->
+            <section class="form-section">
+                <h2>Параметры болта</h2>
+                <form id="boltForm">
+                    <!-- Тип болта -->
+                    <div class="form-group">
+                        <label for="boltType">Тип болта:</label>
+                        <select id="boltType" required>
+                            <option value="">-- Выбрать --</option>
+                            <option value="1.1">1.1 (первая категория, исполнение 1-2)</option>
+                            <option value="1.2">1.2 (первая категория, исполнение 1-2)</option>
+                            <option value="2.1">2.1 (вторая категория, прямой)</option>
+                            <option value="5">5 (футорка)</option>
+                        </select>
+                    </div>
+
+                    <!-- Исполнение -->
+                    <div class="form-group">
+                        <label for="execution">Исполнение:</label>
+                        <select id="execution" required>
+                            <option value="">-- Выбрать --</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                        </select>
+                    </div>
+
+                    <!-- Диаметр -->
+                    <div class="form-group">
+                        <label for="diameter">Диаметр (М):</label>
+                        <select id="diameter" required>
+                            <option value="">-- Выбрать --</option>
+                            <option value="12">М12</option>
+                            <option value="16">М16</option>
+                            <option value="20">М20</option>
+                            <option value="24">М24</option>
+                            <option value="30">М30</option>
+                            <option value="36">М36</option>
+                            <option value="42">М42</option>
+                            <option value="48">М48</option>
+                            <option value="56">М56</option>
+                            <option value="64">М64</option>
+                            <option value="72">М72</option>
+                            <option value="80">М80</option>
+                            <option value="90">М90</option>
+                            <option value="100">М100</option>
+                        </select>
+                    </div>
+
+                    <!-- Длина -->
+                    <div class="form-group">
+                        <label for="length">Длина (мм):</label>
+                        <input type="number" id="length" min="100" max="5000" placeholder="Например: 800" required>
+                    </div>
+
+                    <!-- Материал -->
+                    <div class="form-group">
+                        <label for="material">Материал:</label>
+                        <select id="material" required>
+                            <option value="">-- Выбрать --</option>
+                            <option value="09Г2С">09Г2С (ГОСТ 19281-2014)</option>
+                            <option value="ВСт3пс2">ВСт3пс2 (ГОСТ 535-88)</option>
+                            <option value="10Г2">10Г2 (ГОСТ 19281-2014)</option>
+                        </select>
+                    </div>
+
+                    <!-- Опциональные компоненты -->
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" id="bottomNut"> Нижняя гайка
+                        </label>
+                        <label>
+                            <input type="checkbox" id="topNut"> Верхняя гайка
+                        </label>
+                        <label>
+                            <input type="checkbox" id="washers"> Шайбы
+                        </label>
+                    </div>
+
+                    <!-- Кнопки -->
+                    <div class="button-group">
+                        <button type="submit" id="generateBtn" class="btn btn-primary">
+                            Сгенерировать
+                        </button>
+                        <button type="button" id="downloadBtn" class="btn btn-secondary" disabled>
+                            Скачать IFC
+                        </button>
+                    </div>
+
+                    <div id="statusMessage" class="status-message"></div>
+                </form>
+            </section>
+
+            <!-- Правая часть: 3D визуализация и свойства -->
+            <section class="viewer-section">
+                <canvas id="canvas3D"></canvas>
+                <div id="propertiesPanel" class="properties-panel">
+                    <h3>Свойства элемента</h3>
+                    <div id="propertiesContent">
+                        <p class="placeholder">Выберите элемент в 3D сцене</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>© 2025 ANCHOR-BOLT-GENERATOR | Python + Pyodide + IFC + Three.js</p>
+        </footer>
+    </div>
+
+    <!-- Pyodide -->
+    <script async src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Наши модули -->
+    <script src="js/viewer.js"></script>
+    <script src="js/ifcBridge.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
