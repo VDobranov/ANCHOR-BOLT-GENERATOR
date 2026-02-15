@@ -10,6 +10,9 @@ function setupFormListeners() {
     const generateBtn = document.getElementById('generateBtn');
     const downloadBtn = document.getElementById('downloadBtn');
 
+    // Initialize execution options based on default bolt type
+    updateExecutionOptions();
+
     // Form submission
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -35,24 +38,23 @@ function setupFormListeners() {
 function updateExecutionOptions() {
     const boltType = document.getElementById('boltType').value;
     const executionSelect = document.getElementById('execution');
+    const executionGroup = document.getElementById('executionGroup');
 
-    executionSelect.innerHTML = '<option value="">-- Выбрать --</option>';
+    if (!boltType) {
+        // No type selected, hide execution group
+        if (executionGroup) executionGroup.style.display = 'none';
+        return;
+    }
 
     if (boltType === '2.1' || boltType === '5') {
-        // These types have fixed execution
-        const opt = document.createElement('option');
-        opt.value = '1';
-        opt.textContent = '1';
-        executionSelect.appendChild(opt);
+        // These types have fixed execution = 1
         executionSelect.value = '1';
+        if (executionGroup) executionGroup.style.display = 'none';
     } else if (boltType === '1.1' || boltType === '1.2') {
-        // These types have execution 1 and 2
-        ['1', '2'].forEach(exec => {
-            const opt = document.createElement('option');
-            opt.value = exec;
-            opt.textContent = exec;
-            executionSelect.appendChild(opt);
-        });
+        // These types have execution determined by second digit
+        // For 1.1 execution is 1, for 1.2 execution is 2
+        executionSelect.value = boltType === '1.1' ? '1' : '2';
+        if (executionGroup) executionGroup.style.display = 'none';
     }
 }
 
@@ -61,6 +63,12 @@ async function generateBolt() {
 
     if (!validateParams(params)) {
         showStatus('Пожалуйста, заполните все поля', 'error', 5000);
+        return;
+    }
+
+    // Check if bridge is initialized
+    if (!bridge) {
+        showStatus('Ошибка: Приложение не инициализировано. Перезагрузите страницу.', 'error', 5000);
         return;
     }
 

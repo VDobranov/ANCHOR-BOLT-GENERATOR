@@ -4,10 +4,10 @@ Initializes the base IFC document and provides the main interface
 """
 
 try:
-    from ifcopenshell import file as ifc_file
+    import ifcopenshell
 except ImportError:
     # Fallback if ifcopenshell not available in Pyodide
-    ifc_file = None
+    ifcopenshell = None
     print("Warning: ifcopenshell not available, will use stub")
 
 import uuid
@@ -28,12 +28,15 @@ def initialize_base_document():
     """Initialize empty IFC4 ADD2 TC1 document with Project/Site/Building/StoreyStructure"""
     global ifc_doc
 
-    if ifc_file is None:
+    if ifcopenshell is None:
         raise RuntimeError("ifcopenshell not available in this environment")
 
     try:
-        # Create IFC4 ADD2 TC1 file
-        ifc_doc = ifc_file.create(schema='IFC4')
+        # Create IFC4 file - use IFC4X3 if IFC4 is not supported
+        try:
+            ifc_doc = ifcopenshell.file(schema='IFC4')
+        except:
+            ifc_doc = ifcopenshell.file(schema='IFC4X3')
 
         # Project
         project = ifc_doc.create_entity('IfcProject',
@@ -95,12 +98,12 @@ def initialize_base_document():
 
         # Create world coordinate system
         ifc_doc.create_entity('IfcAxis2Placement2D',
-                             Location=ifc_doc.create_entity('IfcCartesianPoint', Coordinates=(0, 0)))
+                             Location=ifc_doc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0]))
 
         ifc_doc.create_entity('IfcAxis2Placement3D',
-                             Location=ifc_doc.create_entity('IfcCartesianPoint', Coordinates=(0, 0, 0)),
-                             Axis=ifc_doc.create_entity('IfcDirection', DirectionRatios=(0, 0, 1)),
-                             RefDirection=ifc_doc.create_entity('IfcDirection', DirectionRatios=(1, 0, 0)))
+                             Location=ifc_doc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0]),
+                             Axis=ifc_doc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0]),
+                             RefDirection=ifc_doc.create_entity('IfcDirection', DirectionRatios=[1.0, 0.0, 0.0]))
 
         return ifc_doc
 

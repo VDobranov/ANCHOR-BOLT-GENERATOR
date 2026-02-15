@@ -23,7 +23,7 @@ async function initializeApp() {
         console.log('✓ Pyodide is available');
 
         // Now initialize the IFC Bridge and the rest of the app
-        await initializeIFCBridge();
+        bridge = await initializeIFCBridge();
         console.log('✓ IFC Bridge initialized');
 
         // Setup form listeners

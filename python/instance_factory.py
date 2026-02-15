@@ -71,7 +71,7 @@ class InstanceFactory:
                                      GlobalId=self._generate_guid(),
                                      Name=f'Stud_M{diameter}x{length}',
                                      ObjectType='STUD',
-                                     Placement=stud_placement)
+                                     ObjectPlacement=stud_placement)
 
         self.ifc.create_entity('IfcRelDefinesByType',
                               GlobalId=self._generate_guid(),
@@ -94,7 +94,7 @@ class InstanceFactory:
                                                   GlobalId=self._generate_guid(),
                                                   Name=f'Washer_Bottom_M{diameter}',
                                                   ObjectType='WASHER',
-                                                  Placement=washer_bottom_placement)
+                                                  ObjectPlacement=washer_bottom_placement)
 
             self.ifc.create_entity('IfcRelDefinesByType',
                                   GlobalId=self._generate_guid(),
@@ -112,7 +112,7 @@ class InstanceFactory:
                                                GlobalId=self._generate_guid(),
                                                Name=f'Nut_Bottom_M{diameter}',
                                                ObjectType='NUT',
-                                               Placement=nut_bottom_placement)
+                                               ObjectPlacement=nut_bottom_placement)
 
             self.ifc.create_entity('IfcRelDefinesByType',
                                   GlobalId=self._generate_guid(),
@@ -134,7 +134,7 @@ class InstanceFactory:
                                                GlobalId=self._generate_guid(),
                                                Name=f'Washer_Top_M{diameter}',
                                                ObjectType='WASHER',
-                                               Placement=washer_top_placement)
+                                               ObjectPlacement=washer_top_placement)
 
             self.ifc.create_entity('IfcRelDefinesByType',
                                   GlobalId=self._generate_guid(),
@@ -152,7 +152,7 @@ class InstanceFactory:
                                             GlobalId=self._generate_guid(),
                                             Name=f'Nut_Top_M{diameter}',
                                             ObjectType='NUT',
-                                            Placement=nut_top_placement)
+                                            ObjectPlacement=nut_top_placement)
 
             self.ifc.create_entity('IfcRelDefinesByType',
                                   GlobalId=self._generate_guid(),
@@ -439,9 +439,11 @@ class InstanceFactory:
 
     def _create_placement(self, location=(0, 0, 0)):
         """Create 3D placement"""
-        location_point = self.ifc.create_entity('IfcCartesianPoint', Coordinates=location)
-        axis = self.ifc.create_entity('IfcDirection', DirectionRatios=(0, 0, 1))
-        ref_dir = self.ifc.create_entity('IfcDirection', DirectionRatios=(1, 0, 0))
+        # Convert location to list of floats
+        location_list = [float(x) for x in location]
+        location_point = self.ifc.create_entity('IfcCartesianPoint', Coordinates=location_list)
+        axis = self.ifc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0])
+        ref_dir = self.ifc.create_entity('IfcDirection', DirectionRatios=[1.0, 0.0, 0.0])
 
         return self.ifc.create_entity('IfcAxis2Placement3D',
                                      Location=location_point,
@@ -488,6 +490,11 @@ def generate_bolt_assembly(params):
     )
 
     # Export IFC as string
-    ifc_string = ifc_doc.write()
+    # Write to temporary file in Pyodide's virtual filesystem, then read back as string
+    temp_path = '/tmp/temp_bolt.ifc'
+    ifc_doc.write(temp_path)
+
+    with open(temp_path, 'r') as f:
+        ifc_string = f.read()
 
     return (ifc_string, result['mesh_data'])

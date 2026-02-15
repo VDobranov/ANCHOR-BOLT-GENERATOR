@@ -4,8 +4,12 @@ geometry_builder.py - Построение геометрии для компо�
 """
 
 import math
-from ifcopenshell import file as ifc_file
 import numpy as np
+
+
+def to_float_list(coordinates):
+    """Convert coordinates to list of floats for ifcopenshell compatibility"""
+    return [float(x) for x in coordinates]
 
 
 class GeometryBuilder:
@@ -16,8 +20,8 @@ class GeometryBuilder:
 
     def create_line(self, point1, point2):
         """Create IfcLine between two points"""
-        p1 = self.ifc.create_entity('IfcCartesianPoint', Coordinates=point1)
-        p2 = self.ifc.create_entity('IfcCartesianPoint', Coordinates=point2)
+        p1 = self.ifc.create_entity('IfcCartesianPoint', Coordinates=to_float_list(point1))
+        p2 = self.ifc.create_entity('IfcCartesianPoint', Coordinates=to_float_list(point2))
         return self.ifc.create_entity('IfcLine', Pnt=p1, Dir=self._create_direction(point2, point1))
 
     def create_circle_arc(self, center, radius, start_angle, end_angle, normal=(0, 0, 1)):
@@ -27,35 +31,35 @@ class GeometryBuilder:
         end = math.radians(end_angle) if end_angle > math.pi else end_angle
 
         # For simplified representation, create arc as IfcCircularArcSegment3D
-        center_point = self.ifc.create_entity('IfcCartesianPoint', Coordinates=center)
+        center_point = self.ifc.create_entity('IfcCartesianPoint', Coordinates=to_float_list(center))
 
         # Radius vector
         radius_point = (center[0] + radius, center[1], center[2])
 
         start_point = self.ifc.create_entity('IfcCartesianPoint',
-            Coordinates=(
+            Coordinates=to_float_list([
                 center[0] + radius * math.cos(start),
                 center[1],
                 center[2] + radius * math.sin(start)
-            ))
+            ]))
 
         end_point = self.ifc.create_entity('IfcCartesianPoint',
-            Coordinates=(
+            Coordinates=to_float_list([
                 center[0] + radius * math.cos(end),
                 center[1],
                 center[2] + radius * math.sin(end)
-            ))
+            ]))
 
         axis = self.ifc.create_entity('IfcAxis2Placement3D',
                                      Location=center_point,
-                                     Axis=self.ifc.create_entity('IfcDirection', DirectionRatios=normal),
-                                     RefDirection=self.ifc.create_entity('IfcDirection', DirectionRatios=(1, 0, 0)))
+                                     Axis=self.ifc.create_entity('IfcDirection', DirectionRatios=to_float_list(normal)),
+                                     RefDirection=self.ifc.create_entity('IfcDirection', DirectionRatios=to_float_list([1, 0, 0])))
 
         return self.ifc.create_entity('IfcCircularArcSegment3D',
                                      StartPoint=start_point,
                                      EndPoint=end_point,
                                      Placement=axis,
-                                     Radius=radius)
+                                     Radius=float(radius))
 
     def create_composite_curve_stud(self, bolt_type, diameter, length, execution=1):
         """
@@ -73,7 +77,7 @@ class GeometryBuilder:
             radius = diameter * (1.5 if bolt_type == '1.1' else 2.0)
 
             # Lower straight line: (0,0,0) to (0,0,radius)
-            line1 = self.create_line((0, 0, 0), (0, 0, radius))
+            line1 = self.create_line([0.0, 0.0, 0.0], [0.0, 0.0, radius])
             seg1 = self.ifc.create_entity('IfcCompositeCurveSegment',
                                          Transition='Continuous',
                                          SameSense=True,
@@ -82,8 +86,8 @@ class GeometryBuilder:
 
             # Circular arc: center at (radius, 0, radius), radius = radius
             # From (0,0,radius) to (radius,0,0)
-            arc_center = (radius, 0, radius)
-            arc = self.create_circle_arc(arc_center, radius, math.pi / 2, 0)
+            arc_center = (radius, 0.0, radius)
+            arc = self.create_circle_arc(arc_center, radius, math.pi / 2, 0.0)
             seg2 = self.ifc.create_entity('IfcCompositeCurveSegment',
                                          Transition='Continuous',
                                          SameSense=True,
@@ -91,7 +95,7 @@ class GeometryBuilder:
             segments.append(seg2)
 
             # Upper straight line: (radius,0,0) to (radius,0,length-radius)
-            line2 = self.create_line((radius, 0, 0), (radius, 0, length - radius))
+            line2 = self.create_line([radius, 0.0, 0.0], [radius, 0.0, length - radius])
             seg3 = self.ifc.create_entity('IfcCompositeCurveSegment',
                                          Transition='Continuous',
                                          SameSense=True,
@@ -99,7 +103,7 @@ class GeometryBuilder:
             segments.append(seg3)
         else:
             # Straight stud: simple line from (0,0,0) to (0,0,length)
-            line = self.create_line((0, 0, 0), (0, 0, length))
+            line = self.create_line([0.0, 0.0, 0.0], [0.0, 0.0, length])
             seg = self.ifc.create_entity('IfcCompositeCurveSegment',
                                         Transition='Continuous',
                                         SameSense=True,
@@ -115,17 +119,17 @@ class GeometryBuilder:
 
     def create_circle_profile(self, diameter):
         """Create circular profile for sweptsurface"""
-        radius = diameter / 2
-        circle_center = self.ifc.create_entity('IfcCartesianPoint', Coordinates=(0, 0, 0))
+        radius = diameter / 2.0
+        circle_center = self.ifc.create_entity('IfcCartesianPoint', Coordinates=to_float_list([0, 0, 0]))
 
         # Create circle placement
         placement = self.ifc.create_entity('IfcAxis2Placement2D',
                                           Location=circle_center,
-                                          RefDirection=self.ifc.create_entity('IfcDirection', DirectionRatios=(1, 0)))
+                                          RefDirection=self.ifc.create_entity('IfcDirection', DirectionRatios=to_float_list([1, 0])))
 
         # Create circle profile
         circle = self.ifc.create_entity('IfcCircle',
-                                       Radius=radius,
+                                       Radius=float(radius),
                                        Position=placement)
 
         # Create profile def
@@ -144,21 +148,21 @@ class GeometryBuilder:
         # Create hexagon vertices
         vertices = []
         for i in range(6):
-            angle = (i * 60 - 90) * math.pi / 180
-            x = outer_diameter / 2 * math.cos(angle)
-            y = outer_diameter / 2 * math.sin(angle)
-            vertices.append(self.ifc.create_entity('IfcCartesianPoint', Coordinates=(x, y)))
+            angle = (i * 60 - 90) * math.pi / 180.0
+            x = outer_diameter / 2.0 * math.cos(angle)
+            y = outer_diameter / 2.0 * math.sin(angle)
+            vertices.append(self.ifc.create_entity('IfcCartesianPoint', Coordinates=to_float_list([x, y])))
 
         # Create polyline for hexagon outer boundary
         outer_loop = self.ifc.create_entity('IfcPolyline', Points=vertices + [vertices[0]])
 
         # Create inner hole (circle)
-        hole_center = self.ifc.create_entity('IfcCartesianPoint', Coordinates=(0, 0))
+        hole_center = self.ifc.create_entity('IfcCartesianPoint', Coordinates=to_float_list([0, 0]))
         hole_placement = self.ifc.create_entity('IfcAxis2Placement2D',
                                                Location=hole_center,
-                                               RefDirection=self.ifc.create_entity('IfcDirection', DirectionRatios=(1, 0)))
+                                               RefDirection=self.ifc.create_entity('IfcDirection', DirectionRatios=to_float_list([1, 0])))
         hole_circle = self.ifc.create_entity('IfcCircle',
-                                            Radius=nominal_diameter / 2 + 0.5,  # Small clearance
+                                            Radius=float(nominal_diameter / 2.0 + 0.5),  # Small clearance
                                             Position=hole_placement)
         hole = self.ifc.create_entity('IfcPolyline',
                                      Points=[hole_center])  # Simplified
@@ -174,20 +178,20 @@ class GeometryBuilder:
     def create_washer_profile(self, outer_diameter, inner_diameter):
         """Create ring profile for washer"""
         # Outer circle
-        outer_center = self.ifc.create_entity('IfcCartesianPoint', Coordinates=(0, 0))
+        outer_center = self.ifc.create_entity('IfcCartesianPoint', Coordinates=to_float_list([0, 0]))
         outer_placement = self.ifc.create_entity('IfcAxis2Placement2D',
                                                 Location=outer_center,
-                                                RefDirection=self.ifc.create_entity('IfcDirection', DirectionRatios=(1, 0)))
+                                                RefDirection=self.ifc.create_entity('IfcDirection', DirectionRatios=to_float_list([1, 0])))
         outer_circle = self.ifc.create_entity('IfcCircle',
-                                             Radius=outer_diameter / 2,
+                                             Radius=float(outer_diameter / 2.0),
                                              Position=outer_placement)
 
         # Inner circle (hole)
         inner_placement = self.ifc.create_entity('IfcAxis2Placement2D',
                                                 Location=outer_center,
-                                                RefDirection=self.ifc.create_entity('IfcDirection', DirectionRatios=(1, 0)))
+                                                RefDirection=self.ifc.create_entity('IfcDirection', DirectionRatios=to_float_list([1, 0])))
         inner_circle = self.ifc.create_entity('IfcCircle',
-                                             Radius=inner_diameter / 2,
+                                             Radius=float(inner_diameter / 2.0),
                                              Position=inner_placement)
 
         # Create profile with void
@@ -201,21 +205,21 @@ class GeometryBuilder:
     def create_extruded_solid(self, profile, extrusion_height, direction=(0, 0, 1)):
         """Create extruded area solid"""
         # Base placement
-        base_point = self.ifc.create_entity('IfcCartesianPoint', Coordinates=(0, 0, 0))
+        base_point = self.ifc.create_entity('IfcCartesianPoint', Coordinates=to_float_list([0, 0, 0]))
         base_placement = self.ifc.create_entity('IfcAxis2Placement3D',
                                                Location=base_point,
-                                               Axis=self.ifc.create_entity('IfcDirection', DirectionRatios=direction),
-                                               RefDirection=self.ifc.create_entity('IfcDirection', DirectionRatios=(1, 0, 0)))
+                                               Axis=self.ifc.create_entity('IfcDirection', DirectionRatios=to_float_list(direction)),
+                                               RefDirection=self.ifc.create_entity('IfcDirection', DirectionRatios=to_float_list([1, 0, 0])))
 
         # Extrusion direction
-        extrusion_dir = self.ifc.create_entity('IfcDirection', DirectionRatios=direction)
+        extrusion_dir = self.ifc.create_entity('IfcDirection', DirectionRatios=to_float_list(direction))
 
         # Create extruded solid
         solid = self.ifc.create_entity('IfcExtrudedAreaSolid',
                                       SweptArea=profile,
                                       Position=base_placement,
                                       ExtrudedDirection=extrusion_dir,
-                                      Depth=extrusion_height)
+                                      Depth=float(extrusion_height))
 
         return solid
 
@@ -224,7 +228,7 @@ class GeometryBuilder:
         # In IFC, IfcSweptDiskSolid represents a disk swept along a curve
         solid = self.ifc.create_entity('IfcSweptDiskSolid',
                                       Directrix=axis_curve,
-                                      Radius=radius)
+                                      Radius=float(radius))
 
         return solid
 
@@ -233,13 +237,13 @@ class GeometryBuilder:
         dx = to_point[0] - from_point[0]
         dy = to_point[1] - from_point[1]
         dz = to_point[2] - from_point[2]
-        return self.ifc.create_entity('IfcDirection', DirectionRatios=(dx, dy, dz))
+        return self.ifc.create_entity('IfcDirection', DirectionRatios=to_float_list([dx, dy, dz]))
 
     def create_placement(self, location=(0, 0, 0), z_axis=(0, 0, 1), x_axis=(1, 0, 0)):
         """Create 3D placement with location and axes"""
-        location_point = self.ifc.create_entity('IfcCartesianPoint', Coordinates=location)
-        axis = self.ifc.create_entity('IfcDirection', DirectionRatios=z_axis)
-        ref_direction = self.ifc.create_entity('IfcDirection', DirectionRatios=x_axis)
+        location_point = self.ifc.create_entity('IfcCartesianPoint', Coordinates=to_float_list(location))
+        axis = self.ifc.create_entity('IfcDirection', DirectionRatios=to_float_list(z_axis))
+        ref_direction = self.ifc.create_entity('IfcDirection', DirectionRatios=to_float_list(x_axis))
 
         placement = self.ifc.create_entity('IfcAxis2Placement3D',
                                           Location=location_point,
@@ -256,7 +260,7 @@ def create_stud_representation(ifc_doc, bolt_type, diameter, length, execution=1
     axis_curve = builder.create_composite_curve_stud(bolt_type, diameter, length, execution)
 
     # Create swept disk solid
-    stud_radius = diameter / 2
+    stud_radius = diameter / 2.0
     geometry = builder.create_swept_disk_solid(axis_curve, stud_radius)
 
     return geometry

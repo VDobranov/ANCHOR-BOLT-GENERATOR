@@ -11,7 +11,10 @@ class IFCBridge {
 
     async initialize() {
         try {
-            // Import Python modules
+            // First, load Python modules into Pyodide's virtual filesystem
+            await loadPythonModules(this.pyodide);
+
+            // Then import and initialize them
             await this.pyodide.runPythonAsync(`
                 import sys
                 sys.path.insert(0, '/python')
@@ -30,11 +33,16 @@ class IFCBridge {
 
     async generateBolt(params) {
         try {
+            // Convert JavaScript booleans to Python booleans in JSON
+            const paramsJson = JSON.stringify(params)
+                .replace(/false/g, 'False')
+                .replace(/true/g, 'True');
+
             const result = await this.pyodide.runPythonAsync(`
                 from instance_factory import generate_bolt_assembly
                 import json
 
-                params = ${JSON.stringify(params)}
+                params = ${paramsJson}
 
                 ifc_str, mesh_data = generate_bolt_assembly(params)
 
