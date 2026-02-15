@@ -9,6 +9,51 @@ class IFCGenerator:
     def __init__(self, ifc_doc):
         self.ifc = ifc_doc
 
+    def setup_units_and_contexts(self):
+        """Setup units and geometric contexts for the IFC document and link them to the project"""
+        # Create unit assignments
+        length_unit = self.ifc.create_entity('IfcSIUnit',
+                                           UnitType='LENGTHUNIT',
+                                           Prefix='MILLI',
+                                           Name='METRE')
+
+        mass_unit = self.ifc.create_entity('IfcSIUnit',
+                                         UnitType='MASSUNIT',
+                                         Name='GRAM')
+
+        plane_angle = self.ifc.create_entity('IfcSIUnit',
+                                           UnitType='PLANEANGLEUNIT',
+                                           Name='RADIAN')
+
+        unit_assignment = self.ifc.create_entity('IfcUnitAssignment',
+                                               Units=[length_unit, mass_unit, plane_angle])
+
+        # Create geometric representation context
+        world_coordinate_system = self.ifc.create_entity('IfcAxis2Placement3D',
+                                                        Location=self.ifc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0]),
+                                                        Axis=self.ifc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0]),
+                                                        RefDirection=self.ifc.create_entity('IfcDirection', DirectionRatios=[1.0, 0.0, 0.0]))
+
+        geometric_context = self.ifc.create_entity('IfcGeometricRepresentationContext',
+                                                 ContextType='Model',
+                                                 CoordinateSpaceDimension=3,
+                                                 Precision=1e-05,
+                                                 WorldCoordinateSystem=world_coordinate_system)
+
+        # Find the project and link the units and geometric context
+        projects = self.ifc.by_type('IfcProject')
+        if projects:
+            project = projects[0]
+            # Update the project to include the units assignment
+            project.UnitsInContext = unit_assignment
+            # Add the geometric context to the representations in context
+            if not hasattr(project, 'RepresentationContexts') or project.RepresentationContexts is None:
+                project.RepresentationContexts = [geometric_context]
+            else:
+                project.RepresentationContexts.append(geometric_context)
+        else:
+            raise ValueError("No IfcProject found in the document")
+
     def export_to_string(self):
         """Export IFC document to string (IFC SPF format)"""
         return self.ifc.write()

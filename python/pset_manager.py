@@ -104,11 +104,9 @@ class PSetManager:
             return self.ifc.create_entity('IfcLabel', wrappedValue=str(value))
 
     def _generate_guid(self):
-        """Generate IFC GUID"""
-        import uuid
-        import base64
-        uuid_bytes = uuid.uuid4().bytes
-        return base64.b64encode(uuid_bytes).decode()[:22]
+        """Generate IFC GUID using ifcopenshell"""
+        import ifcopenshell
+        return ifcopenshell.guid.new()
 
 
 def create_fastener_psets(ifc_doc, pset_manager, component_type, diameter,

@@ -19,10 +19,10 @@ class GeometryBuilder:
         self.ifc = ifc_doc
 
     def create_line(self, point1, point2):
-        """Create IfcLine between two points"""
+        """Create IfcPolyline (bounded curve) between two points"""
         p1 = self.ifc.create_entity('IfcCartesianPoint', Coordinates=to_float_list(point1))
         p2 = self.ifc.create_entity('IfcCartesianPoint', Coordinates=to_float_list(point2))
-        return self.ifc.create_entity('IfcLine', Pnt=p1, Dir=self._create_direction(point2, point1))
+        return self.ifc.create_entity('IfcPolyline', Points=[p1, p2])
 
     def create_circle_arc(self, center, radius, start_angle, end_angle, normal=(0, 0, 1)):
         """Create circular arc segment in 3D space"""
@@ -81,26 +81,45 @@ class GeometryBuilder:
             # Upper straight line: from top (0,0,length) to bend point (0,0,length-radius)
             line1 = self.create_line([0.0, 0.0, float(length)], [0.0, 0.0, float(length - radius)])
             seg1 = self.ifc.create_entity('IfcCompositeCurveSegment',
-                                         Transition='Continuous',
+                                         Transition='CONTINUOUS',
                                          SameSense=True,
                                          ParentCurve=line1)
             segments.append(seg1)
 
-            # Circular arc: center at (radius, 0, length-radius), radius = radius
-            # From (0,0,length-radius) to (radius,0,length-radius-radius)
-            arc_center = (radius, 0.0, float(length - radius))
-            # Arc from +Y direction to -X direction (rotated 90 degrees)
-            arc = self.create_circle_arc(arc_center, radius, math.pi / 2, math.pi)
+            # Approximate circular arc with polyline
+            # Arc from (0,0,length-radius) to (radius,0,length-radius-radius) with center at (radius, 0, length-radius)
+            num_segments = 10  # Number of segments to approximate the arc
+            arc_points = []
+
+            # Starting point of the arc
+            start_point = [0.0, 0.0, float(length - radius)]
+            arc_points.append(self.ifc.create_entity('IfcCartesianPoint', Coordinates=to_float_list(start_point)))
+
+            # Calculate intermediate points along the arc
+            for i in range(1, num_segments):
+                angle = (math.pi / 2) * (i / num_segments)  # From 90 degrees to 180 degrees (quarter circle)
+                x = radius * (1 - math.cos(angle))
+                y = 0.0
+                z = length - radius - radius * math.sin(angle)
+                arc_points.append(self.ifc.create_entity('IfcCartesianPoint', Coordinates=to_float_list([x, y, z])))
+
+            # Ending point of the arc
+            end_point = [float(radius), 0.0, float(length - 2 * radius)]
+            arc_points.append(self.ifc.create_entity('IfcCartesianPoint', Coordinates=to_float_list(end_point)))
+
+            # Create polyline for the arc
+            arc_polyline = self.ifc.create_entity('IfcPolyline', Points=arc_points)
+
             seg2 = self.ifc.create_entity('IfcCompositeCurveSegment',
-                                         Transition='Continuous',
+                                         Transition='CONTINUOUS',
                                          SameSense=True,
-                                         ParentCurve=arc)
+                                         ParentCurve=arc_polyline)
             segments.append(seg2)
 
             # Lower straight line: from bend point (radius,0,length-radius-radius) to bottom (radius,0,0)
             line2 = self.create_line([float(radius), 0.0, float(length - 2 * radius)], [float(radius), 0.0, 0.0])
             seg3 = self.ifc.create_entity('IfcCompositeCurveSegment',
-                                         Transition='Continuous',
+                                         Transition='CONTINUOUS',
                                          SameSense=True,
                                          ParentCurve=line2)
             segments.append(seg3)
@@ -108,7 +127,7 @@ class GeometryBuilder:
             # Straight stud: simple line from top (0,0,length) to bottom (0,0,0)
             line = self.create_line([0.0, 0.0, float(length)], [0.0, 0.0, 0.0])
             seg = self.ifc.create_entity('IfcCompositeCurveSegment',
-                                        Transition='Continuous',
+                                        Transition='CONTINUOUS',
                                         SameSense=True,
                                         ParentCurve=line)
             segments.append(seg)

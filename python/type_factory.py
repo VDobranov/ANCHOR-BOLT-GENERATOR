@@ -3,8 +3,6 @@ type_factory.py - Создание и кэширование типов IFC
 Динамическое создание IfcMechanicalFastenerType с уникальным кэшированием
 """
 
-import uuid
-import base64
 from gost_data import get_bolt_spec
 import math
 
@@ -29,7 +27,8 @@ class TypeFactory:
         stud_type = self.ifc.create_entity('IfcMechanicalFastenerType',
                                           GlobalId=self._generate_guid(),
                                           Name=type_name,
-                                          PredefinedType='USERDEFINED')
+                                          PredefinedType='USERDEFINED',
+                                          ElementType='STUD')
 
         # Create geometry representation
         self._create_cylinder_geometry(stud_type, diameter, length)
@@ -52,7 +51,8 @@ class TypeFactory:
         nut_type = self.ifc.create_entity('IfcMechanicalFastenerType',
                                          GlobalId=self._generate_guid(),
                                          Name=type_name,
-                                         PredefinedType='USERDEFINED')
+                                         PredefinedType='USERDEFINED',
+                                         ElementType='NUT')
 
         # Create hexagonal nut geometry
         self._create_hex_nut_geometry(nut_type, diameter, height)
@@ -76,7 +76,8 @@ class TypeFactory:
         washer_type = self.ifc.create_entity('IfcMechanicalFastenerType',
                                             GlobalId=self._generate_guid(),
                                             Name=type_name,
-                                            PredefinedType='USERDEFINED')
+                                            PredefinedType='USERDEFINED',
+                                            ElementType='WASHER')
 
         # Create washer geometry (ring)
         self._create_washer_geometry(washer_type, diameter, outer_d, thickness)
@@ -102,31 +103,72 @@ class TypeFactory:
         return assembly_type
 
     def _create_cylinder_geometry(self, product_type, diameter, length):
-        """Create cylindrical geometry for stud"""
-        # Create axis placement
-        placement = self.ifc.create_entity('IfcAxis2Placement3D',
-                                          Location=self.ifc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0]))
+        """Create geometry for stud - straight for types 2.1, 5 and bent for types 1.1, 1.2"""
+        # Import geometry builder here to avoid circular imports
+        from geometry_builder import GeometryBuilder
 
-        # Create circular profile
-        profile = self.ifc.create_entity('IfcCircleProfileDef',
-                                        ProfileType='AREA',
-                                        ProfileName='CircularProfile',
-                                        Radius=diameter / 2.0)
+        builder = GeometryBuilder(self.ifc)
 
-        # Create extrusion direction
-        direction = self.ifc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0])
+        # Extract bolt type and execution from the product type name
+        type_name = product_type.Name or ""
+        bolt_type = "1.1"  # Default assumption
+        execution = 1  # Default assumption
 
-        # Create swept area solid (extruded cylinder)
-        swept_area = self.ifc.create_entity('IfcExtrudedAreaSolid',
-                                           SweptArea=profile,
-                                           Position=placement,
-                                           ExtrudedDirection=direction,
-                                           Depth=length)
+        # Extract bolt type from the name
+        if "_1.1_" in type_name:
+            bolt_type = "1.1"
+        elif "_1.2_" in type_name:
+            bolt_type = "1.2"
+        elif "_2.1_" in type_name:
+            bolt_type = "2.1"
+        elif "_5_" in type_name:
+            bolt_type = "5"
+
+        # Extract execution from the name
+        if "_exec1" in type_name:
+            execution = 1
+        elif "_exec2" in type_name:
+            execution = 2
+
+        # Determine if bolt has bend
+        has_bend = bolt_type in ['1.1', '1.2']
+
+        if has_bend:
+            # Create bent geometry for types 1.1 and 1.2
+            # Create axis curve for bent stud
+            axis_curve = builder.create_composite_curve_stud(bolt_type, diameter, length, execution)
+
+            # Create swept disk solid for bent stud
+            stud_radius = diameter / 2.0
+            swept_area = self.ifc.create_entity('IfcSweptDiskSolid',
+                                              Directrix=axis_curve,
+                                              Radius=float(stud_radius))
+        else:
+            # Create straight geometry for types 2.1 and 5
+            # Create axis placement
+            placement = self.ifc.create_entity('IfcAxis2Placement3D',
+                                              Location=self.ifc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0]))
+
+            # Create circular profile
+            profile = self.ifc.create_entity('IfcCircleProfileDef',
+                                            ProfileType='AREA',
+                                            ProfileName='CircularProfile',
+                                            Radius=diameter / 2.0)
+
+            # Create extrusion direction
+            direction = self.ifc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0])
+
+            # Create swept area solid (extruded cylinder)
+            swept_area = self.ifc.create_entity('IfcExtrudedAreaSolid',
+                                               SweptArea=profile,
+                                               Position=placement,
+                                               ExtrudedDirection=direction,
+                                               Depth=length)
 
         # Create geometric representation
         rep_item = [swept_area]
         rep_context = self._get_representation_context()
-        
+
         # Create shape representation
         shape_rep = self.ifc.create_entity('IfcShapeRepresentation',
                                           ContextOfItems=rep_context,
@@ -317,6 +359,6 @@ class TypeFactory:
         return len(self.types_cache)
 
     def _generate_guid(self):
-        """Generate IFC GUID"""
-        uuid_bytes = uuid.uuid4().bytes
-        return base64.b64encode(uuid_bytes).decode()[:22]
+        """Generate IFC GUID using ifcopenshell"""
+        import ifcopenshell
+        return ifcopenshell.guid.new()

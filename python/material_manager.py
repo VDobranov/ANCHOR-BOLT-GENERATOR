@@ -2,8 +2,6 @@
 material_manager.py - Управление материалами в IFC документе
 """
 
-import uuid
-import base64
 from gost_data import MATERIALS
 
 
@@ -38,6 +36,6 @@ class MaterialManager:
         return rel
 
     def _generate_guid(self):
-        """Generate IFC GUID"""
-        uuid_bytes = uuid.uuid4().bytes
-        return base64.b64encode(uuid_bytes).decode()[:22]
+        """Generate IFC GUID using ifcopenshell"""
+        import ifcopenshell
+        return ifcopenshell.guid.new()

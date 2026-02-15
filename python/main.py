@@ -10,18 +10,13 @@ except ImportError:
     ifcopenshell = None
     print("Warning: ifcopenshell not available, will use stub")
 
-import uuid
-import base64
-
 # Global IFC document
 ifc_doc = None
 
 
 def generate_guid():
-    """Generate IFC GUID"""
-    uuid_bytes = uuid.uuid4().bytes
-    guid_str = base64.b64encode(uuid_bytes).decode()[:22]
-    return guid_str
+    """Generate IFC GUID using ifcopenshell"""
+    return ifcopenshell.guid.new()
 
 
 def initialize_base_document():
@@ -79,23 +74,6 @@ def initialize_base_document():
                              RelatingObject=building,
                              RelatedObjects=[storey])
 
-        # Create unit assignments
-        length_unit = ifc_doc.create_entity('IfcSIUnit',
-                                           UnitType='LENGTHUNIT',
-                                           Prefix='MILLI',
-                                           Name='METRE')
-
-        mass_unit = ifc_doc.create_entity('IfcSIUnit',
-                                         UnitType='MASSUNIT',
-                                         Name='GRAM')
-
-        plane_angle = ifc_doc.create_entity('IfcSIUnit',
-                                           UnitType='PLANEANGLEUNIT',
-                                           Name='RADIAN')
-
-        ifc_doc.create_entity('IfcUnitAssignment',
-                             Units=[length_unit, mass_unit, plane_angle])
-
         # Create world coordinate system
         ifc_doc.create_entity('IfcAxis2Placement2D',
                              Location=ifc_doc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0]))
@@ -104,6 +82,11 @@ def initialize_base_document():
                              Location=ifc_doc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0]),
                              Axis=ifc_doc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0]),
                              RefDirection=ifc_doc.create_entity('IfcDirection', DirectionRatios=[1.0, 0.0, 0.0]))
+
+        # Setup units and contexts using IFCGenerator
+        from ifc_generator import IFCGenerator
+        generator = IFCGenerator(ifc_doc)
+        generator.setup_units_and_contexts()
 
         return ifc_doc
 
