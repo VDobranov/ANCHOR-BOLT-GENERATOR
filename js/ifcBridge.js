@@ -12,9 +12,18 @@ class IFCBridge {
     async initialize() {
         try {
             // First, load Python modules into Pyodide's virtual filesystem
+            if (typeof showStatus !== 'undefined') {
+                showStatus('Загрузка Python модулей в виртуальную файловую систему...', 'info');
+            }
             await loadPythonModules(this.pyodide);
+            if (typeof showStatus !== 'undefined') {
+                showStatus('Python модули загружены в виртуальную файловую систему', 'info');
+            }
 
             // Then import and initialize them
+            if (typeof showStatus !== 'undefined') {
+                showStatus('Импорт и инициализация Python модулей...', 'info');
+            }
             await this.pyodide.runPythonAsync(`
                 import sys
                 sys.path.insert(0, '/python')
@@ -24,6 +33,9 @@ class IFCBridge {
 
             this.ifc_main = this.pyodide.globals.get('ifc_main');
             console.log('✓ Python modules initialized');
+            if (typeof showStatus !== 'undefined') {
+                showStatus('Python модули успешно инициализированы', 'info');
+            }
             return true;
         } catch (error) {
             console.error('Failed to initialize Python modules:', error);
@@ -91,9 +103,17 @@ let ifcBridge = null;
 
 async function initializeIFCBridge() {
     try {
-        let pyodide = await loadPyodide();
+        if (typeof showStatus !== 'undefined') {
+            showStatus('Создание IFC Bridge...', 'info');
+        }
         ifcBridge = new IFCBridge(pyodide);
+        if (typeof showStatus !== 'undefined') {
+            showStatus('Загрузка Python модулей...', 'info');
+        }
         await ifcBridge.initialize();
+        if (typeof showStatus !== 'undefined') {
+            showStatus('Python модули загружены', 'info');
+        }
         return ifcBridge;
     } catch (error) {
         console.error('Bridge initialization failed:', error);

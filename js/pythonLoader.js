@@ -41,6 +41,9 @@ async function loadPythonModules(pyodide) {
         }
 
         // Load ifcopenshell wheel file
+        if (typeof showStatus !== 'undefined') {
+            showStatus('Загрузка ifcopenshell wheel файла...', 'info');
+        }
         console.log('  Loading ifcopenshell wheel...');
         const wheelFilename = 'ifcopenshell-0.8.4+158fe92-cp313-cp313-pyodide_2025_0_wasm32.whl';
         const wheelUrl = 'wheels/' + wheelFilename;
@@ -52,31 +55,52 @@ async function loadPythonModules(pyodide) {
             const wheelData = await response.arrayBuffer();
             FS.writeFile('/wheels/' + wheelFilename, new Uint8Array(wheelData));
             console.log('  ✓ ifcopenshell wheel loaded');
+            if (typeof showStatus !== 'undefined') {
+                showStatus('ifcopenshell wheel файл загружен', 'info');
+            }
         } catch (error) {
             console.error('Failed to load ifcopenshell wheel:', error);
             throw error;
         }
 
         // Load micropip package first
+        if (typeof showStatus !== 'undefined') {
+            showStatus('Загрузка micropip пакета...', 'info');
+        }
         console.log('  Loading micropip...');
         await pyodide.loadPackage('micropip');
         console.log('  ✓ micropip loaded');
+        if (typeof showStatus !== 'undefined') {
+            showStatus('micropip пакет загружен', 'info');
+        }
 
         // Install ifcopenshell using micropip
+        if (typeof showStatus !== 'undefined') {
+            showStatus('Установка ifcopenshell...', 'info');
+        }
         console.log('  Installing ifcopenshell...');
         await pyodide.runPythonAsync(`
             import micropip
             await micropip.install('file:///wheels/${wheelFilename}')
         `);
         console.log('  ✓ ifcopenshell installed');
+        if (typeof showStatus !== 'undefined') {
+            showStatus('ifcopenshell установлен', 'info');
+        }
 
         // Load each Python file
+        if (typeof showStatus !== 'undefined') {
+            showStatus('Загрузка Python модулей...', 'info');
+        }
         const cacheBuster = '?v=' + Date.now(); // Prevent browser caching
         for (const filePath of PYTHON_MODULES) {
             const fileName = filePath.split('/').pop();
 
             try {
                 console.log(`  Loading ${fileName}...`);
+                if (typeof showStatus !== 'undefined') {
+                    showStatus(`Загрузка модуля: ${fileName}...`, 'info');
+                }
 
                 // Fetch the file content with cache busting
                 const response = await fetch(filePath + cacheBuster);
@@ -91,6 +115,9 @@ async function loadPythonModules(pyodide) {
                 FS.writeFile(fullPath, content);
 
                 console.log(`  ✓ ${fileName} loaded`);
+                if (typeof showStatus !== 'undefined') {
+                    showStatus(`Модуль ${fileName} загружен`, 'info');
+                }
             } catch (error) {
                 console.error(`Failed to load ${fileName}:`, error);
                 throw error;
@@ -98,6 +125,9 @@ async function loadPythonModules(pyodide) {
         }
 
         console.log('✓ All Python modules loaded');
+        if (typeof showStatus !== 'undefined') {
+            showStatus('Все Python модули загружены', 'info');
+        }
     } catch (error) {
         console.error('Error loading Python modules:', error);
         throw new Error(`Failed to load Python modules: ${error.message}`);

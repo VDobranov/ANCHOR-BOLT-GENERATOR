@@ -5,19 +5,42 @@
 let viewer = null;
 let bridge = null;
 
-function setupFormListeners() {
+/**
+ * Disable/enable UI elements during initialization
+ */
+function toggleUI(enabled) {
+    const elements = [
+        '#boltType', '#diameter', '#length', '#material',
+        '#bottomNut', '#topNut', '#washers',
+        '#generateBtn', '#downloadBtn'
+    ];
+    
+    elements.forEach(selector => {
+        const element = document.querySelector(selector);
+        if (element) {
+            element.disabled = !enabled;
+        }
+    });
+    
+    // Also disable form submission
     const form = document.getElementById('boltForm');
-    const generateBtn = document.getElementById('generateBtn');
+    if (form) {
+        if (enabled) {
+            form.classList.remove('disabled');
+        } else {
+            form.classList.add('disabled');
+        }
+    }
+}
+
+function setupFormListeners() {
     const downloadBtn = document.getElementById('downloadBtn');
 
     // Initialize execution options based on default bolt type
     updateExecutionOptions();
 
-    // Form submission
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await generateBolt();
-    });
+    // Initialize length options based on default values
+    updateLengthOptions();
 
     // Download button
     downloadBtn.addEventListener('click', () => {
@@ -29,10 +52,48 @@ function setupFormListeners() {
     // Update execution options based on bolt type
     document.getElementById('boltType').addEventListener('change', updateExecutionOptions);
 
+    // Update length options when bolt type, execution, or diameter changes
+    document.getElementById('boltType').addEventListener('change', updateLengthOptions);
+    document.getElementById('execution').addEventListener('change', updateLengthOptions);
+    document.getElementById('diameter').addEventListener('change', updateLengthOptions);
+
+    // Add event listeners for all form inputs to trigger automatic regeneration
+    document.getElementById('boltType').addEventListener('change', () => {
+        // Debounce to prevent too frequent updates
+        debounce(generateBolt, 300)();
+    });
+    
+    document.getElementById('diameter').addEventListener('change', () => {
+        debounce(generateBolt, 300)();
+    });
+    
+    document.getElementById('length').addEventListener('change', () => {
+        debounce(generateBolt, 300)();
+    });
+    
+    document.getElementById('material').addEventListener('change', () => {
+        debounce(generateBolt, 300)();
+    });
+    
+    document.getElementById('bottomNut').addEventListener('change', () => {
+        debounce(generateBolt, 300)();
+    });
+    
+    document.getElementById('topNut').addEventListener('change', () => {
+        debounce(generateBolt, 300)();
+    });
+    
+    document.getElementById('washers').addEventListener('change', () => {
+        debounce(generateBolt, 300)();
+    });
+
     // Mesh selection event
     window.addEventListener('meshSelected', (e) => {
         updatePropertiesPanel(e.detail);
     });
+    
+    // Enable UI after all listeners are set up
+    toggleUI(true);
 }
 
 function updateExecutionOptions() {
@@ -58,11 +119,72 @@ function updateExecutionOptions() {
     }
 }
 
+function updateLengthOptions() {
+    const boltType = document.getElementById('boltType').value;
+    const execution = parseInt(document.getElementById('execution').value || '1');
+    const diameter = parseInt(document.getElementById('diameter').value || '0');
+    const lengthSelect = document.getElementById('length');
+
+    // Clear current options
+    lengthSelect.innerHTML = '';
+
+    // If any required parameter is missing, return
+    if (!boltType || !diameter) {
+        return;
+    }
+
+    // Get available lengths from Python module via Pyodide
+    try {
+        // Access the Python module through Pyodide by importing gost_data
+        const result = pyodide.runPython(`
+            import sys
+            sys.path.insert(0, '/python')
+            import gost_data
+            key = ("${boltType}", ${execution}, ${diameter})
+            lengths = gost_data.AVAILABLE_LENGTHS.get(key, [])
+            sorted(lengths)  # Sort lengths in ascending order
+        `);
+        
+        // Convert Python list to JavaScript array
+        const lengthsArray = result.toJs();
+        
+        if (lengthsArray.length > 0) {
+            // Add options to the select element
+            lengthsArray.forEach(length => {
+                const option = document.createElement('option');
+                option.value = length;
+                option.textContent = `${length} мм`;
+                lengthSelect.appendChild(option);
+            });
+            
+            // Automatically select the smallest length (first option)
+            lengthSelect.value = lengthsArray[0];
+        } else {
+            // If no lengths found for this combination, add a disabled option
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'Нет доступных длин';
+            option.disabled = true;
+            lengthSelect.appendChild(option);
+        }
+    } catch (error) {
+        console.error('Error getting available lengths:', error);
+        
+        // Fallback: add a generic error message option
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Ошибка загрузки длин';
+        option.disabled = true;
+        lengthSelect.appendChild(option);
+    }
+}
+
 async function generateBolt() {
     const params = getFormParams();
 
     if (!validateParams(params)) {
-        showStatus('Пожалуйста, заполните все поля', 'error', 5000);
+        // Don't show error if some fields are not filled yet
+        // This can happen during initial loading or when changing parameters
         return;
     }
 
@@ -72,12 +194,10 @@ async function generateBolt() {
         return;
     }
 
-    const generateBtn = document.getElementById('generateBtn');
-    const originalText = generateBtn.textContent;
-    generateBtn.disabled = true;
-    generateBtn.innerHTML = '<span class="spinner"></span> Генерирую...';
-
-    showStatus('Генерирую болт...', 'info');
+    // Disable UI during generation
+    toggleUI(false);
+    
+    showStatus(`Генерирую болт: ${params.bolt_type}, М${params.diameter}x${params.length}...`, 'info');
 
     try {
         const result = await bridge.generateBolt(params);
@@ -87,21 +207,21 @@ async function generateBolt() {
             return;
         }
 
-        // Update 3D view
+        // Update 3D view preserving current camera orientation
         if (result.meshData) {
-            viewer.updateMeshes(result.meshData);
+            viewer.updateMeshesPreserveView(result.meshData);
         }
 
         // Enable download
         document.getElementById('downloadBtn').disabled = false;
 
-        showStatus('Болт успешно сгенерирован!', 'success', 3000);
+        showStatus(`Болт ${params.bolt_type}.М${params.diameter}x${params.length} успешно сгенерирован!`, 'success', 3000);
     } catch (error) {
         showStatus(`Ошибка: ${error.message}`, 'error', 5000);
         console.error(error);
     } finally {
-        generateBtn.disabled = false;
-        generateBtn.textContent = originalText;
+        // Re-enable UI after generation is complete
+        toggleUI(true);
     }
 }
 
@@ -180,6 +300,7 @@ function updatePropertiesPanel(meshItem) {
 
 function showStatus(message, type = 'info', duration = 0) {
     const statusEl = document.getElementById('statusMessage');
+    
     statusEl.textContent = message;
     statusEl.className = `status-message show ${type}`;
 
@@ -189,3 +310,54 @@ function showStatus(message, type = 'info', duration = 0) {
         }, duration);
     }
 }
+
+/**
+ * Generate default bolt with predefined parameters
+ */
+async function generateDefaultBolt() {
+    // Default parameters for the bolt
+    const defaultParams = {
+        bolt_type: '1.1',
+        execution: 1,
+        diameter: 20,
+        length: 800,
+        material: '09Г2С',
+        has_bottom_nut: true,
+        has_top_nut: true,
+        has_washers: true
+    };
+
+    // Update form fields with default values
+    document.getElementById('boltType').value = defaultParams.bolt_type;
+    document.getElementById('diameter').value = defaultParams.diameter;
+    document.getElementById('material').value = defaultParams.material;
+    document.getElementById('bottomNut').checked = defaultParams.has_bottom_nut;
+    document.getElementById('topNut').checked = defaultParams.has_top_nut;
+    document.getElementById('washers').checked = defaultParams.has_washers;
+
+    // Update execution options based on bolt type
+    updateExecutionOptions();
+
+    // Update length options based on bolt type, execution, and diameter
+    // This will automatically select the smallest available length
+    updateLengthOptions();
+
+    // Trigger the change event to generate the bolt with default parameters
+    document.getElementById('boltType').dispatchEvent(new Event('change'));
+}
+
+// Debounce function to limit frequency of function calls
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Make toggleUI function available globally
+window.toggleUI = toggleUI;

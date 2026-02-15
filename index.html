@@ -22,7 +22,6 @@
                     <div class="form-group">
                         <label for="boltType">Тип болта:</label>
                         <select id="boltType" required>
-                            <option value="">-- Выбрать --</option>
                             <option value="1.1" selected>1.1 (первая категория, исполнение 1-2)</option>
                             <option value="1.2">1.2 (первая категория, исполнение 1-2)</option>
                             <option value="2.1">2.1 (вторая категория, прямой)</option>
@@ -43,7 +42,6 @@
                     <div class="form-group">
                         <label for="diameter">Диаметр (М):</label>
                         <select id="diameter" required>
-                            <option value="">-- Выбрать --</option>
                             <option value="12">М12</option>
                             <option value="16">М16</option>
                             <option value="20" selected>М20</option>
@@ -64,14 +62,15 @@
                     <!-- Длина -->
                     <div class="form-group">
                         <label for="length">Длина (мм):</label>
-                        <input type="number" id="length" min="100" max="5000" value="800" placeholder="Например: 800" required>
+                        <select id="length" required>
+                            <option value="">-- Выбрать --</option>
+                        </select>
                     </div>
 
                     <!-- Материал -->
                     <div class="form-group">
                         <label for="material">Материал:</label>
                         <select id="material" required>
-                            <option value="">-- Выбрать --</option>
                             <option value="09Г2С" selected>09Г2С (ГОСТ 19281-2014)</option>
                             <option value="ВСт3пс2">ВСт3пс2 (ГОСТ 535-88)</option>
                             <option value="10Г2">10Г2 (ГОСТ 19281-2014)</option>
@@ -93,9 +92,6 @@
 
                     <!-- Кнопки -->
                     <div class="button-group">
-                        <button type="submit" id="generateBtn" class="btn btn-primary">
-                            Сгенерировать
-                        </button>
                         <button type="button" id="downloadBtn" class="btn btn-secondary" disabled>
                             Скачать IFC
                         </button>

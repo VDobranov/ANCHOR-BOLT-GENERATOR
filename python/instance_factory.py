@@ -4,7 +4,8 @@ instance_factory.py - Создание инстансов болтов и упр
 
 from type_factory import TypeFactory
 from gost_data import validate_parameters, get_bolt_spec
-import math
+import ifcopenshell
+import ifcopenshell.geom as geom
 
 
 class InstanceFactory:
@@ -60,13 +61,19 @@ class InstanceFactory:
                               GlobalId=self._generate_guid(),
                               RelatingType=assembly_type,
                               RelatedObjects=[assembly])
+        
+        # Add direct representation to the assembly instance for ifcopenshell.geom compatibility
+        self._add_direct_representation(assembly, assembly_type)
 
         # Create instances for components
         components = []
-        z_position = 0
 
-        # Stud instance
-        stud_placement = self._create_placement((0, 0, z_position))
+        # Calculate positions for nuts and washers
+        washer_thickness = spec.get('washer_thickness', 3)
+        nut_height = spec.get('nut_height', 10)
+
+        # Stud instance - positioned from top (length) to bottom (0)
+        stud_placement = self._create_placement((0, 0, 0))  # Origin at bottom of threaded portion
         stud = self.ifc.create_entity('IfcMechanicalFastener',
                                      GlobalId=self._generate_guid(),
                                      Name=f'Stud_M{diameter}x{length}',
@@ -78,18 +85,14 @@ class InstanceFactory:
                               RelatingType=stud_type,
                               RelatedObjects=[stud])
 
-        components.append(stud)
-
-        # Calculate positions for nuts and washers
-        washer_thickness = spec.get('washer_thickness', 3)
-        nut_height = spec.get('nut_height', 10)
+        # Add direct representation to the stud instance for ifcopenshell.geom compatibility
+        self._add_direct_representation(stud, stud_type)
 
         component_instances = [stud]
 
-        # Bottom washer (optional)
+        # Bottom washer (optional) - placed at the bottom (z=0)
         if has_washers:
-            z_pos = 0
-            washer_bottom_placement = self._create_placement((0, 0, z_pos))
+            washer_bottom_placement = self._create_placement((0, 0, -washer_thickness/2))
             washer_bottom = self.ifc.create_entity('IfcMechanicalFastener',
                                                   GlobalId=self._generate_guid(),
                                                   Name=f'Washer_Bottom_M{diameter}',
@@ -101,13 +104,14 @@ class InstanceFactory:
                                   RelatingType=washer_type,
                                   RelatedObjects=[washer_bottom])
 
+            # Add direct representation to the washer instance for ifcopenshell.geom compatibility
+            self._add_direct_representation(washer_bottom, washer_type)
+
             component_instances.append(washer_bottom)
 
-            z_position += washer_thickness
-
-        # Bottom nut (optional)
+        # Bottom nut (optional) - placed below the washer
         if has_bottom_nut:
-            nut_bottom_placement = self._create_placement((0, 0, z_position))
+            nut_bottom_placement = self._create_placement((0, 0, -(washer_thickness + nut_height)/2))
             nut_bottom = self.ifc.create_entity('IfcMechanicalFastener',
                                                GlobalId=self._generate_guid(),
                                                Name=f'Nut_Bottom_M{diameter}',
@@ -119,17 +123,14 @@ class InstanceFactory:
                                   RelatingType=nut_type,
                                   RelatedObjects=[nut_bottom])
 
+            # Add direct representation to the nut instance for ifcopenshell.geom compatibility
+            self._add_direct_representation(nut_bottom, nut_type)
+
             component_instances.append(nut_bottom)
 
-            z_position += nut_height
-
-        # Top side positions (from top down)
-        z_top = length
-
-        # Top washer
+        # Top washer (optional) - placed at the top of the threaded portion
         if has_washers:
-            z_pos = z_top - washer_thickness
-            washer_top_placement = self._create_placement((0, 0, z_pos))
+            washer_top_placement = self._create_placement((0, 0, length - washer_thickness/2))
             washer_top = self.ifc.create_entity('IfcMechanicalFastener',
                                                GlobalId=self._generate_guid(),
                                                Name=f'Washer_Top_M{diameter}',
@@ -141,13 +142,14 @@ class InstanceFactory:
                                   RelatingType=washer_type,
                                   RelatedObjects=[washer_top])
 
+            # Add direct representation to the washer instance for ifcopenshell.geom compatibility
+            self._add_direct_representation(washer_top, washer_type)
+
             component_instances.append(washer_top)
 
-            z_top -= washer_thickness
-
-        # Top nut
+        # Top nut (optional) - placed above the washer
         if has_top_nut:
-            nut_top_placement = self._create_placement((0, 0, z_top - nut_height))
+            nut_top_placement = self._create_placement((0, 0, length + (washer_thickness + nut_height)/2))
             nut_top = self.ifc.create_entity('IfcMechanicalFastener',
                                             GlobalId=self._generate_guid(),
                                             Name=f'Nut_Top_M{diameter}',
@@ -158,6 +160,9 @@ class InstanceFactory:
                                   GlobalId=self._generate_guid(),
                                   RelatingType=nut_type,
                                   RelatedObjects=[nut_top])
+
+            # Add direct representation to the nut instance for ifcopenshell.geom compatibility
+            self._add_direct_representation(nut_top, nut_type)
 
             component_instances.append(nut_top)
 
@@ -180,9 +185,9 @@ class InstanceFactory:
                                   RelatingElement=component_instances[i],
                                   RelatedElement=component_instances[i + 1])
 
-        # Generate mesh data for 3D visualization
-        mesh_data = self._generate_mesh_data(
-            bolt_type, diameter, length, material,
+        # Generate mesh data for 3D visualization using ifcopenshell.geom
+        mesh_data = self._generate_mesh_data_with_geom(
+            component_instances, bolt_type, diameter, length, material,
             has_bottom_nut, has_top_nut, has_washers
         )
 
@@ -199,250 +204,366 @@ class InstanceFactory:
             'mesh_data': mesh_data
         }
 
-    def _generate_mesh_data(self, bolt_type, diameter, length, material,
-                           has_bottom_nut, has_top_nut, has_washers):
-        """Generate simplified mesh data for 3D visualization"""
+    def _add_direct_representation(self, instance, type_obj):
+        """Add direct representation to instance for ifcopenshell.geom compatibility"""
+        # Check if the type has representation maps
+        if hasattr(type_obj, 'RepresentationMaps') and type_obj.RepresentationMaps:
+            # Get the first representation map from the type
+            rep_map = type_obj.RepresentationMaps[0] if isinstance(type_obj.RepresentationMaps, (list, tuple)) else type_obj.RepresentationMaps
+            
+            # If it's a single map, put it in a list
+            if not isinstance(rep_map, (list, tuple)):
+                rep_maps = [rep_map]
+            else:
+                rep_maps = rep_map
+                
+            # For each representation map in the type
+            for rep_map in rep_maps:
+                if hasattr(rep_map, 'MappedRepresentation'):
+                    mapped_rep = rep_map.MappedRepresentation
+                    
+                    # Get the context and type information
+                    context = mapped_rep.ContextOfItems
+                    identifier = mapped_rep.RepresentationIdentifier
+                    rep_type = mapped_rep.RepresentationType
+                    items = mapped_rep.Items  # This should be the geometric elements
+                    
+                    # Create a new shape representation for the instance by referencing the same items
+                    # This is a workaround for Pyodide compatibility
+                    try:
+                        instance_shape_rep = self.ifc.create_entity('IfcShapeRepresentation',
+                                                                  ContextOfItems=context,
+                                                                  RepresentationIdentifier=identifier,
+                                                                  RepresentationType=rep_type,
+                                                                  Items=items)
+                        
+                        # Create a product definition shape containing this representation
+                        prod_def_shape = self.ifc.create_entity('IfcProductDefinitionShape',
+                                                               Representations=[instance_shape_rep])
+                        
+                        # Link the product definition shape to the instance
+                        instance.Representation = prod_def_shape
+                    except Exception as e:
+                        # If direct reference doesn't work, create a minimal representation
+                        print(f"Could not create representation for {instance.Name}: {str(e)}")
+                        # Fallback: create a minimal representation to avoid "Representation is NULL" error
+                        try:
+                            # Create a minimal context if needed
+                            context = self._get_or_create_context()
+                            
+                            # Create a minimal representation
+                            instance_shape_rep = self.ifc.create_entity('IfcShapeRepresentation',
+                                                                      ContextOfItems=context,
+                                                                      RepresentationIdentifier='Body',
+                                                                      RepresentationType='SweptSolid',
+                                                                      Items=[])
+                            
+                            prod_def_shape = self.ifc.create_entity('IfcProductDefinitionShape',
+                                                                   Representations=[instance_shape_rep])
+                            
+                            instance.Representation = prod_def_shape
+                        except Exception as fallback_error:
+                            print(f"Fallback representation creation also failed: {str(fallback_error)}")
+    
+    def _get_or_create_context(self):
+        """Get or create geometric representation context"""
+        contexts = self.ifc.by_type('IfcGeometricRepresentationContext')
+        if contexts:
+            return contexts[0]
+        
+        # Create new context if not found
+        return self.ifc.create_entity('IfcGeometricRepresentationContext',
+                                     ContextType='Model',
+                                     CoordinateSpaceDimension=3,
+                                     Precision=1e-05,
+                                     WorldCoordinateSystem=self.ifc.create_entity('IfcAxis2Placement3D',
+                                                                               Location=self.ifc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0])))
+
+    def _generate_mesh_data_with_geom(self, components, bolt_type, diameter, length, material,
+                                     has_bottom_nut, has_top_nut, has_washers):
+        """Generate mesh data with fallback to manual generation (optimized for Pyodide)"""
         meshes = []
-
-        # Stud (cylinder)
-        stud_mesh = self._create_cylinder_mesh(
-            radius=diameter / 2,
-            height=length,
-            position=(0, 0, length / 2),
-            color=0x8B8B8B,  # Gray
-            name='Stud',
-            id='stud_0'
-        )
-        meshes.append(stud_mesh)
-
-        # Washers and nuts
-        z_pos = 0
-        spec = get_bolt_spec(diameter)
-        washer_thickness = spec.get('washer_thickness', 3)
-        washer_od = spec.get('washer_outer_diameter', diameter + 10)
-        nut_height = spec.get('nut_height', 10)
-
-        # Bottom washer
-        if has_washers:
-            washer_mesh = self._create_ring_mesh(
-                outer_radius=washer_od / 2,
-                inner_radius=diameter / 2 + 0.5,
-                height=washer_thickness,
-                position=(0, 0, z_pos + washer_thickness / 2),
-                color=0xA9A9A9,  # Dark gray
-                name='Washer_Bottom',
-                id='washer_bottom_0'
-            )
-            meshes.append(washer_mesh)
-            z_pos += washer_thickness
-
-        # Bottom nut
-        if has_bottom_nut:
-            nut_mesh = self._create_hex_mesh(
-                diameter=diameter * 1.5,
-                height=nut_height,
-                position=(0, 0, z_pos + nut_height / 2),
-                color=0x696969,  # Dim gray
-                name='Nut_Bottom',
-                id='nut_bottom_0'
-            )
-            meshes.append(nut_mesh)
-
-        # Top components
-        z_top = length
-
-        if has_washers:
-            washer_mesh = self._create_ring_mesh(
-                outer_radius=washer_od / 2,
-                inner_radius=diameter / 2 + 0.5,
-                height=washer_thickness,
-                position=(0, 0, z_top - washer_thickness / 2),
-                color=0xA9A9A9,
-                name='Washer_Top',
-                id='washer_top_0'
-            )
-            meshes.append(washer_mesh)
-            z_top -= washer_thickness
-
-        if has_top_nut:
-            nut_mesh = self._create_hex_mesh(
-                diameter=diameter * 1.5,
-                height=nut_height,
-                position=(0, 0, z_top - nut_height / 2),
-                color=0x696969,
-                name='Nut_Top',
-                id='nut_top_0'
-            )
-            meshes.append(nut_mesh)
+        
+        # Map component types to colors
+        color_map = {
+            'STUD': 0x8B8B8B,      # Gray
+            'WASHER': 0xA9A9A9,    # Dark gray
+            'NUT': 0x696969,       # Dim gray
+            'ANCHORBOLT': 0x4F4F4F # Darker gray
+        }
+        
+        # In Pyodide environment, directly use the fallback method for better reliability
+        for i, component in enumerate(components):
+            # Create mesh using the improved fallback method that accounts for placement
+            fallback_mesh = self._create_fallback_mesh(component, i, diameter, length, color_map)
+            if fallback_mesh:
+                meshes.append(fallback_mesh)
 
         return {'meshes': meshes}
 
-    def _create_cylinder_mesh(self, radius, height, position, color, name, id):
-        """Create simplified cylinder mesh"""
-        segments = 16
-        vertices = []
-        indices = []
+    def _create_fallback_mesh(self, component, index, diameter, length, color_map):
+        """Create simplified fallback mesh if geometry extraction fails"""
+        import math
+        
+        comp_type = component.ObjectType or 'UNKNOWN'
+        color = color_map.get(comp_type, 0xCCCCCC)
+        
+        # Get bolt specifications
+        spec = get_bolt_spec(diameter)
+        
+        # Create basic shapes based on component type
+        if comp_type == 'STUD':
+            # Create a cylinder for the stud
+            segments = 16
+            vertices = []
+            indices = []
 
-        # Top and bottom centers
-        vertices.append(list(position))  # 0: bottom center
-        vertices.append([position[0], position[1], position[2] + height])  # 1: top center
+            # Get the placement of the component to determine position
+            placement = component.ObjectPlacement
+            if placement and hasattr(placement, 'Location'):
+                loc = placement.Location.Coordinates
+                pos_x, pos_y, pos_z = loc[0], loc[1], loc[2]
+            else:
+                pos_x, pos_y, pos_z = 0.0, 0.0, 0.0
 
-        # Bottom circle
-        for i in range(segments):
-            angle = 2 * math.pi * i / segments
-            x = position[0] + radius * math.cos(angle)
-            y = position[1] + radius * math.sin(angle)
-            vertices.append([x, y, position[2]])
+            # Top and bottom centers
+            vertices.append([pos_x, pos_y, pos_z])  # 0: bottom center
+            vertices.append([pos_x, pos_y, pos_z + length])  # 1: top center
 
-        # Top circle
-        for i in range(segments):
-            angle = 2 * math.pi * i / segments
-            x = position[0] + radius * math.cos(angle)
-            y = position[1] + radius * math.sin(angle)
-            vertices.append([x, y, position[2] + height])
+            # Bottom circle
+            for i in range(segments):
+                angle = 2 * math.pi * i / segments
+                x = pos_x + (diameter / 2) * math.cos(angle)
+                y = pos_y + (diameter / 2) * math.sin(angle)
+                z = pos_z
+                vertices.append([x, y, z])
 
-        # Bottom triangles
-        for i in range(segments):
-            next_i = (i + 1) % segments
-            indices.extend([0, 2 + i, 2 + next_i])
+            # Top circle
+            for i in range(segments):
+                angle = 2 * math.pi * i / segments
+                x = pos_x + (diameter / 2) * math.cos(angle)
+                y = pos_y + (diameter / 2) * math.sin(angle)
+                z = pos_z + length
+                vertices.append([x, y, z])
 
-        # Top triangles
-        for i in range(segments):
-            next_i = (i + 1) % segments
-            indices.extend([1, 2 + segments + next_i, 2 + segments + i])
+            # Bottom triangles
+            for i in range(segments):
+                next_i = (i + 1) % segments
+                indices.extend([0, 2 + i, 2 + next_i])
 
-        # Side triangles
-        for i in range(segments):
-            next_i = (i + 1) % segments
-            indices.extend([2 + i, 2 + segments + i, 2 + next_i])
-            indices.extend([2 + next_i, 2 + segments + i, 2 + segments + next_i])
+            # Top triangles
+            for i in range(segments):
+                next_i = (i + 1) % segments
+                indices.extend([1, 2 + segments + next_i, 2 + segments + i])
 
-        return {
-            'vertices': [v for vertex in vertices for v in vertex],
-            'indices': indices,
-            'color': color,
-            'name': name,
-            'id': id,
-            'metadata': {}
-        }
+            # Side triangles
+            for i in range(segments):
+                next_i = (i + 1) % segments
+                indices.extend([2 + i, 2 + segments + i, 2 + next_i])
+                indices.extend([2 + next_i, 2 + segments + i, 2 + segments + next_i])
 
-    def _create_ring_mesh(self, outer_radius, inner_radius, height, position, color, name, id):
-        """Create ring/washer mesh"""
-        segments = 16
-        vertices = []
-        indices = []
+            return {
+                'vertices': [v for vertex in vertices for v in vertex],
+                'indices': indices,
+                'color': color,
+                'name': component.Name or f'{comp_type}_{index}',
+                'id': component.GlobalId,
+                'metadata': {
+                    'type': comp_type,
+                    'diameter': diameter,
+                    'length': length
+                }
+            }
+        elif comp_type == 'WASHER':
+            # Create a ring for washer
+            washer_thickness = spec.get('washer_thickness', 3)
+            washer_od = spec.get('washer_outer_diameter', diameter + 10)
+            
+            segments = 16
+            vertices = []
+            indices = []
 
-        # Bottom outer circle
-        for i in range(segments):
-            angle = 2 * math.pi * i / segments
-            x = position[0] + outer_radius * math.cos(angle)
-            y = position[1] + outer_radius * math.sin(angle)
-            vertices.append([x, y, position[2] - height / 2])
+            # Get the placement of the component to determine position
+            placement = component.ObjectPlacement
+            if placement and hasattr(placement, 'Location'):
+                loc = placement.Location.Coordinates
+                pos_x, pos_y, pos_z = loc[0], loc[1], loc[2]
+            else:
+                pos_x, pos_y, pos_z = 0.0, 0.0, 0.0
+            
+            # Bottom outer circle
+            for i in range(segments):
+                angle = 2 * math.pi * i / segments
+                x = pos_x + (washer_od / 2) * math.cos(angle)
+                y = pos_y + (washer_od / 2) * math.sin(angle)
+                z = pos_z - washer_thickness / 2
+                vertices.append([x, y, z])
 
-        # Bottom inner circle
-        for i in range(segments):
-            angle = 2 * math.pi * i / segments
-            x = position[0] + inner_radius * math.cos(angle)
-            y = position[1] + inner_radius * math.sin(angle)
-            vertices.append([x, y, position[2] - height / 2])
+            # Bottom inner circle
+            for i in range(segments):
+                angle = 2 * math.pi * i / segments
+                x = pos_x + (diameter / 2) * math.cos(angle)
+                y = pos_y + (diameter / 2) * math.sin(angle)
+                z = pos_z - washer_thickness / 2
+                vertices.append([x, y, z])
 
-        # Top outer circle
-        for i in range(segments):
-            angle = 2 * math.pi * i / segments
-            x = position[0] + outer_radius * math.cos(angle)
-            y = position[1] + outer_radius * math.sin(angle)
-            vertices.append([x, y, position[2] + height / 2])
+            # Top outer circle
+            for i in range(segments):
+                angle = 2 * math.pi * i / segments
+                x = pos_x + (washer_od / 2) * math.cos(angle)
+                y = pos_y + (washer_od / 2) * math.sin(angle)
+                z = pos_z + washer_thickness / 2
+                vertices.append([x, y, z])
 
-        # Top inner circle
-        for i in range(segments):
-            angle = 2 * math.pi * i / segments
-            x = position[0] + inner_radius * math.cos(angle)
-            y = position[1] + inner_radius * math.sin(angle)
-            vertices.append([x, y, position[2] + height / 2])
+            # Top inner circle
+            for i in range(segments):
+                angle = 2 * math.pi * i / segments
+                x = pos_x + (diameter / 2) * math.cos(angle)
+                y = pos_y + (diameter / 2) * math.sin(angle)
+                z = pos_z + washer_thickness / 2
+                vertices.append([x, y, z])
 
-        # Bottom faces
-        for i in range(segments):
-            next_i = (i + 1) % segments
-            indices.extend([i, segments + next_i, segments + i])
-            indices.extend([i, next_i, segments + next_i])
+            # Bottom faces
+            for i in range(segments):
+                next_i = (i + 1) % segments
+                indices.extend([i, segments + next_i, segments + i])
+                indices.extend([i, next_i, segments + next_i])
 
-        # Top faces
-        for i in range(segments):
-            next_i = (i + 1) % segments
-            indices.extend([2 * segments + i, 3 * segments + i, 3 * segments + next_i])
-            indices.extend([2 * segments + i, 3 * segments + next_i, 2 * segments + next_i])
+            # Top faces
+            for i in range(segments):
+                next_i = (i + 1) % segments
+                indices.extend([2 * segments + i, 3 * segments + i, 3 * segments + next_i])
+                indices.extend([2 * segments + i, 3 * segments + next_i, 2 * segments + next_i])
 
-        # Side faces (outer and inner)
-        for i in range(segments):
-            next_i = (i + 1) % segments
-            # Outer
-            indices.extend([i, 2 * segments + i, 2 * segments + next_i])
-            indices.extend([i, 2 * segments + next_i, next_i])
-            # Inner
-            indices.extend([segments + i, segments + next_i, 3 * segments + next_i])
-            indices.extend([segments + i, 3 * segments + next_i, 3 * segments + i])
+            # Side faces (outer and inner)
+            for i in range(segments):
+                next_i = (i + 1) % segments
+                # Outer
+                indices.extend([i, 2 * segments + i, 2 * segments + next_i])
+                indices.extend([i, 2 * segments + next_i, next_i])
+                # Inner
+                indices.extend([segments + i, segments + next_i, 3 * segments + next_i])
+                indices.extend([segments + i, 3 * segments + next_i, 3 * segments + i])
 
-        return {
-            'vertices': [v for vertex in vertices for v in vertex],
-            'indices': indices,
-            'color': color,
-            'name': name,
-            'id': id,
-            'metadata': {}
-        }
+            return {
+                'vertices': [v for vertex in vertices for v in vertex],
+                'indices': indices,
+                'color': color,
+                'name': component.Name or f'{comp_type}_{index}',
+                'id': component.GlobalId,
+                'metadata': {
+                    'type': comp_type,
+                    'diameter': diameter,
+                    'outer_diameter': washer_od,
+                    'thickness': washer_thickness
+                }
+            }
+        elif comp_type == 'NUT':
+            # Create hexagonal nut
+            nut_height = spec.get('nut_height', 10)
+            # Standard ratio for hex nuts: across flats = nominal diameter * 1.5
+            across_flats = diameter * 1.5  # This is the distance between opposite flats
+            # Calculate the distance from center to a corner of the hexagon
+            across_corners = across_flats / math.cos(math.pi/6)  # approximately across_flats * 1.1547
+            
+            vertices = []
+            indices = []
 
-    def _create_hex_mesh(self, diameter, height, position, color, name, id):
-        """Create hexagonal nut mesh"""
-        vertices = []
-        indices = []
+            # Get the placement of the component to determine position
+            placement = component.ObjectPlacement
+            if placement and hasattr(placement, 'Location'):
+                loc = placement.Location.Coordinates
+                pos_x, pos_y, pos_z = loc[0], loc[1], loc[2]
+            else:
+                pos_x, pos_y, pos_z = 0.0, 0.0, 0.0
 
-        # Hexagon vertices
-        hex_vertices = []
-        for i in range(6):
-            angle = (i * 60) * math.pi / 180
-            x = position[0] + (diameter / 2) * math.cos(angle)
-            y = position[1] + (diameter / 2) * math.sin(angle)
-            hex_vertices.append((x, y))
+            # Create hexagon vertices (top and bottom)
+            for height_offset in [-nut_height/2, nut_height/2]:  # Bottom and top
+                for i in range(6):  # 6 corners of hexagon
+                    angle = i * math.pi / 3  # 60 degrees in radians
+                    x = pos_x + (across_corners / 2) * math.cos(angle)
+                    y = pos_y + (across_corners / 2) * math.sin(angle)
+                    z = pos_z + height_offset
+                    vertices.extend([x, y, z])
 
-        # Bottom hexagon
-        for x, y in hex_vertices:
-            vertices.append([x, y, position[2] - height / 2])
+            # Create indices for top and bottom faces
+            # Bottom face (first 6 vertices)
+            for i in range(6):
+                next_i = (i + 1) % 6
+                indices.extend([0, next_i, i])  # Fan triangulation for center point
 
-        # Top hexagon
-        for x, y in hex_vertices:
-            vertices.append([x, y, position[2] + height / 2])
+            # Top face (next 6 vertices)
+            for i in range(6):
+                next_i = (i + 1) % 6
+                indices.extend([6, 6 + i, 6 + next_i])  # Fan triangulation for center point
 
-        # Bottom triangles
-        for i in range(6):
-            next_i = (i + 1) % 6
-            indices.extend([i, next_i, 6])  # Simple fan triangulation
+            # Side faces (connecting top and bottom hexagons)
+            for i in range(6):
+                next_i = (i + 1) % 6
+                # Two triangles for each side face
+                indices.extend([i, next_i, 6 + next_i])
+                indices.extend([i, 6 + next_i, 6 + i])
 
-        # Top triangles
-        for i in range(6):
-            next_i = (i + 1) % 6
-            indices.extend([6 + i, 12, 6 + next_i])
+            return {
+                'vertices': vertices,
+                'indices': indices,
+                'color': color,
+                'name': component.Name or f'{comp_type}_{index}',
+                'id': component.GlobalId,
+                'metadata': {
+                    'type': comp_type,
+                    'diameter': diameter,
+                    'height': nut_height,
+                    'across_flats': across_flats
+                }
+            }
+        else:
+            # Default fallback - small cube at component's location
+            # Get the placement of the component to determine position
+            placement = component.ObjectPlacement
+            if placement and hasattr(placement, 'Location'):
+                loc = placement.Location.Coordinates
+                pos_x, pos_y, pos_z = loc[0], loc[1], loc[2]
+            else:
+                pos_x, pos_y, pos_z = 0.0, 0.0, 0.0
 
-        # Side quads as triangles
-        for i in range(6):
-            next_i = (i + 1) % 6
-            indices.extend([i, 6 + i, 6 + next_i])
-            indices.extend([i, 6 + next_i, next_i])
-
-        return {
-            'vertices': [v for vertex in vertices for v in vertex],
-            'indices': indices,
-            'color': color,
-            'name': name,
-            'id': id,
-            'metadata': {}
-        }
+            # Small cube of 10mm size centered at the component's location
+            size = 10.0
+            vertices = [
+                [pos_x - size/2, pos_y - size/2, pos_z - size/2],  # 0: front bottom left
+                [pos_x + size/2, pos_y - size/2, pos_z - size/2],  # 1: front bottom right
+                [pos_x + size/2, pos_y + size/2, pos_z - size/2],  # 2: front top right
+                [pos_x - size/2, pos_y + size/2, pos_z - size/2],  # 3: front top left
+                [pos_x - size/2, pos_y - size/2, pos_z + size/2],  # 4: back bottom left
+                [pos_x + size/2, pos_y - size/2, pos_z + size/2],  # 5: back bottom right
+                [pos_x + size/2, pos_y + size/2, pos_z + size/2], # 6: back top right
+                [pos_x - size/2, pos_y + size/2, pos_z + size/2]  # 7: back top left
+            ]
+            indices = [
+                0, 1, 2, 0, 2, 3,  # Front
+                4, 7, 6, 4, 6, 5,  # Back
+                0, 4, 5, 0, 5, 1,  # Bottom
+                2, 6, 7, 2, 7, 3,  # Top
+                0, 3, 7, 0, 7, 4,  # Left
+                1, 5, 6, 1, 6, 2   # Right
+            ]
+            
+            return {
+                'vertices': [v for vertex in vertices for v in vertex],
+                'indices': indices,
+                'color': color,
+                'name': component.Name or f'{comp_type}_{index}',
+                'id': component.GlobalId,
+                'metadata': {'type': comp_type}
+            }
 
     def _create_placement(self, location=(0, 0, 0)):
         """Create 3D placement"""
         # Convert location to list of floats
         location_list = [float(x) for x in location]
         location_point = self.ifc.create_entity('IfcCartesianPoint', Coordinates=location_list)
-        axis = self.ifc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0])
+        # For bolt oriented along Z-axis from top to bottom, the axis should point in negative Z direction
+        axis = self.ifc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, -1.0])
         ref_dir = self.ifc.create_entity('IfcDirection', DirectionRatios=[1.0, 0.0, 0.0])
 
         return self.ifc.create_entity('IfcAxis2Placement3D',

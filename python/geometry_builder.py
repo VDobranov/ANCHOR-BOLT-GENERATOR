@@ -66,6 +66,8 @@ class GeometryBuilder:
         Create composite curve for stud based on bolt type
         For bent bolts (1.1, 1.2): line + arc + line
         For straight bolts (2.1, 5): single line
+        The bolt is oriented along the Z-axis from top to bottom (from +Z to -Z),
+        with the origin at the bottom of the threaded portion.
         """
         segments = []
 
@@ -73,37 +75,38 @@ class GeometryBuilder:
         has_bend = bolt_type in ['1.1', '1.2']
 
         if has_bend:
-            # Bent stud: lower straight part + arc + upper straight part
+            # Bent stud: upper straight part + arc + lower straight part
             radius = diameter * (1.5 if bolt_type == '1.1' else 2.0)
 
-            # Lower straight line: (0,0,0) to (0,0,radius)
-            line1 = self.create_line([0.0, 0.0, 0.0], [0.0, 0.0, radius])
+            # Upper straight line: from top (0,0,length) to bend point (0,0,length-radius)
+            line1 = self.create_line([0.0, 0.0, float(length)], [0.0, 0.0, float(length - radius)])
             seg1 = self.ifc.create_entity('IfcCompositeCurveSegment',
                                          Transition='Continuous',
                                          SameSense=True,
                                          ParentCurve=line1)
             segments.append(seg1)
 
-            # Circular arc: center at (radius, 0, radius), radius = radius
-            # From (0,0,radius) to (radius,0,0)
-            arc_center = (radius, 0.0, radius)
-            arc = self.create_circle_arc(arc_center, radius, math.pi / 2, 0.0)
+            # Circular arc: center at (radius, 0, length-radius), radius = radius
+            # From (0,0,length-radius) to (radius,0,length-radius-radius)
+            arc_center = (radius, 0.0, float(length - radius))
+            # Arc from +Y direction to -X direction (rotated 90 degrees)
+            arc = self.create_circle_arc(arc_center, radius, math.pi / 2, math.pi)
             seg2 = self.ifc.create_entity('IfcCompositeCurveSegment',
                                          Transition='Continuous',
                                          SameSense=True,
                                          ParentCurve=arc)
             segments.append(seg2)
 
-            # Upper straight line: (radius,0,0) to (radius,0,length-radius)
-            line2 = self.create_line([radius, 0.0, 0.0], [radius, 0.0, length - radius])
+            # Lower straight line: from bend point (radius,0,length-radius-radius) to bottom (radius,0,0)
+            line2 = self.create_line([float(radius), 0.0, float(length - 2 * radius)], [float(radius), 0.0, 0.0])
             seg3 = self.ifc.create_entity('IfcCompositeCurveSegment',
                                          Transition='Continuous',
                                          SameSense=True,
                                          ParentCurve=line2)
             segments.append(seg3)
         else:
-            # Straight stud: simple line from (0,0,0) to (0,0,length)
-            line = self.create_line([0.0, 0.0, 0.0], [0.0, 0.0, length])
+            # Straight stud: simple line from top (0,0,length) to bottom (0,0,0)
+            line = self.create_line([0.0, 0.0, float(length)], [0.0, 0.0, 0.0])
             seg = self.ifc.create_entity('IfcCompositeCurveSegment',
                                         Transition='Continuous',
                                         SameSense=True,
