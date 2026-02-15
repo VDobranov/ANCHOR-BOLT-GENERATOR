@@ -11,7 +11,7 @@ let bridge = null;
 function toggleUI(enabled) {
     const elements = [
         '#boltType', '#diameter', '#length', '#material',
-        '#bottomNut', '#topNut', '#washers',
+        '#bottomNut', '#topNut1', '#topNut2', '#washers',
         '#generateBtn', '#downloadBtn'
     ];
     
@@ -59,6 +59,8 @@ function setupFormListeners() {
 
     // Add event listeners for all form inputs to trigger automatic regeneration
     document.getElementById('boltType').addEventListener('change', () => {
+        // Update availability of bottom nuts and washers based on bolt type
+        updateBottomComponentsAvailability();
         // Debounce to prevent too frequent updates
         debounce(generateBolt, 300)();
     });
@@ -79,7 +81,11 @@ function setupFormListeners() {
         debounce(generateBolt, 300)();
     });
     
-    document.getElementById('topNut').addEventListener('change', () => {
+    document.getElementById('topNut1').addEventListener('change', () => {
+        debounce(generateBolt, 300)();
+    });
+    
+    document.getElementById('topNut2').addEventListener('change', () => {
         debounce(generateBolt, 300)();
     });
     
@@ -177,6 +183,29 @@ function updateLengthOptions() {
         option.disabled = true;
         lengthSelect.appendChild(option);
     }
+    
+    // Update availability of bottom nuts and washers based on bolt type
+    updateBottomComponentsAvailability();
+}
+
+function updateBottomComponentsAvailability() {
+    const boltType = document.getElementById('boltType').value;
+    const bottomNutCheckbox = document.getElementById('bottomNut');
+    const washersCheckbox = document.getElementById('washers');
+    
+    // Bottom nuts are only available for bolt type 2.x
+    const isBoltType2 = boltType.startsWith('2.');
+    
+    bottomNutCheckbox.disabled = !isBoltType2;
+    
+    // Washers are available for all bolt types, but bottom washers only for type 2.x
+    // So we keep the checkbox enabled for all types
+    washersCheckbox.disabled = false;
+    
+    // If the bolt type is not 2.x and bottom nut checkbox was checked, uncheck it
+    if (!isBoltType2) {
+        bottomNutCheckbox.checked = false;
+    }
 }
 
 async function generateBolt() {
@@ -222,19 +251,27 @@ async function generateBolt() {
     } finally {
         // Re-enable UI after generation is complete
         toggleUI(true);
+        // Ensure bottom components availability is correctly set after generation
+        updateBottomComponentsAvailability();
     }
 }
 
 function getFormParams() {
+    const boltType = document.getElementById('boltType').value;
+    
+    // Bottom nuts are only available for bolt type 2.x
+    const isBoltType2 = boltType.startsWith('2.');
+    
     return {
         bolt_type: document.getElementById('boltType').value,
         execution: parseInt(document.getElementById('execution').value || '1'),
         diameter: parseInt(document.getElementById('diameter').value || '0'),
         length: parseInt(document.getElementById('length').value || '0'),
         material: document.getElementById('material').value,
-        has_bottom_nut: document.getElementById('bottomNut').checked,
-        has_top_nut: document.getElementById('topNut').checked,
-        has_washers: document.getElementById('washers').checked
+        has_bottom_nut: isBoltType2 ? document.getElementById('bottomNut').checked : false,
+        has_top_nut1: document.getElementById('topNut1').checked,
+        has_top_nut2: document.getElementById('topNut2').checked,
+        has_washers: document.getElementById('washers').checked  // Washers are available for all bolt types
     };
 }
 
@@ -322,9 +359,10 @@ async function generateDefaultBolt() {
         diameter: 20,
         length: 800,
         material: '09Г2С',
-        has_bottom_nut: true,
-        has_top_nut: true,
-        has_washers: true
+        has_bottom_nut: false, // Bottom nuts are not available for type 1.x
+        has_top_nut1: true,
+        has_top_nut2: true,
+        has_washers: true // Washers are available for all bolt types
     };
 
     // Update form fields with default values
@@ -332,7 +370,8 @@ async function generateDefaultBolt() {
     document.getElementById('diameter').value = defaultParams.diameter;
     document.getElementById('material').value = defaultParams.material;
     document.getElementById('bottomNut').checked = defaultParams.has_bottom_nut;
-    document.getElementById('topNut').checked = defaultParams.has_top_nut;
+    document.getElementById('topNut1').checked = defaultParams.has_top_nut1;
+    document.getElementById('topNut2').checked = defaultParams.has_top_nut2;
     document.getElementById('washers').checked = defaultParams.has_washers;
 
     // Update execution options based on bolt type

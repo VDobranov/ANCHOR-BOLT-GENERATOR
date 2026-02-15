@@ -17,7 +17,7 @@ class InstanceFactory:
         self.instances = []
 
     def create_bolt_assembly(self, bolt_type, execution, diameter, length, material,
-                            has_bottom_nut=False, has_top_nut=False, has_washers=False):
+                            has_bottom_nut=False, has_top_nut1=False, has_top_nut2=False, has_washers=False):
         """
         Create complete anchor bolt assembly with all components
 
@@ -72,8 +72,8 @@ class InstanceFactory:
         washer_thickness = spec.get('washer_thickness', 3)
         nut_height = spec.get('nut_height', 10)
 
-        # Stud instance - positioned from top (length) to bottom (0)
-        stud_placement = self._create_placement((0, 0, 0))  # Origin at bottom of threaded portion
+        # Stud instance - positioned from bottom (length) to top (0), so top is closer to origin
+        stud_placement = self._create_placement((0, 0, 0))  # Origin at top of threaded portion
         stud = self.ifc.create_entity('IfcMechanicalFastener',
                                      GlobalId=self._generate_guid(),
                                      Name=f'Stud_M{diameter}x{length}',
@@ -90,47 +90,10 @@ class InstanceFactory:
 
         component_instances = [stud]
 
-        # Bottom washer (optional) - placed at the bottom (z=0)
+        # Top washer (optional) - placed at the top (closer to origin), available for all bolt types
+        washer_top = None
         if has_washers:
-            washer_bottom_placement = self._create_placement((0, 0, -washer_thickness/2))
-            washer_bottom = self.ifc.create_entity('IfcMechanicalFastener',
-                                                  GlobalId=self._generate_guid(),
-                                                  Name=f'Washer_Bottom_M{diameter}',
-                                                  ObjectType='WASHER',
-                                                  ObjectPlacement=washer_bottom_placement)
-
-            self.ifc.create_entity('IfcRelDefinesByType',
-                                  GlobalId=self._generate_guid(),
-                                  RelatingType=washer_type,
-                                  RelatedObjects=[washer_bottom])
-
-            # Add direct representation to the washer instance for ifcopenshell.geom compatibility
-            self._add_direct_representation(washer_bottom, washer_type)
-
-            component_instances.append(washer_bottom)
-
-        # Bottom nut (optional) - placed below the washer
-        if has_bottom_nut:
-            nut_bottom_placement = self._create_placement((0, 0, -(washer_thickness + nut_height)/2))
-            nut_bottom = self.ifc.create_entity('IfcMechanicalFastener',
-                                               GlobalId=self._generate_guid(),
-                                               Name=f'Nut_Bottom_M{diameter}',
-                                               ObjectType='NUT',
-                                               ObjectPlacement=nut_bottom_placement)
-
-            self.ifc.create_entity('IfcRelDefinesByType',
-                                  GlobalId=self._generate_guid(),
-                                  RelatingType=nut_type,
-                                  RelatedObjects=[nut_bottom])
-
-            # Add direct representation to the nut instance for ifcopenshell.geom compatibility
-            self._add_direct_representation(nut_bottom, nut_type)
-
-            component_instances.append(nut_bottom)
-
-        # Top washer (optional) - placed at the top of the threaded portion
-        if has_washers:
-            washer_top_placement = self._create_placement((0, 0, length - washer_thickness/2))
+            washer_top_placement = self._create_placement((0, 0, washer_thickness/2))  # Closer to origin
             washer_top = self.ifc.create_entity('IfcMechanicalFastener',
                                                GlobalId=self._generate_guid(),
                                                Name=f'Washer_Top_M{diameter}',
@@ -147,24 +110,97 @@ class InstanceFactory:
 
             component_instances.append(washer_top)
 
-        # Top nut (optional) - placed above the washer
-        if has_top_nut:
-            nut_top_placement = self._create_placement((0, 0, length + (washer_thickness + nut_height)/2))
-            nut_top = self.ifc.create_entity('IfcMechanicalFastener',
+        # Top nut 1 (optional) - placed at the top (closer to origin), available for all bolt types
+        nut_top1 = None
+        if has_top_nut1:
+            if has_washers and washer_top:
+                # Place nut above washer (closer to origin)
+                nut_top1_placement = self._create_placement((0, 0, washer_thickness/2 + nut_height/2))
+            else:
+                # Place nut at the top (closer to origin)
+                nut_top1_placement = self._create_placement((0, 0, nut_height/2))
+                
+            nut_top1 = self.ifc.create_entity('IfcMechanicalFastener',
                                             GlobalId=self._generate_guid(),
-                                            Name=f'Nut_Top_M{diameter}',
+                                            Name=f'Nut_Top1_M{diameter}',
                                             ObjectType='NUT',
-                                            ObjectPlacement=nut_top_placement)
+                                            ObjectPlacement=nut_top1_placement)
 
             self.ifc.create_entity('IfcRelDefinesByType',
                                   GlobalId=self._generate_guid(),
                                   RelatingType=nut_type,
-                                  RelatedObjects=[nut_top])
+                                  RelatedObjects=[nut_top1])
 
             # Add direct representation to the nut instance for ifcopenshell.geom compatibility
-            self._add_direct_representation(nut_top, nut_type)
+            self._add_direct_representation(nut_top1, nut_type)
 
-            component_instances.append(nut_top)
+            component_instances.append(nut_top1)
+
+        # Top nut 2 (optional) - placed above the first nut (even closer to origin), available for all bolt types
+        if has_top_nut2:
+            if nut_top1:
+                # Place nut2 above nut1 (closer to origin)
+                nut_top2_placement = self._create_placement((0, 0, washer_thickness + nut_height + nut_height/2))
+            elif has_washers and washer_top:
+                # Place nut2 above washer (when no nut1 but washer exists)
+                nut_top2_placement = self._create_placement((0, 0, washer_thickness/2 + nut_height + nut_height/2))
+            else:
+                # Place nut2 at the top plus one nut height
+                nut_top2_placement = self._create_placement((0, 0, nut_height + nut_height/2))
+                
+            nut_top2 = self.ifc.create_entity('IfcMechanicalFastener',
+                                            GlobalId=self._generate_guid(),
+                                            Name=f'Nut_Top2_M{diameter}',
+                                            ObjectType='NUT',
+                                            ObjectPlacement=nut_top2_placement)
+
+            self.ifc.create_entity('IfcRelDefinesByType',
+                                  GlobalId=self._generate_guid(),
+                                  RelatingType=nut_type,
+                                  RelatedObjects=[nut_top2])
+
+            # Add direct representation to the nut instance for ifcopenshell.geom compatibility
+            self._add_direct_representation(nut_top2, nut_type)
+
+            component_instances.append(nut_top2)
+
+        # Bottom washer (optional) - placed at the bottom (farther from origin), only for bolt type 2.x
+        if has_washers and bolt_type.startswith('2.'):
+            washer_bottom_placement = self._create_placement((0, 0, length - washer_thickness/2))  # At the bottom (farther from origin)
+            washer_bottom = self.ifc.create_entity('IfcMechanicalFastener',
+                                                  GlobalId=self._generate_guid(),
+                                                  Name=f'Washer_Bottom_M{diameter}',
+                                                  ObjectType='WASHER',
+                                                  ObjectPlacement=washer_bottom_placement)
+
+            self.ifc.create_entity('IfcRelDefinesByType',
+                                  GlobalId=self._generate_guid(),
+                                  RelatingType=washer_type,
+                                  RelatedObjects=[washer_bottom])
+
+            # Add direct representation to the washer instance for ifcopenshell.geom compatibility
+            self._add_direct_representation(washer_bottom, washer_type)
+
+            component_instances.append(washer_bottom)
+
+        # Bottom nut (optional) - placed below the washer, only for bolt type 2.x
+        if has_bottom_nut and bolt_type.startswith('2.'):
+            nut_bottom_placement = self._create_placement((0, 0, length + washer_thickness/2 + nut_height/2))  # Below washer
+            nut_bottom = self.ifc.create_entity('IfcMechanicalFastener',
+                                               GlobalId=self._generate_guid(),
+                                               Name=f'Nut_Bottom_M{diameter}',
+                                               ObjectType='NUT',
+                                               ObjectPlacement=nut_bottom_placement)
+
+            self.ifc.create_entity('IfcRelDefinesByType',
+                                  GlobalId=self._generate_guid(),
+                                  RelatingType=nut_type,
+                                  RelatedObjects=[nut_bottom])
+
+            # Add direct representation to the nut instance for ifcopenshell.geom compatibility
+            self._add_direct_representation(nut_bottom, nut_type)
+
+            component_instances.append(nut_bottom)
 
         # Create aggregation relationship (assembly contains components)
         if storey:
@@ -188,7 +224,7 @@ class InstanceFactory:
         # Generate mesh data for 3D visualization using ifcopenshell.geom
         mesh_data = self._generate_mesh_data_with_geom(
             component_instances, bolt_type, diameter, length, material,
-            has_bottom_nut, has_top_nut, has_washers
+            has_bottom_nut, has_top_nut1, has_top_nut2, has_washers
         )
 
         self.instances.append({
@@ -280,7 +316,7 @@ class InstanceFactory:
                                                                                Location=self.ifc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0])))
 
     def _generate_mesh_data_with_geom(self, components, bolt_type, diameter, length, material,
-                                     has_bottom_nut, has_top_nut, has_washers):
+                                     has_bottom_nut, has_top_nut1, has_top_nut2, has_washers):
         """Generate mesh data with fallback to manual generation (optimized for Pyodide)"""
         meshes = []
         
@@ -326,11 +362,11 @@ class InstanceFactory:
             else:
                 pos_x, pos_y, pos_z = 0.0, 0.0, 0.0
 
-            # Top and bottom centers
-            vertices.append([pos_x, pos_y, pos_z])  # 0: bottom center
-            vertices.append([pos_x, pos_y, pos_z + length])  # 1: top center
+            # Top and bottom centers (with corrected orientation: top is closer to origin)
+            vertices.append([pos_x, pos_y, pos_z])  # 0: top center (closer to origin)
+            vertices.append([pos_x, pos_y, pos_z + length])  # 1: bottom center (farther from origin)
 
-            # Bottom circle
+            # Top circle (closer to origin)
             for i in range(segments):
                 angle = 2 * math.pi * i / segments
                 x = pos_x + (diameter / 2) * math.cos(angle)
@@ -338,7 +374,7 @@ class InstanceFactory:
                 z = pos_z
                 vertices.append([x, y, z])
 
-            # Top circle
+            # Bottom circle (farther from origin)
             for i in range(segments):
                 angle = 2 * math.pi * i / segments
                 x = pos_x + (diameter / 2) * math.cos(angle)
@@ -346,12 +382,12 @@ class InstanceFactory:
                 z = pos_z + length
                 vertices.append([x, y, z])
 
-            # Bottom triangles
+            # Top triangles
             for i in range(segments):
                 next_i = (i + 1) % segments
                 indices.extend([0, 2 + i, 2 + next_i])
 
-            # Top triangles
+            # Bottom triangles
             for i in range(segments):
                 next_i = (i + 1) % segments
                 indices.extend([1, 2 + segments + next_i, 2 + segments + i])
@@ -562,8 +598,9 @@ class InstanceFactory:
         # Convert location to list of floats
         location_list = [float(x) for x in location]
         location_point = self.ifc.create_entity('IfcCartesianPoint', Coordinates=location_list)
-        # For bolt oriented along Z-axis from top to bottom, the axis should point in negative Z direction
-        axis = self.ifc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, -1.0])
+        # For bolt oriented along Z-axis from bottom to top (so top is closer to origin), 
+        # the axis should point in positive Z direction
+        axis = self.ifc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0])
         ref_dir = self.ifc.create_entity('IfcDirection', DirectionRatios=[1.0, 0.0, 0.0])
 
         return self.ifc.create_entity('IfcAxis2Placement3D',
@@ -606,7 +643,8 @@ def generate_bolt_assembly(params):
         length=params.get('length'),
         material=params.get('material'),
         has_bottom_nut=params.get('has_bottom_nut', False),
-        has_top_nut=params.get('has_top_nut', False),
+        has_top_nut1=params.get('has_top_nut1', False),
+        has_top_nut2=params.get('has_top_nut2', False),
         has_washers=params.get('has_washers', False)
     )
 
