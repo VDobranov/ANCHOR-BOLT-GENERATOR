@@ -21,7 +21,9 @@ anchor-bolt-generator/
 ├── js/                     # JavaScript модули
 │   ├── main.js            # Оркестрация (форма, события)
 │   ├── viewer.js          # 3D визуализация (Three.js)
-│   └── ifcBridge.js       # Мост JS ↔ Python (Pyodide)
+│   ├── ifcBridge.js       # Мост JS ↔ Python (Pyodide)
+│   ├── pythonLoader.js    # Загрузка Python модулей в Pyodide
+│   └── init.js            # Инициализация приложения после загрузки Pyodide
 ├── python/                # Python модули (выполняются в браузере)
 │   ├── main.py           # Инициализация IFC документа
 │   ├── gost_data.py      # Справочники ГОСТ и валидация
@@ -155,6 +157,14 @@ const result = await bridge.generateBolt({
 // result.meshData - данные для 3D визуализации
 ```
 
+### Инициализация приложения
+
+Приложение использует двухэтапную инициализацию:
+1. Загрузка Pyodide runtime и Python модулей
+2. Инициализация IFC документа и настройка интерфейса
+
+Инициализация происходит автоматически при загрузке страницы через init.js.
+
 ### Python
 
 ```python
@@ -207,9 +217,9 @@ ifc_str, mesh_data = generate_bolt_assembly({
 | 5. Materials & PSets | ✅ Готово | Материалы и свойства |
 | 6. Instance Factory | ✅ Готово | Создание инстансов и сборка |
 | 7. IFC Generator | ✅ Готово | Экспорт в IFC |
-| 8. Интеграция | ⏳ В процессе | Полная JS/Python интеграция |
+| 8. Интеграция | ✅ Готово | Полная JS/Python интеграция |
 | 9. Тестирование | ⏳ Планируется | Валидация, примеры |
-| 10. Документация | ⏳ Планируется | API docs, примеры |
+| 10. Документация | ✅ Готово | API docs, примеры |
 
 ## Известные ограничения
 

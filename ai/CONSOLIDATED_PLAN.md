@@ -49,10 +49,12 @@ anchor-bolt-generator/
 ├── index.html                  # Главная страница
 ├── style.css                   # Основные стили
 │
-├── js/                         # JavaScript слой (3 модуля)
+├── js/                         # JavaScript слой (5 модулей)
 │   ├── main.js                 # Оркестрация: форма, события, Pyodide
 │   ├── viewer.js               # 3D визуализация (Three.js)
-│   └── ifcBridge.js            # Communication layer (JS ↔ Python)
+│   ├── ifcBridge.js            # Communication layer (JS ↔ Python)
+│   ├── pythonLoader.js         # Загрузка Python модулей в Pyodide
+│   └── init.js                 # Инициализация приложения после загрузки Pyodide
 │
 ├── python/                     # Python слой (9 модулей)
 │   ├── main.py                 # Точка входа Pyodide
@@ -418,20 +420,20 @@ def validate_parameters(bolt_type, execution, diameter, length, material):
 
 ### **12. ЭТАПЫ РАЗРАБОТКИ (проверенный и консолидированный план)**
 
-| # | Этап | Компоненты | Зависимости | Примерно (дни) |
-|---|------|-----------|------------|--------|
-| 1 | **Инфраструктура** | index.html, style.css, main.js (основа), Pyodide инициализация | — | 2 |
-| 2 | **GOST Справочники** | gost_data.py с полными таблицами | Этап 1 | 2 |
-| 3 | **Geometry Builder** | geometry_builder.py (кривые, профили, выдавливание) | Этап 1 | 3 |
-| 4 | **Type Factory** | type_factory.py с кэшированием, create_swept_disk_solid, profiles | Этап 2, 3 | 4 |
-| 5 | **Materials & PSets** | material_manager.py, pset_manager.py | Этап 4 | 2 |
-| 6 | **Instance Factory** | instance_factory.py, расчёт позиций, отношения | Этап 4, 5 | 3 |
-| 7 | **IFC Generator** | ifc_generator.py, экспорт в строку/файл | Этап 6 | 2 |
-| 8 | **IFC Bridge & Form** | ifcBridge.js, form_handler (HTML форма), валидация UI | Этап 1, 7 | 2 |
-| 9 | **Three.js Viewer** | viewer.js (3D сцена, меши, выделение, Raycaster) | Этап 1 | 3 |
-| 10 | **Интеграция & UI** | Полная форма, panel свойств, Download кнопка | Этап 8, 9 | 2 |
-| 11 | **Тестирование & Документация** | Валидация IFC, проверка геометрии, README | Все | 2 |
-| **ИТОГО** | | | | **27 дней** |
+| # | Этап | Компоненты | Зависимости | Примерно (дни) | Статус |
+|---|------|-----------|------------|--------|--------|
+| 1 | **Инфраструктура** | index.html, style.css, main.js (основа), Pyodide инициализация | — | 2 | ✅ |
+| 2 | **GOST Справочники** | gost_data.py с полными таблицами | Этап 1 | 2 | ✅ |
+| 3 | **Geometry Builder** | geometry_builder.py (кривые, профили, выдавливание) | Этап 1 | 3 | ✅ |
+| 4 | **Type Factory** | type_factory.py с кэшированием, create_swept_disk_solid, profiles | Этап 2, 3 | 4 | ✅ |
+| 5 | **Materials & PSets** | material_manager.py, pset_manager.py | Этап 4 | 2 | ✅ |
+| 6 | **Instance Factory** | instance_factory.py, расчёт позиций, отношения | Этап 4, 5 | 3 | ✅ |
+| 7 | **IFC Generator** | ifc_generator.py, экспорт в строку/файл | Этап 6 | 2 | ✅ |
+| 8 | **IFC Bridge & Form** | ifcBridge.js, form_handler (HTML форма), валидация UI | Этап 1, 7 | 2 | ✅ |
+| 9 | **Three.js Viewer** | viewer.js (3D сцена, меши, выделение, Raycaster) | Этап 1 | 3 | ✅ |
+| 10 | **Интеграция & UI** | Полная форма, panel свойств, Download кнопка | Этап 8, 9 | 2 | ✅ |
+| 11 | **Тестирование & Документация** | Валидация IFC, проверка геометрии, README | Все | 2 | ⏳ |
+| **ИТОГО** | | | | **27 дней** | |
 
 ---
 
@@ -464,6 +466,12 @@ def validate_parameters(bolt_type, execution, diameter, length, material):
 - Все диаметры и материалы
 - Тесты и документация
 
+**Текущий статус:**
+- ✅ MVP реализован
+- ✅ Version 1.0 реализована
+- ✅ Polish этап частично реализован
+- ⏳ Остается тестирование и документация
+
 ---
 
 ### **15. ИНСТРУМЕНТЫ И ВЕРСИИ (финальные)**
@@ -476,3 +484,16 @@ def validate_parameters(bolt_type, execution, diameter, length, material):
 | Three.js | r150+ | 3D визуализация |
 | IFC Standard | IFC4 ADD2 TC1 | Russian standard for BIM |
 | HTML/CSS/JS | ванильные (no frameworks) | Frontend |
+
+---
+
+### **16. ТЕКУЩИЙ СТАТУС ПРОЕКТА**
+
+На данный момент проект находится в продвинутой стадии готовности:
+- ✅ Все основные компоненты реализованы
+- ✅ Функциональность генерации болтов работает
+- ✅ 3D визуализация реализована
+- ✅ Экспорт в IFC4 работает
+- ⏳ Остается провести дополнительное тестирование
+- ⏳ Оптимизация производительности
+- ⏳ Дополнительная документация
