@@ -1,33 +1,9 @@
 /**
- * main.js - Application orchestration
+ * main.js - Application functionality (initialization moved to init.js)
  */
 
 let viewer = null;
 let bridge = null;
-
-// Initialize app on load
-document.addEventListener('DOMContentLoaded', async () => {
-    showStatus('Инициализация приложения...', 'info');
-
-    try {
-        // Initialize 3D viewer
-        const canvas = document.getElementById('canvas3D');
-        viewer = new IFCViewer(canvas);
-        console.log('✓ 3D Viewer initialized');
-
-        // Initialize Python bridge and Pyodide
-        bridge = await initializeIFCBridge();
-        console.log('✓ IFC Bridge initialized');
-
-        showStatus('Приложение готово к работе', 'success', 3000);
-
-        // Setup form
-        setupFormListeners();
-    } catch (error) {
-        showStatus(`Ошибка инициализации: ${error.message}`, 'error', 0);
-        console.error(error);
-    }
-});
 
 function setupFormListeners() {
     const form = document.getElementById('boltForm');
