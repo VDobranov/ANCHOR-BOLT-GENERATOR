@@ -4,8 +4,10 @@ instance_factory.py - Создание инстансов болтов и упр
 
 from type_factory import TypeFactory
 from gost_data import validate_parameters, get_bolt_spec
-import ifcopenshell
-import ifcopenshell.geom as geom
+
+# ifcopenshell imported lazily after micropip installation
+# import ifcopenshell
+# import ifcopenshell.geom as geom
 
 
 class InstanceFactory:
