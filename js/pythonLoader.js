@@ -75,18 +75,10 @@ async function loadPythonModules(pyodide) {
             FS.writeFile('/wheels/' + wheelFilename, new Uint8Array(wheelData));
             console.log('  ✓ Wheel file downloaded and written to FS');
 
-            // Unpack wheel file manually using zipfile
+            // Install using micropip from the local filesystem path
             await pyodide.runPythonAsync(`
-                import zipfile
-                import os
-                
-                wheel_path = '/wheels/${wheelFilename}'
-                
-                # Extract wheel to site-packages
-                with zipfile.ZipFile(wheel_path, 'r') as zf:
-                    zf.extractall('/lib/python3.13/site-packages/')
-                
-                print('✓ ifcopenshell extracted to site-packages')
+                import micropip
+                await micropip.install('/wheels/${wheelFilename}', deps=False)
             `);
 
             console.log('  ✓ ifcopenshell installed');
