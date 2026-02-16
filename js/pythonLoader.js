@@ -58,6 +58,11 @@ async function loadPythonModules(pyodide) {
         }
         console.log('  Installing ifcopenshell from Pyodide CDN...');
         
+        // Calculate the base URL for the application (handles GitHub Pages subdirectory deployment)
+        const baseUrl = window.location.origin + window.location.pathname.replace(/\/$/, '');
+        const wheelFilename = 'ifcopenshell-0.8.4+158fe92-cp313-cp313-pyodide_2025_0_wasm32.whl';
+        const wheelFullUrl = baseUrl + '/wheels/' + wheelFilename;
+        
         // Use the official Pyodide package index for ifcopenshell
         // This is the most reliable source for Pyodide-compatible wheels
         try {
@@ -75,11 +80,8 @@ async function loadPythonModules(pyodide) {
             
             // Fallback: Try to load from local wheels directory (for development)
             try {
-                const wheelFilename = 'ifcopenshell-0.8.4+158fe92-cp313-cp313-pyodide_2025_0_wasm32.whl';
-                const wheelUrl = 'wheels/' + wheelFilename;
-                
-                console.log('  Trying local wheel file...');
-                const response = await fetch(wheelUrl);
+                console.log('  Trying local wheel file from:', wheelFullUrl);
+                const response = await fetch(wheelFullUrl);
                 if (!response.ok) {
                     throw new Error(`Failed to fetch local wheel: ${response.status}`);
                 }
