@@ -40,29 +40,6 @@ async function loadPythonModules(pyodide) {
             if (e.code !== 'EEXIST') throw e;
         }
 
-        // Load ifcopenshell wheel file
-        if (typeof showStatus !== 'undefined') {
-            showStatus('Загрузка ifcopenshell wheel файла...', 'info');
-        }
-        console.log('  Loading ifcopenshell wheel...');
-        const wheelFilename = 'ifcopenshell-0.8.4+158fe92-cp313-cp313-pyodide_2025_0_wasm32.whl';
-        const wheelUrl = 'wheels/' + wheelFilename;
-        try {
-            const response = await fetch(wheelUrl);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch wheel: ${response.status}`);
-            }
-            const wheelData = await response.arrayBuffer();
-            FS.writeFile('/wheels/' + wheelFilename, new Uint8Array(wheelData));
-            console.log('  ✓ ifcopenshell wheel loaded');
-            if (typeof showStatus !== 'undefined') {
-                showStatus('ifcopenshell wheel файл загружен', 'info');
-            }
-        } catch (error) {
-            console.error('Failed to load ifcopenshell wheel:', error);
-            throw error;
-        }
-
         // Load micropip package first
         if (typeof showStatus !== 'undefined') {
             showStatus('Загрузка micropip пакета...', 'info');
@@ -74,15 +51,54 @@ async function loadPythonModules(pyodide) {
             showStatus('micropip пакет загружен', 'info');
         }
 
-        // Install ifcopenshell using micropip
+        // Install ifcopenshell using micropip from CDN
+        // Using pre-built wheel for Pyodide from the official Pyodide repository
         if (typeof showStatus !== 'undefined') {
             showStatus('Установка ifcopenshell...', 'info');
         }
-        console.log('  Installing ifcopenshell...');
-        await pyodide.runPythonAsync(`
-            import micropip
-            await micropip.install('file:///wheels/${wheelFilename}')
-        `);
+        console.log('  Installing ifcopenshell from Pyodide CDN...');
+        
+        // Use the official Pyodide package index for ifcopenshell
+        // This is the most reliable source for Pyodide-compatible wheels
+        try {
+            await pyodide.runPythonAsync(`
+                import micropip
+                # Install from Pyodide's official package repository
+                await micropip.install('ifcopenshell', deps=False)
+            `);
+            console.log('  ✓ ifcopenshell installed from Pyodide repository');
+            if (typeof showStatus !== 'undefined') {
+                showStatus('ifcopenshell установлен', 'info');
+            }
+        } catch (error) {
+            console.warn('  Failed to install from Pyodide repository, trying alternative sources...');
+            
+            // Fallback: Try to load from local wheels directory (for development)
+            try {
+                const wheelFilename = 'ifcopenshell-0.8.4+158fe92-cp313-cp313-pyodide_2025_0_wasm32.whl';
+                const wheelUrl = 'wheels/' + wheelFilename;
+                
+                console.log('  Trying local wheel file...');
+                const response = await fetch(wheelUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch local wheel: ${response.status}`);
+                }
+                const wheelData = await response.arrayBuffer();
+                FS.writeFile('/wheels/' + wheelFilename, new Uint8Array(wheelData));
+                
+                await pyodide.runPythonAsync(`
+                    import micropip
+                    await micropip.install('file:///wheels/${wheelFilename}')
+                `);
+                console.log('  ✓ ifcopenshell installed from local wheel');
+                if (typeof showStatus !== 'undefined') {
+                    showStatus('ifcopenshell установлен (локальный файл)', 'info');
+                }
+            } catch (localError) {
+                console.error('  Failed to install from local wheel:', localError);
+                throw new Error(`Не удалось установить ifcopenshell. Убедитесь, что файл wheels/ifcopenshell-0.8.4+158fe92-cp313-cp313-pyodide_2025_0_wasm32.whl существует. ` + localError.message);
+            }
+        }
         console.log('  ✓ ifcopenshell installed');
         if (typeof showStatus !== 'undefined') {
             showStatus('ifcopenshell установлен', 'info');
