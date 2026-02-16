@@ -3,19 +3,24 @@ main.py - Entry point for Pyodide
 Initializes the base IFC document and provides the main interface
 """
 
-try:
-    import ifcopenshell
-except ImportError:
-    # Fallback if ifcopenshell not available in Pyodide
-    ifcopenshell = None
-    print("Warning: ifcopenshell not available, will use stub")
-
 # Global IFC document
 ifc_doc = None
 
 
+def _get_ifcopenshell():
+    """Lazy import of ifcopenshell to ensure it's available after micropip install"""
+    try:
+        import ifcopenshell
+        return ifcopenshell
+    except ImportError:
+        return None
+
+
 def generate_guid():
     """Generate IFC GUID using ifcopenshell"""
+    ifcopenshell = _get_ifcopenshell()
+    if ifcopenshell is None:
+        raise RuntimeError("ifcopenshell not available")
     return ifcopenshell.guid.new()
 
 
@@ -23,6 +28,7 @@ def initialize_base_document():
     """Initialize empty IFC4 ADD2 TC1 document with Project/Site/Building/StoreyStructure"""
     global ifc_doc
 
+    ifcopenshell = _get_ifcopenshell()
     if ifcopenshell is None:
         raise RuntimeError("ifcopenshell not available in this environment")
 
