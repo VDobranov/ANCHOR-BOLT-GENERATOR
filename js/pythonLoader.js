@@ -52,61 +52,42 @@ async function loadPythonModules(pyodide) {
         }
 
         // Install ifcopenshell using direct wheel installation
-        // This approach works around micropip's URL parsing issues with GitHub Pages subdirectories
         if (typeof showStatus !== 'undefined') {
             showStatus('Установка ifcopenshell...', 'info');
         }
         console.log('  Installing ifcopenshell...');
 
-        // Calculate the base URL for the application (handles GitHub Pages subdirectory deployment)
-        const baseUrl = window.location.origin + window.location.pathname.replace(/\/$/, '');
+        // Use raw GitHub URL for reliable access
         const wheelFilename = 'ifcopenshell-0.8.4+158fe92-cp313-cp313-pyodide_2025_0_wasm32.whl';
-        const wheelFullUrl = baseUrl + '/wheels/' + wheelFilename;
+        const wheelUrl = 'https://raw.githubusercontent.com/vdobranov/anchor-bolt-generator/main/wheels/' + wheelFilename;
 
-        // First, try to install from Pyodide's official repository
         try {
+            console.log('  Downloading wheel from:', wheelUrl);
+
+            // Fetch the wheel file directly from GitHub raw content
+            const response = await fetch(wheelUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch wheel: ${response.status} ${response.statusText}`);
+            }
+            const wheelData = await response.arrayBuffer();
+
+            // Write to Pyodide's virtual filesystem
+            FS.writeFile('/wheels/' + wheelFilename, new Uint8Array(wheelData));
+            console.log('  ✓ Wheel file downloaded and written to FS');
+
+            // Install using micropip from the local filesystem path
             await pyodide.runPythonAsync(`
                 import micropip
-                await micropip.install('ifcopenshell', deps=False)
+                await micropip.install('/wheels/${wheelFilename}', deps=False)
             `);
-            console.log('  ✓ ifcopenshell installed from Pyodide repository');
+
+            console.log('  ✓ ifcopenshell installed');
             if (typeof showStatus !== 'undefined') {
-                showStatus('ifcopenshell установлен (Pyodide CDN)', 'info');
+                showStatus('ifcopenshell установлен', 'info');
             }
         } catch (error) {
-            console.warn('  Failed to install from Pyodide repository, using local wheel...');
-
-            // Fallback: Download wheel file directly and install from virtual filesystem
-            try {
-                console.log('  Downloading wheel from:', wheelFullUrl);
-
-                // Fetch the wheel file directly
-                const response = await fetch(wheelFullUrl);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch wheel: ${response.status} ${response.statusText}`);
-                }
-                const wheelData = await response.arrayBuffer();
-
-                // Write to Pyodide's virtual filesystem
-                FS.writeFile('/wheels/' + wheelFilename, new Uint8Array(wheelData));
-                console.log('  ✓ Wheel file downloaded and written to FS');
-
-                // Install using micropip from the local filesystem path
-                // Use absolute path within Pyodide's filesystem
-                await pyodide.runPythonAsync(`
-                    import micropip
-                    # Install from the wheel file in our virtual filesystem
-                    await micropip.install('/wheels/${wheelFilename}', deps=False)
-                `);
-
-                console.log('  ✓ ifcopenshell installed from local wheel');
-                if (typeof showStatus !== 'undefined') {
-                    showStatus('ifcopenshell установлен (локальный файл)', 'info');
-                }
-            } catch (localError) {
-                console.error('  Failed to install from local wheel:', localError);
-                throw new Error(`Не удалось установить ifcopenshell. Проверьте, что файл существует: ${wheelFullUrl}. ${localError.message}`);
-            }
+            console.error('  Failed to install ifcopenshell:', error);
+            throw new Error(`Не удалось установить ifcopenshell: ${error.message}`);
         }
         console.log('  ✓ ifcopenshell installed');
         if (typeof showStatus !== 'undefined') {
