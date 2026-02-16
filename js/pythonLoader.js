@@ -66,6 +66,13 @@ async function loadPythonModules(pyodide) {
             await pyodide.runPythonAsync(`
                 import micropip
                 print('  Starting micropip installation of ifcopenshell...')
+                
+                # Install typing_extensions first (required dependency)
+                print('  Installing typing_extensions dependency...')
+                await micropip.install('typing_extensions')
+                print('  ✓ typing_extensions installed')
+                
+                # Now install ifcopenshell
                 await micropip.install('${wheelUrl}', deps=False)
                 print('  ✓ micropip installation complete')
                 
