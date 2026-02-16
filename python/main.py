@@ -21,7 +21,7 @@ def _get_ifcopenshell(force_reload=False):
     try:
         import ifcopenshell
         _ifcopenshell_cache = ifcopenshell
-        print(f"✓ ifcopenshell imported successfully (schema versions: {ifcopenshell.schema_versions})")
+        print(f"✓ ifcopenshell imported successfully")
         return ifcopenshell
     except ImportError as e:
         print(f"✗ Failed to import ifcopenshell: {e}")
