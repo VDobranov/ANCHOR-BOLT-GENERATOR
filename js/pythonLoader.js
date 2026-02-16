@@ -51,34 +51,21 @@ async function loadPythonModules(pyodide) {
             showStatus('micropip пакет загружен', 'info');
         }
 
-        // Install ifcopenshell using direct wheel installation
+        // Install ifcopenshell using micropip with direct URL
         if (typeof showStatus !== 'undefined') {
             showStatus('Установка ifcopenshell...', 'info');
         }
         console.log('  Installing ifcopenshell...');
 
-        // Use raw GitHub URL for reliable access
-        const wheelFilename = 'ifcopenshell-0.8.4+158fe92-cp313-cp313-pyodide_2025_0_wasm32.whl';
-        const wheelUrl = 'https://raw.githubusercontent.com/vdobranov/anchor-bolt-generator/main/wheels/' + wheelFilename;
+        // Use raw GitHub URL for direct installation by micropip
+        const wheelUrl = 'https://raw.githubusercontent.com/vdobranov/anchor-bolt-generator/main/wheels/ifcopenshell-0.8.4+158fe92-cp313-cp313-pyodide_2025_0_wasm32.whl';
 
         try {
-            console.log('  Downloading wheel from:', wheelUrl);
+            console.log('  Installing from:', wheelUrl);
 
-            // Fetch the wheel file directly from GitHub raw content
-            const response = await fetch(wheelUrl);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch wheel: ${response.status} ${response.statusText}`);
-            }
-            const wheelData = await response.arrayBuffer();
-
-            // Write to Pyodide's virtual filesystem
-            FS.writeFile('/wheels/' + wheelFilename, new Uint8Array(wheelData));
-            console.log('  ✓ Wheel file downloaded and written to FS');
-
-            // Install using micropip from the local filesystem path
             await pyodide.runPythonAsync(`
                 import micropip
-                await micropip.install('/wheels/${wheelFilename}', deps=False)
+                await micropip.install('${wheelUrl}', deps=False)
             `);
 
             console.log('  ✓ ifcopenshell installed');
