@@ -24,11 +24,33 @@ class IFCBridge {
             if (typeof showStatus !== 'undefined') {
                 showStatus('Импорт и инициализация Python модулей...', 'info');
             }
+            
+            // First, verify ifcopenshell is available before initializing
+            if (typeof showStatus !== 'undefined') {
+                showStatus('Проверка доступности ifcopenshell...', 'info');
+            }
             await this.pyodide.runPythonAsync(`
                 import sys
                 sys.path.insert(0, '/python')
+                
+                # Verify ifcopenshell is available
+                try:
+                    import ifcopenshell
+                    print(f'✓ ifcopenshell available: {ifcopenshell}')
+                except ImportError as e:
+                    print(f'✗ ifcopenshell NOT available: {e}')
+                    raise RuntimeError('ifcopenshell not available after micropip installation')
+                
+                # Import main module
                 import main as ifc_main
+                
+                # Check if ifcopenshell is available via main module
+                if not ifc_main.is_ifcopenshell_available():
+                    raise RuntimeError('ifcopenshell not available in main module')
+                
+                print('✓ ifcopenshell verified, initializing base document...')
                 ifc_main.initialize_base_document()
+                print('✓ Base document initialized successfully')
             `);
 
             this.ifc_main = this.pyodide.globals.get('ifc_main');
@@ -39,6 +61,9 @@ class IFCBridge {
             return true;
         } catch (error) {
             console.error('Failed to initialize Python modules:', error);
+            if (typeof showStatus !== 'undefined') {
+                showStatus(`Ошибка инициализации: ${error.message}`, 'error');
+            }
             throw error;
         }
     }

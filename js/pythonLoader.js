@@ -65,20 +65,26 @@ async function loadPythonModules(pyodide) {
 
             await pyodide.runPythonAsync(`
                 import micropip
+                print('  Starting micropip installation of ifcopenshell...')
                 await micropip.install('${wheelUrl}', deps=False)
+                print('  ✓ micropip installation complete')
+                
+                # Verify installation by attempting import
+                try:
+                    import ifcopenshell
+                    print(f'  ✓ ifcopenshell imported successfully (version: {ifcopenshell.__version__ if hasattr(ifcopenshell, "__version__") else "unknown"})')
+                except ImportError as e:
+                    print(f'  ✗ Failed to import ifcopenshell after installation: {e}')
+                    raise RuntimeError(f'ifcopenshell installed but not importable: {e}')
             `);
 
-            console.log('  ✓ ifcopenshell installed');
+            console.log('  ✓ ifcopenshell installed and verified');
             if (typeof showStatus !== 'undefined') {
-                showStatus('ifcopenshell установлен', 'info');
+                showStatus('ifcopenshell установлен и проверен', 'info');
             }
         } catch (error) {
             console.error('  Failed to install ifcopenshell:', error);
             throw new Error(`Не удалось установить ifcopenshell: ${error.message}`);
-        }
-        console.log('  ✓ ifcopenshell installed');
-        if (typeof showStatus !== 'undefined') {
-            showStatus('ifcopenshell установлен', 'info');
         }
 
         // Load each Python file

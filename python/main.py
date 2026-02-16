@@ -5,22 +5,40 @@ Initializes the base IFC document and provides the main interface
 
 # Global IFC document
 ifc_doc = None
+_ifcopenshell_cache = None
 
 
-def _get_ifcopenshell():
-    """Lazy import of ifcopenshell to ensure it's available after micropip install"""
+def _get_ifcopenshell(force_reload=False):
+    """
+    Lazy import of ifcopenshell to ensure it's available after micropip install.
+    Caches the import to avoid repeated import overhead.
+    """
+    global _ifcopenshell_cache
+    
+    if _ifcopenshell_cache is not None and not force_reload:
+        return _ifcopenshell_cache
+    
     try:
         import ifcopenshell
+        _ifcopenshell_cache = ifcopenshell
+        print(f"✓ ifcopenshell imported successfully (schema versions: {ifcopenshell.schema_versions})")
         return ifcopenshell
-    except ImportError:
+    except ImportError as e:
+        print(f"✗ Failed to import ifcopenshell: {e}")
+        _ifcopenshell_cache = None
         return None
+
+
+def is_ifcopenshell_available():
+    """Check if ifcopenshell is available for use"""
+    return _get_ifcopenshell() is not None
 
 
 def generate_guid():
     """Generate IFC GUID using ifcopenshell"""
     ifcopenshell = _get_ifcopenshell()
     if ifcopenshell is None:
-        raise RuntimeError("ifcopenshell not available")
+        raise RuntimeError("ifcopenshell not available - ensure micropip installation completed")
     return ifcopenshell.guid.new()
 
 
@@ -30,7 +48,16 @@ def initialize_base_document():
 
     ifcopenshell = _get_ifcopenshell()
     if ifcopenshell is None:
-        raise RuntimeError("ifcopenshell not available in this environment")
+        print("✗ CRITICAL: ifcopenshell is not available!")
+        print("  This usually means:")
+        print("  1. micropip.install() has not completed yet")
+        print("  2. The wheel URL is incorrect or inaccessible")
+        print("  3. There was a network error during installation")
+        raise RuntimeError(
+            "ifcopenshell not available. "
+            "Ensure ifcopenshell was installed via micropip before calling this function. "
+            "Check browser console for installation errors."
+        )
 
     try:
         # Create IFC4 file - use IFC4X3 if IFC4 is not supported

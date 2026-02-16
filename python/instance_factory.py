@@ -809,7 +809,10 @@ class InstanceFactory:
 
     def _generate_guid(self):
         """Generate IFC GUID using ifcopenshell"""
-        import ifcopenshell
+        from main import _get_ifcopenshell
+        ifcopenshell = _get_ifcopenshell()
+        if ifcopenshell is None:
+            raise RuntimeError("ifcopenshell not available in instance_factory._generate_guid()")
         return ifcopenshell.guid.new()
 
 
@@ -824,8 +827,16 @@ def generate_bolt_assembly(params):
     Returns:
         tuple: (ifc_string, mesh_data_dict)
     """
-    from main import initialize_base_document
-    
+    from main import initialize_base_document, is_ifcopenshell_available
+
+    # Verify ifcopenshell is available before proceeding
+    if not is_ifcopenshell_available():
+        raise RuntimeError(
+            "ifcopenshell is not available! "
+            "This function should only be called after IFCBridge.initialize() completes. "
+            "Check browser console for ifcopenshell installation errors."
+        )
+
     # Create a new document for this specific bolt
     temp_doc = initialize_base_document()
 

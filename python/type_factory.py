@@ -360,5 +360,8 @@ class TypeFactory:
 
     def _generate_guid(self):
         """Generate IFC GUID using ifcopenshell"""
-        import ifcopenshell
+        from main import _get_ifcopenshell
+        ifcopenshell = _get_ifcopenshell()
+        if ifcopenshell is None:
+            raise RuntimeError("ifcopenshell not available in type_factory._generate_guid()")
         return ifcopenshell.guid.new()
