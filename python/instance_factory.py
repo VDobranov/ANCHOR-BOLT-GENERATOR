@@ -387,17 +387,21 @@ class InstanceFactory:
         indices = []
 
         if has_bend:
-            # Изогнутая шпилька: вертикальная часть + дуга 90°
+            # Изогнутая шпилька: вертикальная часть + дуга 90° + горизонтальный крюк
+            # Вертикальная часть: от z=0 до z=length-bend_radius
+            # Дуга: от (0, length-bend_radius) до (bend_radius, length)
+            # Горизонтальный крюк: от x=bend_radius до x=0 (возврат назад)
+            
             vertical_length = length - bend_radius
-
-            # Вертикальная часть (цилиндр от z=vertical_length до z=length)
+            
+            # 1. Вертикальная часть (цилиндр вдоль оси Z от 0 до vertical_length)
             vert_base = 0
             for i in range(segments):
                 angle = (2 * np.pi * i) / segments
                 x = radius * np.cos(angle)
                 y = radius * np.sin(angle)
+                vertices.extend([x, y, 0])
                 vertices.extend([x, y, vertical_length])
-                vertices.extend([x, y, length])
 
             # Соединяем вертикальную часть
             for i in range(segments):
@@ -405,34 +409,35 @@ class InstanceFactory:
                 indices.extend([vert_base + i * 2, vert_base + next_i * 2, vert_base + i * 2 + 1])
                 indices.extend([vert_base + i * 2 + 1, vert_base + next_i * 2, vert_base + next_i * 2 + 1])
 
-            # Дуга (четверть окружности)
+            # 2. Дуга 90° (от вертикальной к горизонтальной)
             arc_segments = 12
             arc_base = len(vertices) // 3
-            
+
             for i in range(arc_segments + 1):
                 t = i / arc_segments
                 angle = (np.pi / 2) * t  # 0 до 90 градусов
-                
-                # Центр дуги
-                center_x = bend_radius
-                center_z = vertical_length - bend_radius
-                
-                # Позиция на дуге
-                arc_x = center_x + bend_radius * np.sin(angle)  # sin для движения вправо
-                arc_z = center_z + bend_radius * np.cos(angle)  # cos для движения вниз
-                
+
+                # Центр дуги в точке (0, 0, vertical_length)
+                center_x = 0
+                center_z = vertical_length
+
+                # Позиция центра сечения на дуге (движение вверх и вправо)
+                arc_x = center_x + bend_radius * np.sin(angle)  # от 0 до bend_radius
+                arc_z = center_z + bend_radius * (1 - np.cos(angle))  # от vertical_length до length
+
                 # Сечение (круг) перпендикулярно направлению дуги
                 for j in range(segments):
                     theta = (2 * np.pi * j) / segments
-                    # Локальные координаты сечения
-                    local_x = radius * np.cos(theta)
+                    local_r = radius * np.cos(theta)
                     local_y = radius * np.sin(theta)
-                    
-                    # Поворот сечения: вокруг оси Y
-                    x = arc_x + local_x * np.cos(angle)
+
+                    # Поворот сечения перпендикулярно касательной дуги
+                    # Касательная направлена под углом angle к вертикали
+                    tan_angle = angle
+                    x = arc_x + local_r * np.cos(tan_angle)
                     y = local_y
-                    z = arc_z - local_x * np.sin(angle)
-                    
+                    z = arc_z - local_r * np.sin(tan_angle)
+
                     vertices.extend([x, y, z])
 
             # Соединяем дугу
@@ -440,22 +445,44 @@ class InstanceFactory:
                 for j in range(segments):
                     next_i = i + 1
                     next_j = (j + 1) % segments
-                    
+
                     idx = arc_base + i * segments + j
                     idx_next_i = arc_base + next_i * segments + j
                     idx_next_j = arc_base + i * segments + next_j
                     idx_next_both = arc_base + next_i * segments + next_j
-                    
+
                     indices.extend([idx, idx_next_j, idx_next_i])
                     indices.extend([idx_next_j, idx_next_both, idx_next_i])
 
-            # Торцы
-            # Нижний торец вертикальной части (z=vertical_length)
-            bottom_center = len(vertices) // 3
-            vertices.extend([0, 0, vertical_length])
+            # 3. Горизонтальный крюк (цилиндр вдоль оси X от bend_radius до 0)
+            hook_base = len(vertices) // 3
+            for i in range(segments):
+                angle = (2 * np.pi * i) / segments
+                y = radius * np.cos(angle)
+                z = radius * np.sin(angle)
+                vertices.extend([bend_radius, y, length])
+                vertices.extend([0, y, length])
+
+            # Соединяем горизонтальную часть
             for i in range(segments):
                 next_i = (i + 1) % segments
-                indices.extend([bottom_center, vert_base + next_i * 2, vert_base + i * 2])
+                indices.extend([hook_base + i * 2, hook_base + next_i * 2, hook_base + i * 2 + 1])
+                indices.extend([hook_base + i * 2 + 1, hook_base + next_i * 2, hook_base + next_i * 2 + 1])
+
+            # 4. Торцы
+            # Нижний торец вертикальной части (z=0)
+            bottom_center = len(vertices) // 3
+            vertices.extend([0, 0, 0])
+            for i in range(segments):
+                next_i = (i + 1) % segments
+                indices.extend([bottom_center, vert_base + i * 2, vert_base + next_i * 2])
+
+            # Концевой торец крюка (x=0)
+            hook_end_center = len(vertices) // 3
+            vertices.extend([0, 0, length])
+            for i in range(segments):
+                next_i = (i + 1) % segments
+                indices.extend([hook_end_center, hook_base + next_i * 2 + 1, hook_base + i * 2 + 1])
 
         else:
             # Прямая шпилька: цилиндр с торцами
