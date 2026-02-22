@@ -1,145 +1,165 @@
 """
-main.py - Entry point for Pyodide
-Initializes the base IFC document and provides the main interface
+main.py — Entry point для Pyodide
+Управление IFC документом и ifcopenshell
 """
 
-# Global IFC document
-ifc_doc = None
-_ifcopenshell_cache = None
+# ifcopenshell импортируется лениво после установки через micropip
+ifcopenshell = None
 
 
-def _get_ifcopenshell(force_reload=False):
-    """
-    Lazy import of ifcopenshell to ensure it's available after micropip install.
-    Caches the import to avoid repeated import overhead.
-    """
-    global _ifcopenshell_cache
-    
-    if _ifcopenshell_cache is not None and not force_reload:
-        return _ifcopenshell_cache
-    
-    try:
-        import ifcopenshell
-        _ifcopenshell_cache = ifcopenshell
-        print(f"✓ ifcopenshell imported successfully")
-        return ifcopenshell
-    except ImportError as e:
-        print(f"✗ Failed to import ifcopenshell: {e}")
-        _ifcopenshell_cache = None
-        return None
-
-
-def is_ifcopenshell_available():
-    """Check if ifcopenshell is available for use"""
-    return _get_ifcopenshell() is not None
-
-
-def generate_guid():
-    """Generate IFC GUID using ifcopenshell"""
-    ifcopenshell = _get_ifcopenshell()
+def _get_ifcopenshell():
+    """Ленивый импорт ifcopenshell"""
+    global ifcopenshell
     if ifcopenshell is None:
-        raise RuntimeError("ifcopenshell not available - ensure micropip installation completed")
-    return ifcopenshell.guid.new()
+        try:
+            import ifcopenshell as _ifc
+            ifcopenshell = _ifc
+        except ImportError:
+            return None
+    return ifcopenshell
+
+
+class IFCDocument:
+    """Класс для управления IFC документом"""
+    
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+    
+    def __init__(self):
+        if self._initialized:
+            return
+        self.file = None
+        self._initialized = True
+    
+    def initialize(self, schema='IFC4'):
+        """Инициализация нового документа"""
+        ifc = _get_ifcopenshell()
+        if ifc is None:
+            raise RuntimeError("ifcopenshell не доступен. Убедитесь, что он установлен через micropip.")
+        
+        try:
+            self.file = ifcopenshell.file(schema=schema)
+        except Exception:
+            self.file = ifcopenshell.file(schema='IFC4X3')
+        
+        self._create_base_structure()
+        return self.file
+    
+    def _create_base_structure(self):
+        """Создание базовой IFC структуры: Project/Site/Building/Storey"""
+        f = self.file
+        
+        # Project
+        project = f.create_entity('IfcProject',
+            GlobalId=ifcopenshell.guid.new(),
+            Name='Anchor Bolt Generator',
+            Description='Generated anchor bolts with IFC4 ADD2 TC1'
+        )
+        
+        # Site
+        site = f.create_entity('IfcSite',
+            GlobalId=ifcopenshell.guid.new(),
+            Name='Default Site'
+        )
+        
+        # Building
+        building = f.create_entity('IfcBuilding',
+            GlobalId=ifcopenshell.guid.new(),
+            Name='Default Building'
+        )
+        
+        # BuildingStorey
+        storey = f.create_entity('IfcBuildingStorey',
+            GlobalId=ifcopenshell.guid.new(),
+            Name='Storey 1',
+            Elevation=0.0
+        )
+        
+        # Иерархия: Project -> Site -> Building -> Storey
+        f.create_entity('IfcRelAggregates',
+            GlobalId=ifcopenshell.guid.new(),
+            RelatingObject=project,
+            RelatedObjects=[site]
+        )
+        f.create_entity('IfcRelAggregates',
+            GlobalId=ifcopenshell.guid.new(),
+            RelatingObject=site,
+            RelatedObjects=[building]
+        )
+        f.create_entity('IfcRelAggregates',
+            GlobalId=ifcopenshell.guid.new(),
+            RelatingObject=building,
+            RelatedObjects=[storey]
+        )
+        
+        # World coordinate system
+        f.create_entity('IfcAxis2Placement2D',
+            Location=f.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0])
+        )
+        f.create_entity('IfcAxis2Placement3D',
+            Location=f.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0]),
+            Axis=f.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0]),
+            RefDirection=f.create_entity('IfcDirection', DirectionRatios=[1.0, 0.0, 0.0])
+        )
+        
+        # Units and contexts
+        from ifc_generator import IFCGenerator
+        gen = IFCGenerator(f)
+        gen.setup_units_and_contexts()
+    
+    def get_file(self):
+        """Получение IFC файла"""
+        if self.file is None:
+            raise RuntimeError("IFC документ не инициализирован")
+        return self.file
+
+
+# Singleton instance
+_doc_instance = None
+
+
+def get_document():
+    """Получение экземпляра документа"""
+    global _doc_instance
+    if _doc_instance is None:
+        _doc_instance = IFCDocument()
+    return _doc_instance
 
 
 def initialize_base_document():
-    """Initialize empty IFC4 ADD2 TC1 document with Project/Site/Building/StoreyStructure"""
-    global ifc_doc
-
-    ifcopenshell = _get_ifcopenshell()
-    if ifcopenshell is None:
-        print("✗ CRITICAL: ifcopenshell is not available!")
-        print("  This usually means:")
-        print("  1. micropip.install() has not completed yet")
-        print("  2. The wheel URL is incorrect or inaccessible")
-        print("  3. There was a network error during installation")
-        raise RuntimeError(
-            "ifcopenshell not available. "
-            "Ensure ifcopenshell was installed via micropip before calling this function. "
-            "Check browser console for installation errors."
-        )
-
-    try:
-        # Create IFC4 file - use IFC4X3 if IFC4 is not supported
-        try:
-            ifc_doc = ifcopenshell.file(schema='IFC4')
-        except:
-            ifc_doc = ifcopenshell.file(schema='IFC4X3')
-
-        # Project
-        project = ifc_doc.create_entity('IfcProject',
-                                       GlobalId=generate_guid(),
-                                       Name='Anchor Bolt Generator',
-                                       Description='Generated anchor bolts with IFC4 ADD2 TC1')
-
-        # Site
-        site = ifc_doc.create_entity('IfcSite',
-                                    GlobalId=generate_guid(),
-                                    Name='Default Site')
-
-        # Building
-        building = ifc_doc.create_entity('IfcBuilding',
-                                        GlobalId=generate_guid(),
-                                        Name='Default Building')
-
-        # BuildingStorey
-        storey = ifc_doc.create_entity('IfcBuildingStorey',
-                                      GlobalId=generate_guid(),
-                                      Name='Storey 1',
-                                      Elevation=0.0)
-
-        # Set up hierarchy
-        # Project -> Site
-        ifc_doc.create_entity('IfcRelAggregates',
-                             GlobalId=generate_guid(),
-                             RelatingObject=project,
-                             RelatedObjects=[site])
-
-        # Site -> Building
-        ifc_doc.create_entity('IfcRelAggregates',
-                             GlobalId=generate_guid(),
-                             RelatingObject=site,
-                             RelatedObjects=[building])
-
-        # Building -> StoreyStructure
-        ifc_doc.create_entity('IfcRelAggregates',
-                             GlobalId=generate_guid(),
-                             RelatingObject=building,
-                             RelatedObjects=[storey])
-
-        # Create world coordinate system
-        ifc_doc.create_entity('IfcAxis2Placement2D',
-                             Location=ifc_doc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0]))
-
-        ifc_doc.create_entity('IfcAxis2Placement3D',
-                             Location=ifc_doc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0]),
-                             Axis=ifc_doc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0]),
-                             RefDirection=ifc_doc.create_entity('IfcDirection', DirectionRatios=[1.0, 0.0, 0.0]))
-
-        # Setup units and contexts using IFCGenerator
-        from ifc_generator import IFCGenerator
-        generator = IFCGenerator(ifc_doc)
-        generator.setup_units_and_contexts()
-
-        return ifc_doc
-
-    except Exception as e:
-        print(f"Error initializing IFC document: {e}")
-        raise
+    """Инициализация базового документа"""
+    doc = get_document()
+    return doc.initialize()
 
 
 def get_ifc_document():
-    """Get current IFC document"""
-    global ifc_doc
-    if ifc_doc is None:
-        raise RuntimeError("IFC document not initialized. Call initialize_base_document() first.")
-    return ifc_doc
+    """Получение текущего IFC документа"""
+    doc = get_document()
+    return doc.get_file()
+
+
+def is_ifcopenshell_available():
+    """Проверка доступности ifcopenshell"""
+    global ifcopenshell
+    if ifcopenshell is not None:
+        return True
+    # Пробуем импортировать напрямую
+    try:
+        import ifcopenshell as _ifc
+        ifcopenshell = _ifc
+        return True
+    except ImportError:
+        return False
 
 
 if __name__ == '__main__':
-    # Test initialization
     try:
         doc = initialize_base_document()
-        print(f"✓ IFC document initialized")
+        print("✓ IFC документ инициализирован")
     except Exception as e:
-        print(f"✗ Error: {e}")
+        print(f"✗ Ошибка: {e}")

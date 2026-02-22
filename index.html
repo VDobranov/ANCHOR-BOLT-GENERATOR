@@ -121,18 +121,19 @@
         </footer>
     </div>
 
-    <!-- Pyodide - loads asynchronously (v0.26.0 or later for wheel compatibility) -->
+    <!-- Pyodide -->
     <script async src="https://cdn.jsdelivr.net/pyodide/dev/full/pyodide.js"></script>
 
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    <!-- Наши модули - in correct dependency order -->
+    <!-- Модули приложения (порядок важен) -->
+    <script src="js/config.js"></script>
+    <script src="js/ui.js"></script>
     <script src="js/viewer.js"></script>
-    <script src="js/pythonLoader.js"></script>
+    <script src="js/form.js"></script>
     <script src="js/ifcBridge.js"></script>
     <script src="js/main.js"></script>
-    <!-- Init script - runs last, waits for Pyodide to load -->
     <script src="js/init.js"></script>
 </body>
 </html>

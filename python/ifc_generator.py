@@ -1,81 +1,77 @@
 """
-ifc_generator.py - Генерация и экспорт IFC файлов
+ifc_generator.py — Генерация и экспорт IFC файлов
 """
 
 
 class IFCGenerator:
-    """Класс для генерации и сохранения IFC файлов"""
+    """Генератор IFC файлов"""
 
     def __init__(self, ifc_doc):
         self.ifc = ifc_doc
 
     def setup_units_and_contexts(self):
-        """Setup units and geometric contexts for the IFC document and link them to the project"""
-        # Create unit assignments
-        length_unit = self.ifc.create_entity('IfcSIUnit',
-                                           UnitType='LENGTHUNIT',
-                                           Prefix='MILLI',
-                                           Name='METRE')
+        """Настройка единиц и геометрического контекста"""
+        f = self.ifc
 
-        mass_unit = self.ifc.create_entity('IfcSIUnit',
-                                         UnitType='MASSUNIT',
-                                         Name='GRAM')
+        # Единицы
+        length_unit = f.create_entity('IfcSIUnit',
+            UnitType='LENGTHUNIT', Prefix='MILLI', Name='METRE'
+        )
+        mass_unit = f.create_entity('IfcSIUnit',
+            UnitType='MASSUNIT', Name='GRAM'
+        )
+        plane_angle = f.create_entity('IfcSIUnit',
+            UnitType='PLANEANGLEUNIT', Name='RADIAN'
+        )
 
-        plane_angle = self.ifc.create_entity('IfcSIUnit',
-                                           UnitType='PLANEANGLEUNIT',
-                                           Name='RADIAN')
+        unit_assignment = f.create_entity('IfcUnitAssignment',
+            Units=[length_unit, mass_unit, plane_angle]
+        )
 
-        unit_assignment = self.ifc.create_entity('IfcUnitAssignment',
-                                               Units=[length_unit, mass_unit, plane_angle])
+        # Геометрический контекст
+        world_coordinate_system = f.create_entity('IfcAxis2Placement3D',
+            Location=f.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0]),
+            Axis=f.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0]),
+            RefDirection=f.create_entity('IfcDirection', DirectionRatios=[1.0, 0.0, 0.0])
+        )
 
-        # Create geometric representation context
-        world_coordinate_system = self.ifc.create_entity('IfcAxis2Placement3D',
-                                                        Location=self.ifc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0]),
-                                                        Axis=self.ifc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0]),
-                                                        RefDirection=self.ifc.create_entity('IfcDirection', DirectionRatios=[1.0, 0.0, 0.0]))
+        geometric_context = f.create_entity('IfcGeometricRepresentationContext',
+            ContextType='Model',
+            CoordinateSpaceDimension=3,
+            Precision=1e-05,
+            WorldCoordinateSystem=world_coordinate_system
+        )
 
-        geometric_context = self.ifc.create_entity('IfcGeometricRepresentationContext',
-                                                 ContextType='Model',
-                                                 CoordinateSpaceDimension=3,
-                                                 Precision=1e-05,
-                                                 WorldCoordinateSystem=world_coordinate_system)
+        # Привязка к проекту
+        projects = f.by_type('IfcProject')
+        if not projects:
+            raise ValueError("IfcProject не найден")
 
-        # Find the project and link the units and geometric context
-        projects = self.ifc.by_type('IfcProject')
-        if projects:
-            project = projects[0]
-            # Update the project to include the units assignment
-            project.UnitsInContext = unit_assignment
-            # Add the geometric context to the representations in context
-            if not hasattr(project, 'RepresentationContexts') or project.RepresentationContexts is None:
-                project.RepresentationContexts = [geometric_context]
-            else:
-                project.RepresentationContexts.append(geometric_context)
-        else:
-            raise ValueError("No IfcProject found in the document")
+        project = projects[0]
+        project.UnitsInContext = unit_assignment
+        project.RepresentationContexts = [geometric_context]
 
     def export_to_string(self):
-        """Export IFC document to string (IFC SPF format)"""
+        """Экспорт в строку"""
         return self.ifc.write()
 
     def export_to_file(self, filepath):
-        """Export IFC document to file"""
+        """Экспорт в файл"""
         self.ifc.write(filepath)
         return filepath
 
     def get_summary(self):
-        """Get summary of IFC document contents"""
-        summary = {
+        """Получение сводки по документу"""
+        return {
             'project': self._get_project_info(),
             'entities_count': len(self.ifc),
             'entity_types': self._count_entity_types(),
             'mechanical_fasteners': self._count_fasteners(),
             'materials': self._count_materials()
         }
-        return summary
 
     def _get_project_info(self):
-        """Get project information"""
+        """Информация о проекте"""
         projects = self.ifc.by_type('IfcProject')
         if projects:
             proj = projects[0]
@@ -87,64 +83,46 @@ class IFCGenerator:
         return {}
 
     def _count_entity_types(self):
-        """Count entities by type"""
+        """Подсчёт типов сущностей"""
         types = {}
         for entity in self.ifc:
             entity_type = entity.is_a()
-            if entity_type not in types:
-                types[entity_type] = 0
-            types[entity_type] += 1
+            types[entity_type] = types.get(entity_type, 0) + 1
         return types
 
     def _count_fasteners(self):
-        """Count mechanical fasteners"""
+        """Подсчёт болтов"""
         fasteners = self.ifc.by_type('IfcMechanicalFastener')
-        return {
-            'total': len(fasteners),
-            'by_type': self._group_fasteners_by_type(fasteners)
-        }
+        grouped = {}
+        for f in fasteners:
+            ftype = f.ObjectType or 'Unknown'
+            grouped[ftype] = grouped.get(ftype, 0) + 1
+        return {'total': len(fasteners), 'by_type': grouped}
 
     def _count_materials(self):
-        """Count materials"""
+        """Подсчёт материалов"""
         materials = self.ifc.by_type('IfcMaterial')
         return {
             'total': len(materials),
-            'materials': [{'name': m.Name or 'Unnamed', 'description': m.Description or ''} for m in materials]
+            'materials': [{'name': m.Name, 'description': m.Description} for m in materials]
         }
 
-    def _group_fasteners_by_type(self, fasteners):
-        """Group fasteners by type"""
-        grouped = {}
-        for fastener in fasteners:
-            ftype = fastener.ObjectType or 'Unknown'
-            if ftype not in grouped:
-                grouped[ftype] = 0
-            grouped[ftype] += 1
-        return grouped
-
-    def validate_ifc(self):
-        """Basic validation of IFC document"""
+    def validate(self):
+        """Базовая валидация документа"""
         errors = []
         warnings = []
 
-        # Check for required project
-        projects = self.ifc.by_type('IfcProject')
-        if not projects:
-            errors.append("No IfcProject found")
+        if not self.ifc.by_type('IfcProject'):
+            errors.append("IfcProject не найден")
 
-        # Check schema version
         if not self.ifc.schema.startswith('IFC4'):
-            warnings.append(f"Using schema {self.ifc.schema}, expected IFC4 variant")
+            warnings.append(f"Схема {self.ifc.schema}, ожидается IFC4")
 
-        # Check for at least one building storey
-        storeys = self.ifc.by_type('IfcBuildingStorey')
-        if not storeys:
-            warnings.append("No building storey found")
+        if not self.ifc.by_type('IfcBuildingStorey'):
+            warnings.append("IfcBuildingStorey не найден")
 
-        # Check for mechanical fasteners
-        fasteners = self.ifc.by_type('IfcMechanicalFastener')
-        if not fasteners:
-            warnings.append("No mechanical fasteners found")
+        if not self.ifc.by_type('IfcMechanicalFastener'):
+            warnings.append("IfcMechanicalFastener не найден")
 
         return {
             'valid': len(errors) == 0,
@@ -154,43 +132,21 @@ class IFCGenerator:
 
 
 def export_ifc_file(ifc_doc, filepath, bolt_type, diameter, length):
-    """
-    Helper function to export IFC file with metadata
-
-    Args:
-        ifc_doc: IFC document
-        filepath: Path to save file
-        bolt_type: Type of bolt (e.g., '1.1')
-        diameter: Diameter in mm
-        length: Length in mm
-
-    Returns:
-        dict with export result
-    """
-    generator = IFCGenerator(ifc_doc)
-
-    # Validate
-    validation = generator.validate_ifc()
+    """Экспорт IFC файла с метаданными"""
+    gen = IFCGenerator(ifc_doc)
+    validation = gen.validate()
 
     if not validation['valid']:
-        return {
-            'status': 'error',
-            'errors': validation['errors']
-        }
+        return {'status': 'error', 'errors': validation['errors']}
 
-    # Export
     try:
-        generator.export_to_file(filepath)
-
+        gen.export_to_file(filepath)
         return {
             'status': 'success',
             'filepath': filepath,
             'filename': f'bolt_{bolt_type}_M{diameter}x{length}.ifc',
             'validation': validation,
-            'summary': generator.get_summary()
+            'summary': gen.get_summary()
         }
     except Exception as e:
-        return {
-            'status': 'error',
-            'message': str(e)
-        }
+        return {'status': 'error', 'message': str(e)}
