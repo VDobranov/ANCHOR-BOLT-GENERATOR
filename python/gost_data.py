@@ -6,24 +6,24 @@ Based on ГОСТ 24379.1-2012 and related standards
 # Типы болтов и их характеристики
 BOLT_TYPES = {
     '1.1': {
-        'name': 'Тип 1.1 (первая категория, изогнутый)',
+        'name': 'Тип 1. Исполнение 1',
         'execution': [1, 2],
         'has_bend': True,
         'bend_radius_factor': 1.5  # R = d * factor
     },
     '1.2': {
-        'name': 'Тип 1.2 (первая категория, изогнутый)',
+        'name': 'Тип 1. Исполнение 2',
         'execution': [1, 2],
         'has_bend': True,
         'bend_radius_factor': 2.0  # R = d * factor
     },
     '2.1': {
-        'name': 'Тип 2.1 (вторая категория, прямой)',
+        'name': 'Тип 2. Исполнение 1',
         'execution': [1],
         'has_bend': False
     },
     '5': {
-        'name': 'Тип 5 (футорка)',
+        'name': 'Тип 5',
         'execution': [1],
         'has_bend': False
     }

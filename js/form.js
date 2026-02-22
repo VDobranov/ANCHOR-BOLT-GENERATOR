@@ -101,7 +101,7 @@ class BoltForm {
                 lengths.forEach(l => {
                     const option = document.createElement('option');
                     option.value = l;
-                    option.textContent = `${l} мм`;
+                    option.textContent = `${l}`;
                     length.appendChild(option);
                 });
                 length.value = lengths[0];

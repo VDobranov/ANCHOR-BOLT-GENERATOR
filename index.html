@@ -10,7 +10,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>Генератор Анкерных Болтов</h1>
+            <h1>Генератор фундаментных болтов</h1>
             <p>ГОСТ 24379.1-2012 | IFC4 ADD2 TC1</p>
         </header>
 
@@ -23,10 +23,10 @@
                     <div class="form-group">
                         <label for="boltType">Тип болта:</label>
                         <select id="boltType" required>
-                            <option value="1.1" selected>1.1 (первая категория, исполнение 1-2)</option>
-                            <option value="1.2">1.2 (первая категория, исполнение 1-2)</option>
-                            <option value="2.1">2.1 (вторая категория, прямой)</option>
-                            <option value="5">5 (футорка)</option>
+                            <option value="1.1" selected>Тип 1. Исполнение 1</option>
+                            <option value="1.2">Тип 1. Исполнение 2</option>
+                            <option value="2.1">Тип 2. Исполнение 1</option>
+                            <option value="5">Тип 5</option>
                         </select>
                     </div>
 
@@ -41,7 +41,7 @@
 
                     <!-- Диаметр -->
                     <div class="form-group">
-                        <label for="diameter">Диаметр (М):</label>
+                        <label for="diameter">Диаметр:</label>
                         <select id="diameter" required>
                             <option value="12">М12</option>
                             <option value="16">М16</option>
@@ -64,7 +64,7 @@
                     <div class="form-group">
                         <label for="length">Длина (мм):</label>
                         <select id="length" required>
-                            <option value="">-- Выбрать --</option>
+                            <option value="">500</option>
                         </select>
                     </div>
 
@@ -102,7 +102,7 @@
         </main>
 
         <footer>
-            <p>© 2025 ANCHOR-BOLT-GENERATOR | Python + Pyodide + IFC + Three.js</p>
+            <p>© 2026 ANCHOR-BOLT-GENERATOR | Python + IFC + Three.js</p>
         </footer>
     </div>
 
