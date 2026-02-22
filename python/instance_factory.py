@@ -2,15 +2,9 @@
 instance_factory.py — Создание инстансов болтов и сборок
 """
 
-import numpy as np
+from utils import get_ifcopenshell
 from type_factory import TypeFactory
 from gost_data import validate_parameters, get_nut_dimensions, get_washer_dimensions
-
-
-def _get_ifcopenshell():
-    """Ленивый импорт ifcopenshell"""
-    from main import _get_ifcopenshell as get_ifc
-    return get_ifc()
 
 
 class InstanceFactory:
@@ -31,7 +25,7 @@ class InstanceFactory:
         Returns:
             dict с assembly, stud, components и mesh_data
         """
-        ifcopenshell = _get_ifcopenshell()
+        ifc = get_ifcopenshell()
 
         # Валидация параметров
         validate_parameters(bolt_type, execution, diameter, length, material)
@@ -65,8 +59,9 @@ class InstanceFactory:
         storey = storeys[0] if storeys else None
 
         # Создание assembly
+        ifc = get_ifcopenshell()
         assembly = self.ifc.create_entity('IfcMechanicalFastener',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             Name=f'AnchorBolt_{bolt_type}_M{diameter}x{length}',
             ObjectType='ANCHORBOLT',
             PredefinedType='ANCHORBOLT'
@@ -87,7 +82,7 @@ class InstanceFactory:
             stud_offset = get_thread_length(diameter, length) or 0
         stud_placement = self._create_placement((0, 0, stud_offset))
         stud = self.ifc.create_entity('IfcMechanicalFastener',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             Name=f'Stud_M{diameter}x{length}',
             ObjectType='STUD',
             ObjectPlacement=stud_placement
@@ -147,25 +142,25 @@ class InstanceFactory:
 
         # IfcRelDefinesByType для каждого типа
         self.ifc.create_entity('IfcRelDefinesByType',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             RelatingType=assembly_type,
             RelatedObjects=[assembly]
         )
         if stud_instances:
             self.ifc.create_entity('IfcRelDefinesByType',
-                GlobalId=ifcopenshell.guid.new(),
+                GlobalId=ifc.guid.new(),
                 RelatingType=stud_type,
                 RelatedObjects=stud_instances
             )
         if nut_instances:
             self.ifc.create_entity('IfcRelDefinesByType',
-                GlobalId=ifcopenshell.guid.new(),
+                GlobalId=ifc.guid.new(),
                 RelatingType=nut_type,
                 RelatedObjects=nut_instances
             )
         if washer_instances:
             self.ifc.create_entity('IfcRelDefinesByType',
-                GlobalId=ifcopenshell.guid.new(),
+                GlobalId=ifc.guid.new(),
                 RelatingType=washer_type,
                 RelatedObjects=washer_instances
             )
@@ -173,14 +168,14 @@ class InstanceFactory:
         # IfcRelContainedInSpatialStructure
         if storey:
             self.ifc.create_entity('IfcRelContainedInSpatialStructure',
-                GlobalId=ifcopenshell.guid.new(),
+                GlobalId=ifc.guid.new(),
                 RelatingStructure=storey,
                 RelatedElements=[assembly] + components
             )
 
         # IfcRelAggregates
         self.ifc.create_entity('IfcRelAggregates',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             RelatingObject=assembly,
             RelatedObjects=components
         )
@@ -188,7 +183,7 @@ class InstanceFactory:
         # IfcRelConnectsElements между компонентами
         for i in range(len(components) - 1):
             self.ifc.create_entity('IfcRelConnectsElements',
-                GlobalId=ifcopenshell.guid.new(),
+                GlobalId=ifc.guid.new(),
                 RelatingElement=components[i],
                 RelatedElement=components[i + 1]
             )
@@ -219,10 +214,10 @@ class InstanceFactory:
 
     def _create_component(self, comp_type, name, object_type, location, type_obj, instances_list):
         """Создание компонента (гайка/шайба)"""
-        ifcopenshell = _get_ifcopenshell()
+        ifc = get_ifcopenshell()
         placement = self._create_placement(location)
         component = self.ifc.create_entity('IfcMechanicalFastener',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             Name=name,
             ObjectType=object_type,
             ObjectPlacement=placement
@@ -332,7 +327,7 @@ class InstanceFactory:
     def _generate_mesh_data(self, components, bolt_type, diameter, length, material):
         """Генерация mesh данных через ifcopenshell.geom"""
         from geometry_converter import convert_assembly_to_meshes
-        
+
         color_map = {
             'STUD': 0x8B8B8B,
             'WASHER': 0xA9A9A9,
@@ -341,350 +336,13 @@ class InstanceFactory:
         }
 
         # Конвертация IFC геометрии в Three.js mesh
-        # Используем только ifcopenshell.geom — fallback отключён
         mesh_data = convert_assembly_to_meshes(self.ifc, components, color_map)
 
         if not mesh_data or not mesh_data.get('meshes'):
-            # Если geom не вернул данные — возвращаем пустой список
             print(f"Warning: ifcopenshell.geom failed to generate mesh data")
             return {'meshes': []}
 
         return mesh_data
-    
-    def _generate_fallback_mesh_data(self, components, bolt_type, diameter, length, color_map):
-        """Fallback: генерация mesh данных вручную (если ifcopenshell.geom недоступен)"""
-        meshes = []
-        
-        for i, component in enumerate(components):
-            mesh = self._create_fallback_mesh(
-                component, i, diameter, length, color_map, bolt_type
-            )
-            if mesh:
-                meshes.append(mesh)
-        
-        return {'meshes': meshes}
-
-    def _create_fallback_mesh(self, component, index, diameter, length, color_map, bolt_type):
-        """Создание упрощённого mesh для визуализации"""
-        comp_type = component.ObjectType or 'UNKNOWN'
-        color = color_map.get(comp_type, 0xCCCCCC)
-
-        # Получение позиции из placement
-        placement = component.ObjectPlacement
-        position = [0, 0, 0]
-        if placement and hasattr(placement, 'RelativePlacement'):
-            loc = placement.RelativePlacement.Location
-            if loc:
-                position = list(loc.Coordinates)
-
-        if comp_type == 'STUD':
-            return self._create_stud_mesh(diameter, length, bolt_type, color, index, component)
-        elif comp_type == 'NUT':
-            return self._create_nut_mesh(diameter, None, color, index, position, component)
-        elif comp_type == 'WASHER':
-            return self._create_washer_mesh(diameter, None, color, index, position, component)
-
-        return None
-
-    def _create_stud_mesh(self, diameter, length, bolt_type, color, index, component):
-        """Mesh шпильки (упрощённая версия)"""
-        has_bend = bolt_type in ['1.1', '1.2']
-        bend_radius = diameter * (1.5 if bolt_type == '1.1' else 2.0)
-        radius = diameter / 2.0
-        segments = 24
-
-        vertices = []
-        indices = []
-
-        if has_bend:
-            # Изогнутая шпилька: вертикальная часть + дуга 90° + горизонтальный крюк
-            # Вертикальная часть: от z=0 до z=length-bend_radius
-            # Дуга: от (0, length-bend_radius) до (bend_radius, length)
-            # Горизонтальный крюк: от x=bend_radius до x=0 (возврат назад)
-            
-            vertical_length = length - bend_radius
-            
-            # 1. Вертикальная часть (цилиндр вдоль оси Z от 0 до vertical_length)
-            vert_base = 0
-            for i in range(segments):
-                angle = (2 * np.pi * i) / segments
-                x = radius * np.cos(angle)
-                y = radius * np.sin(angle)
-                vertices.extend([x, y, 0])
-                vertices.extend([x, y, vertical_length])
-
-            # Соединяем вертикальную часть
-            for i in range(segments):
-                next_i = (i + 1) % segments
-                indices.extend([vert_base + i * 2, vert_base + next_i * 2, vert_base + i * 2 + 1])
-                indices.extend([vert_base + i * 2 + 1, vert_base + next_i * 2, vert_base + next_i * 2 + 1])
-
-            # 2. Дуга 90° (от вертикальной к горизонтальной)
-            arc_segments = 12
-            arc_base = len(vertices) // 3
-
-            for i in range(arc_segments + 1):
-                t = i / arc_segments
-                angle = (np.pi / 2) * t  # 0 до 90 градусов
-
-                # Центр дуги в точке (0, 0, vertical_length)
-                center_x = 0
-                center_z = vertical_length
-
-                # Позиция центра сечения на дуге (движение вверх и вправо)
-                arc_x = center_x + bend_radius * np.sin(angle)  # от 0 до bend_radius
-                arc_z = center_z + bend_radius * (1 - np.cos(angle))  # от vertical_length до length
-
-                # Сечение (круг) перпендикулярно направлению дуги
-                for j in range(segments):
-                    theta = (2 * np.pi * j) / segments
-                    local_r = radius * np.cos(theta)
-                    local_y = radius * np.sin(theta)
-
-                    # Поворот сечения перпендикулярно касательной дуги
-                    # Касательная направлена под углом angle к вертикали
-                    tan_angle = angle
-                    x = arc_x + local_r * np.cos(tan_angle)
-                    y = local_y
-                    z = arc_z - local_r * np.sin(tan_angle)
-
-                    vertices.extend([x, y, z])
-
-            # Соединяем дугу
-            for i in range(arc_segments):
-                for j in range(segments):
-                    next_i = i + 1
-                    next_j = (j + 1) % segments
-
-                    idx = arc_base + i * segments + j
-                    idx_next_i = arc_base + next_i * segments + j
-                    idx_next_j = arc_base + i * segments + next_j
-                    idx_next_both = arc_base + next_i * segments + next_j
-
-                    indices.extend([idx, idx_next_j, idx_next_i])
-                    indices.extend([idx_next_j, idx_next_both, idx_next_i])
-
-            # 3. Горизонтальный крюк (цилиндр вдоль оси X от bend_radius до 0)
-            hook_base = len(vertices) // 3
-            for i in range(segments):
-                angle = (2 * np.pi * i) / segments
-                y = radius * np.cos(angle)
-                z = radius * np.sin(angle)
-                vertices.extend([bend_radius, y, length])
-                vertices.extend([0, y, length])
-
-            # Соединяем горизонтальную часть
-            for i in range(segments):
-                next_i = (i + 1) % segments
-                indices.extend([hook_base + i * 2, hook_base + next_i * 2, hook_base + i * 2 + 1])
-                indices.extend([hook_base + i * 2 + 1, hook_base + next_i * 2, hook_base + next_i * 2 + 1])
-
-            # 4. Торцы
-            # Нижний торец вертикальной части (z=0)
-            bottom_center = len(vertices) // 3
-            vertices.extend([0, 0, 0])
-            for i in range(segments):
-                next_i = (i + 1) % segments
-                indices.extend([bottom_center, vert_base + i * 2, vert_base + next_i * 2])
-
-            # Концевой торец крюка (x=0)
-            hook_end_center = len(vertices) // 3
-            vertices.extend([0, 0, length])
-            for i in range(segments):
-                next_i = (i + 1) % segments
-                indices.extend([hook_end_center, hook_base + next_i * 2 + 1, hook_base + i * 2 + 1])
-
-        else:
-            # Прямая шпилька: цилиндр с торцами
-            for i in range(segments):
-                angle = (2 * np.pi * i) / segments
-                x = radius * np.cos(angle)
-                y = radius * np.sin(angle)
-                vertices.extend([x, y, 0])
-                vertices.extend([x, y, length])
-
-            # Соединяем цилиндр
-            for i in range(segments):
-                next_i = (i + 1) % segments
-                indices.extend([i * 2, next_i * 2, i * 2 + 1])
-                indices.extend([i * 2 + 1, next_i * 2, next_i * 2 + 1])
-
-            # Нижний торец (z=0)
-            center_bottom_idx = len(vertices) // 3
-            vertices.extend([0, 0, 0])
-            for i in range(segments):
-                next_i = (i + 1) % segments
-                indices.extend([center_bottom_idx, i * 2, next_i * 2])
-
-            # Верхний торец (z=length)
-            center_top_idx = len(vertices) // 3
-            vertices.extend([0, 0, length])
-            for i in range(segments):
-                next_i = (i + 1) % segments
-                indices.extend([center_top_idx, next_i * 2 + 1, i * 2 + 1])
-
-        return {
-            'id': getattr(component, 'id', f'mesh_{index}'),
-            'name': getattr(component, 'Name', f'Component_{index}'),
-            'vertices': vertices,
-            'indices': indices,
-            'color': color,
-            'metadata': {
-                'Type': 'STUD',
-                'Diameter': diameter,
-                'Length': length,
-                'BoltType': bolt_type
-            }
-        }
-
-    def _create_nut_mesh(self, diameter, spec, color, index, position, component):
-        """Mesh гайки (шестиугольник)"""
-        from gost_data import get_nut_dimensions
-        import math
-
-        nut_dim = get_nut_dimensions(diameter)
-        height = nut_dim['height'] if nut_dim else 10
-        s_width = nut_dim['s_width'] if nut_dim else diameter * 1.5
-
-        # Размер под ключ (S) — расстояние между параллельными гранями
-        # Радиус описанной окружности (до вершин): R = S / √3
-        outer_radius = s_width / math.sqrt(3)
-        inner_radius = diameter / 2 + 0.5
-        z_offset = position[2]
-
-        vertices = []
-        indices = []
-
-        # Шестиугольник
-        for i in range(6):
-            angle = (2 * np.pi * i) / 6
-            x = outer_radius * np.cos(angle)
-            y = outer_radius * np.sin(angle)
-            vertices.extend([x, y, z_offset])
-            vertices.extend([x, y, z_offset + height])
-
-        # Индексы для сторон
-        for i in range(6):
-            next_i = (i + 1) % 6
-            indices.extend([i * 2, i * 2 + 1, next_i * 2])
-            indices.extend([i * 2 + 1, next_i * 2 + 1, next_i * 2])
-
-        # Верхняя и нижняя грани
-        center_top = len(vertices) // 3
-        vertices.extend([0, 0, z_offset + height])
-        center_bottom = len(vertices) // 3
-        vertices.extend([0, 0, z_offset])
-
-        for i in range(6):
-            next_i = (i + 1) % 6
-            indices.extend([center_top, i * 2 + 1, next_i * 2 + 1])
-            indices.extend([center_bottom, next_i * 2, i * 2])
-
-        return {
-            'id': getattr(component, 'id', f'mesh_{index}'),
-            'name': getattr(component, 'Name', f'Nut_{index}'),
-            'vertices': vertices,
-            'indices': indices,
-            'color': color,
-            'metadata': {
-                'Type': 'NUT',
-                'Diameter': diameter,
-                'Height': height
-            }
-        }
-
-    def _create_washer_mesh(self, diameter, spec, color, index, position, component):
-        """Mesh шайбы (кольцо с торцами)"""
-        from gost_data import get_washer_dimensions
-        
-        washer_dim = get_washer_dimensions(diameter)
-        thickness = washer_dim['thickness'] if washer_dim else 3
-        outer_radius = washer_dim['outer_diameter'] / 2 if washer_dim else (diameter + 10) / 2
-        inner_radius = washer_dim['inner_diameter'] / 2 if washer_dim else (diameter + 2) / 2
-        z_offset = position[2]
-
-        vertices = []
-        indices = []
-        segments = 32
-
-        # Внешний цилиндр
-        outer_base = len(vertices) // 3
-        for i in range(segments):
-            angle = (2 * np.pi * i) / segments
-            x = outer_radius * np.cos(angle)
-            y = outer_radius * np.sin(angle)
-            vertices.extend([x, y, z_offset])
-            vertices.extend([x, y, z_offset + thickness])
-
-        # Соединяем внешний цилиндр
-        for i in range(segments):
-            next_i = (i + 1) % segments
-            indices.extend([outer_base + i * 2, outer_base + i * 2 + 1, outer_base + next_i * 2])
-            indices.extend([outer_base + i * 2 + 1, outer_base + next_i * 2 + 1, outer_base + next_i * 2])
-
-        # Внутренний цилиндр (отверстие)
-        inner_base = len(vertices) // 3
-        for i in range(segments):
-            angle = (2 * np.pi * i) / segments
-            x = inner_radius * np.cos(angle)
-            y = inner_radius * np.sin(angle)
-            vertices.extend([x, y, z_offset])
-            vertices.extend([x, y, z_offset + thickness])
-
-        # Соединяем внутренний цилиндр (обратная нормаль)
-        for i in range(segments):
-            next_i = (i + 1) % segments
-            indices.extend([inner_base + i * 2, inner_base + next_i * 2 + 1, inner_base + next_i * 2])
-            indices.extend([inner_base + i * 2, inner_base + i * 2 + 1, inner_base + next_i * 2 + 1])
-
-        # Нижний торец (кольцо)
-        bottom_outer_base = len(vertices) // 3
-        for i in range(segments):
-            angle = (2 * np.pi * i) / segments
-            vertices.extend([outer_radius * np.cos(angle), outer_radius * np.sin(angle), z_offset])
-        
-        bottom_inner_base = len(vertices) // 3
-        for i in range(segments):
-            angle = (2 * np.pi * i) / segments
-            vertices.extend([inner_radius * np.cos(angle), inner_radius * np.sin(angle), z_offset])
-
-        # Соединяем нижний торец
-        for i in range(segments):
-            next_i = (i + 1) % segments
-            indices.extend([bottom_outer_base + i, bottom_inner_base + i, bottom_outer_base + next_i])
-            indices.extend([bottom_outer_base + next_i, bottom_inner_base + i, bottom_inner_base + next_i])
-
-        # Верхний торец (кольцо)
-        top_outer_base = len(vertices) // 3
-        for i in range(segments):
-            angle = (2 * np.pi * i) / segments
-            vertices.extend([outer_radius * np.cos(angle), outer_radius * np.sin(angle), z_offset + thickness])
-        
-        top_inner_base = len(vertices) // 3
-        for i in range(segments):
-            angle = (2 * np.pi * i) / segments
-            vertices.extend([inner_radius * np.cos(angle), inner_radius * np.sin(angle), z_offset + thickness])
-
-        # Соединяем верхний торец (обратная нормаль)
-        for i in range(segments):
-            next_i = (i + 1) % segments
-            indices.extend([top_outer_base + i, top_outer_base + next_i, top_inner_base + i])
-            indices.extend([top_outer_base + next_i, top_inner_base + next_i, top_inner_base + i])
-
-        return {
-            'id': getattr(component, 'id', f'mesh_{index}'),
-            'name': getattr(component, 'Name', f'Washer_{index}'),
-            'vertices': vertices,
-            'indices': indices,
-            'color': color,
-            'metadata': {
-                'Type': 'WASHER',
-                'Diameter': diameter,
-                'OuterDiameter': outer_radius * 2,
-                'Thickness': thickness,
-                'InnerDiameter': inner_radius * 2
-            }
-        }
 
 
 def generate_bolt_assembly(params):

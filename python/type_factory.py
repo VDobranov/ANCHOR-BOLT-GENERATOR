@@ -4,13 +4,8 @@ type_factory.py — Фабрика для создания и кэширован
 """
 
 import math
+from utils import get_ifcopenshell
 from gost_data import get_nut_dimensions, get_washer_dimensions
-
-
-def _get_ifcopenshell():
-    """Ленивый импорт ifcopenshell"""
-    from main import _get_ifcopenshell as get_ifc
-    return get_ifc()
 
 
 class TypeFactory:
@@ -28,9 +23,9 @@ class TypeFactory:
             return self.types_cache[key]
 
         type_name = f'Stud_M{diameter}x{length}_{bolt_type}_exec{execution}'
-        ifcopenshell = _get_ifcopenshell()
+        ifc = get_ifcopenshell()
         stud_type = self.ifc.create_entity('IfcMechanicalFastenerType',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             Name=type_name,
             PredefinedType='USERDEFINED',
             ElementType='STUD'
@@ -49,10 +44,10 @@ class TypeFactory:
         nut_dim = get_nut_dimensions(diameter)
         height = nut_dim['height'] if nut_dim else 10
         type_name = f'Nut_M{diameter}_H{height}'
-        ifcopenshell = _get_ifcopenshell()
+        ifc = get_ifcopenshell()
 
         nut_type = self.ifc.create_entity('IfcMechanicalFastenerType',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             Name=type_name,
             PredefinedType='USERDEFINED',
             ElementType='NUT'
@@ -72,10 +67,10 @@ class TypeFactory:
         outer_d = washer_dim['outer_diameter'] if washer_dim else diameter + 10
         thickness = washer_dim['thickness'] if washer_dim else 3
         type_name = f'Washer_M{diameter}_OD{outer_d}'
-        ifcopenshell = _get_ifcopenshell()
+        ifc = get_ifcopenshell()
 
         washer_type = self.ifc.create_entity('IfcMechanicalFastenerType',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             Name=type_name,
             PredefinedType='USERDEFINED',
             ElementType='WASHER'
@@ -92,10 +87,10 @@ class TypeFactory:
             return self.types_cache[key]
 
         type_name = f'AnchorBoltAssembly_{bolt_type}_M{diameter}_{material}'
-        ifcopenshell = _get_ifcopenshell()
+        ifc = get_ifcopenshell()
 
         assembly_type = self.ifc.create_entity('IfcMechanicalFastenerType',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             Name=type_name,
             PredefinedType='ANCHORBOLT'
         )

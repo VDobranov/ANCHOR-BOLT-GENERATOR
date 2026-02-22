@@ -9,9 +9,7 @@ const UI = {
      */
     toggle(enabled) {
         const selectors = [
-            '#boltType', '#diameter', '#length', '#material',
-            '#bottomNut', '#topNut1', '#topNut2', '#washers',
-            '#generateBtn', '#downloadBtn'
+            '#boltType', '#diameter', '#length', '#material'
         ];
 
         selectors.forEach(selector => {

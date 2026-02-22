@@ -4,17 +4,12 @@ geometry_converter.py — Конвертация IFC геометрии в Three
 """
 
 import numpy as np
-
-
-def _get_ifcopenshell():
-    """Ленивый импорт ifcopenshell"""
-    from main import _get_ifcopenshell as get_ifc
-    return get_ifc()
+from utils import get_ifcopenshell
 
 
 def _get_ifcopenshell_geom():
     """Ленивый импорт ifcopenshell.geom"""
-    ifc = _get_ifcopenshell()
+    ifc = get_ifcopenshell()
     if ifc is None:
         return None
     try:

@@ -277,24 +277,6 @@ def get_bolt_mass(diameter, length):
     return None
 
 
-# Параметры болтов по ГОСТ 24379.1-2012, 19281-2014
-# Обновлённые данные из DIM.py
-BOLT_DIMENSIONS_SPEC = {}
-
-for d_str, nut_data in NUT_DIM_DATA.items():
-    diameter = int(d_str)
-    washer_data = WASHER_DIM_DATA.get(d_str, [diameter, diameter + 1, diameter * 2, 3])
-    
-    BOLT_DIMENSIONS_SPEC[diameter] = {
-        'thread_pitch': 1.75 if diameter == 12 else 2.0 if diameter == 16 else 2.5 if diameter == 20 else 3.0 if diameter == 24 else 3.5 if diameter == 30 else 4.0 if diameter == 36 else 4.5 if diameter == 42 else 5.0,
-        'nut_height': nut_data[2],  # высота гайки
-        'nut_s_width': nut_data[1],  # размер под ключ
-        'washer_thickness': washer_data[3],  # толщина шайбы
-        'washer_outer_diameter': washer_data[2],  # внешний диаметр шайбы
-        'washer_inner_diameter': washer_data[1],  # диаметр отверстия шайбы
-        's_width': nut_data[1],  # ключ (размер под ключ)
-    }
-
 # Материалы согласно ГОСТ
 MATERIALS = {
     '09Г2С': {
@@ -362,27 +344,6 @@ def validate_parameters(bolt_type, execution, diameter, length, material):
     return True
 
 
-def get_bolt_spec(diameter, length=None):
-    """Get complete specification for bolt diameter and optional length"""
-    spec = BOLT_DIMENSIONS_SPEC.get(diameter, {}).copy()
-    
-    if length is not None:
-        # Добавить специфичные для длины параметры
-        hook_length = get_bolt_hook_length(diameter, length)
-        bend_radius = get_bolt_bend_radius(diameter, length)
-        thread_length = get_thread_length(diameter, length)
-        mass = get_bolt_mass(diameter, length)
-        
-        spec.update({
-            'hook_length': hook_length,
-            'bend_radius': bend_radius,
-            'thread_length': thread_length,
-            'mass': mass
-        })
-    
-    return spec
-
-
 def get_bolt_type_info(bolt_type):
     """Get bolt type information"""
     return BOLT_TYPES.get(bolt_type, {})
@@ -423,14 +384,10 @@ if __name__ == '__main__':
     try:
         validate_parameters('1.1', 1, 20, 800, '09Г2С')
         print("✓ Validation passed")
-        
-        # Test get_bolt_spec
-        spec = get_bolt_spec(20, 800)
-        print(f"✓ Bolt spec for M20x800: {spec}")
-        
+
         # Test dimensions
         print(f"✓ Nut dimensions for M20: {get_nut_dimensions(20)}")
         print(f"✓ Washer dimensions for M20: {get_washer_dimensions(20)}")
-        
+
     except ValueError as e:
         print(f"✗ Validation error: {e}")

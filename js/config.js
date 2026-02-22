@@ -21,9 +21,8 @@ const APP_CONFIG = {
         'python/gost_data.py',
         'python/geometry_builder.py',
         'python/ifc_generator.py',
-        'python/material_manager.py',
-        'python/pset_manager.py',
-        'python/geometry_converter.py'
+        'python/geometry_converter.py',
+        'python/utils.py'
     ],
 
     // Таймауты
@@ -42,11 +41,7 @@ const APP_CONFIG = {
         execution: 1,
         diameter: 20,
         length: 800,
-        material: '09Г2С',
-        has_bottom_nut: false,
-        has_top_nut1: true,
-        has_top_nut2: true,
-        has_washers: true
+        material: '09Г2С'
     },
 
     // Цвета компонентов

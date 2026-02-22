@@ -3,20 +3,7 @@ main.py — Entry point для Pyodide
 Управление IFC документом и ifcopenshell
 """
 
-# ifcopenshell импортируется лениво после установки через micropip
-ifcopenshell = None
-
-
-def _get_ifcopenshell():
-    """Ленивый импорт ifcopenshell"""
-    global ifcopenshell
-    if ifcopenshell is None:
-        try:
-            import ifcopenshell as _ifc
-            ifcopenshell = _ifc
-        except ImportError:
-            return None
-    return ifcopenshell
+from utils import get_ifcopenshell, is_ifcopenshell_available
 
 
 class IFCDocument:
@@ -38,21 +25,21 @@ class IFCDocument:
     
     def initialize(self, schema='IFC4'):
         """Инициализация нового документа"""
-        ifc = _get_ifcopenshell()
+        ifc = get_ifcopenshell()
         if ifc is None:
             raise RuntimeError("ifcopenshell не доступен. Убедитесь, что он установлен через micropip.")
-        
+
         try:
-            self.file = ifcopenshell.file(schema=schema)
+            self.file = ifc.file(schema=schema)
         except Exception:
-            self.file = ifcopenshell.file(schema='IFC4X3')
-        
+            self.file = ifc.file(schema='IFC4X3')
+
         self._create_base_structure()
         return self.file
     
     def reset(self):
         """Сброс документа: удаление всех болтов и создание нового"""
-        ifc = _get_ifcopenshell()
+        ifc = get_ifcopenshell()
         if ifc is None:
             raise RuntimeError("ifcopenshell не доступен")
 
@@ -96,10 +83,10 @@ class IFCDocument:
         # Пересоздаём базовую структуру
         self.file = None
         try:
-            self.file = ifcopenshell.file(schema='IFC4')
+            self.file = ifc.file(schema='IFC4')
         except Exception:
-            self.file = ifcopenshell.file(schema='IFC4X3')
-        
+            self.file = ifc.file(schema='IFC4X3')
+
         self._create_base_structure()
         
         # Восстанавливаем материалы если были
@@ -116,46 +103,47 @@ class IFCDocument:
     def _create_base_structure(self):
         """Создание базовой IFC структуры: Project/Site/Building/Storey"""
         f = self.file
-        
+        ifc = get_ifcopenshell()
+
         # Project
         project = f.create_entity('IfcProject',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             Name='Anchor Bolt Generator',
             Description='Generated anchor bolts with IFC4 ADD2 TC1'
         )
-        
+
         # Site
         site = f.create_entity('IfcSite',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             Name='Default Site'
         )
-        
+
         # Building
         building = f.create_entity('IfcBuilding',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             Name='Default Building'
         )
-        
+
         # BuildingStorey
         storey = f.create_entity('IfcBuildingStorey',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             Name='Storey 1',
             Elevation=0.0
         )
-        
+
         # Иерархия: Project -> Site -> Building -> Storey
         f.create_entity('IfcRelAggregates',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             RelatingObject=project,
             RelatedObjects=[site]
         )
         f.create_entity('IfcRelAggregates',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             RelatingObject=site,
             RelatedObjects=[building]
         )
         f.create_entity('IfcRelAggregates',
-            GlobalId=ifcopenshell.guid.new(),
+            GlobalId=ifc.guid.new(),
             RelatingObject=building,
             RelatedObjects=[storey]
         )
@@ -211,20 +199,6 @@ def reset_ifc_document():
     doc = get_document()
     doc.reset()
     return doc.get_file()
-
-
-def is_ifcopenshell_available():
-    """Проверка доступности ifcopenshell"""
-    global ifcopenshell
-    if ifcopenshell is not None:
-        return True
-    # Пробуем импортировать напрямую
-    try:
-        import ifcopenshell as _ifc
-        ifcopenshell = _ifc
-        return True
-    except ImportError:
-        return False
 
 
 if __name__ == '__main__':
