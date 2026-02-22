@@ -684,10 +684,11 @@ def generate_bolt_assembly(params):
     Returns:
         (ifc_string, mesh_data)
     """
-    from main import get_ifc_document
+    from main import reset_ifc_document
     import io
-    
-    ifc_doc = get_ifc_document()
+
+    # Сброс документа: удаление предыдущих болтов
+    ifc_doc = reset_ifc_document()
 
     factory = InstanceFactory(ifc_doc)
     result = factory.create_bolt_assembly(
@@ -702,15 +703,15 @@ def generate_bolt_assembly(params):
     import tempfile
     with tempfile.NamedTemporaryFile(mode='w', suffix='.ifc', delete=False) as f:
         temp_path = f.name
-    
+
     ifc_doc.write(temp_path)
-    
+
     with open(temp_path, 'r') as f:
         ifc_str = f.read()
-    
+
     import os
     os.unlink(temp_path)
-    
+
     return (ifc_str, result['mesh_data'])
 
 
