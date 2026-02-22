@@ -80,7 +80,12 @@ class InstanceFactory:
         washer_instances = []
 
         # Шпилька
-        stud_placement = self._create_placement((0, 0, 0))
+        # Для типа 1.1: смещение вверх на длину резьбы, чтобы начало резьбы было в (0,0,0)
+        stud_offset = 0.0
+        if bolt_type == '1.1':
+            from gost_data import get_thread_length
+            stud_offset = get_thread_length(diameter, length) or 0
+        stud_placement = self._create_placement((0, 0, stud_offset))
         stud = self.ifc.create_entity('IfcMechanicalFastener',
             GlobalId=ifcopenshell.guid.new(),
             Name=f'Stud_M{diameter}x{length}',

@@ -19,6 +19,7 @@ class IFCViewer {
             0.1, 10000
         );
         this.camera.position.set(0, 0, 1000);
+        this.camera.up.set(0, 1, 0);
         this.camera.lookAt(0, 0, 0);
 
         this.renderer = new THREE.WebGLRenderer({
@@ -279,9 +280,11 @@ class IFCViewer {
         const transformed = [];
         for (let i = 0; i < vertices.length; i += 3) {
             // Конвертация метров в миллиметры + трансформация осей
+            // IFC: Z - вертикаль, Three.js: Y - вертикаль
+            // Инверсия Z для правильного вида сверху
             transformed.push(
                 vertices[i] * 1000,       // x (м → мм)
-                vertices[i + 2] * 1000,   // z -> y (м → мм)
+                -vertices[i + 2] * 1000,  // -z -> y (инверсия для вида сверху)
                 -vertices[i + 1] * 1000   // -y -> z (м → мм)
             );
         }
