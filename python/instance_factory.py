@@ -332,12 +332,24 @@ class InstanceFactory:
             'ANCHORBOLT': 0x4F4F4F
         }
 
+        print(f"=== GENERATE MESH DATA ===")
+        print(f"Bolt type: {bolt_type}, Diameter: {diameter}, Length: {length}")
+        print(f"Components: {len(components)}")
+
         for i, component in enumerate(components):
             mesh = self._create_fallback_mesh(
                 component, i, diameter, length, color_map, bolt_type
             )
             if mesh:
+                print(f"  Mesh {i}: {mesh['name']}")
+                print(f"    Type: {component.ObjectType}, Vertices: {len(mesh['vertices']) // 3}, Indices: {len(mesh['indices']) // 3}")
+                print(f"    First vertex: {mesh['vertices'][:3]}")
                 meshes.append(mesh)
+            else:
+                print(f"  Mesh {i}: FAILED to create")
+
+        print(f"Total meshes created: {len(meshes)}")
+        print(f"========================")
 
         return {'meshes': meshes}
 
@@ -365,63 +377,114 @@ class InstanceFactory:
         return None
 
     def _create_stud_mesh(self, diameter, length, bolt_type, color, index, component):
-        """Mesh шпильки"""
+        """Mesh шпильки (упрощённая версия)"""
         has_bend = bolt_type in ['1.1', '1.2']
-        radius = diameter * (1.5 if bolt_type == '1.1' else 2.0) if has_bend else 0
+        bend_radius = diameter * (1.5 if bolt_type == '1.1' else 2.0)
+        radius = diameter / 2.0
+        segments = 24
 
         vertices = []
         indices = []
 
         if has_bend:
-            # Bent stud: вертикальная часть + дуга + горизонтальная часть
-            segments = 32
-            upper_length = length - 2 * radius
+            # Изогнутая шпилька: вертикальная часть + дуга 90°
+            vertical_length = length - bend_radius
 
-            # Верхняя вертикальная часть
-            for i in range(segments // 2):
-                angle = (2 * np.pi * i) / (segments // 2)
-                x = (diameter / 2) * np.cos(angle)
-                y = (diameter / 2) * np.sin(angle)
-                vertices.extend([x, y, upper_length])
-                vertices.extend([x, y, length])
-
-            # Дуга
-            for i in range(segments // 4 + 1):
-                angle = np.pi / 2 + (np.pi / 2) * (i / (segments // 4))
-                cx = radius
-                cz = length - 2 * radius
-                x = cx + radius * np.cos(angle)
-                z = cz + radius * np.sin(angle)
-                for j in range(2):
-                    rad = (diameter / 2) * (0.5 + 0.5 * np.sin(angle - np.pi / 2))
-                    theta = (2 * np.pi * j) / 2
-                    vertices.extend([
-                        x + rad * np.cos(theta),
-                        rad * np.sin(theta),
-                        z
-                    ])
-
-            # Горизонтальная часть
-            for i in range(segments // 2):
-                angle = (2 * np.pi * i) / (segments // 2)
-                x = radius + (diameter / 2) * np.cos(angle)
-                y = (diameter / 2) * np.sin(angle)
-                vertices.extend([x, y, 0])
-                vertices.extend([x, y, radius])
-        else:
-            # Straight stud: цилиндр
-            segments = 32
+            # Вертикальная часть (цилиндр от z=vertical_length до z=length)
+            vert_base = 0
             for i in range(segments):
                 angle = (2 * np.pi * i) / segments
-                x = (diameter / 2) * np.cos(angle)
-                y = (diameter / 2) * np.sin(angle)
+                x = radius * np.cos(angle)
+                y = radius * np.sin(angle)
+                vertices.extend([x, y, vertical_length])
+                vertices.extend([x, y, length])
+
+            # Соединяем вертикальную часть
+            for i in range(segments):
+                next_i = (i + 1) % segments
+                indices.extend([vert_base + i * 2, vert_base + next_i * 2, vert_base + i * 2 + 1])
+                indices.extend([vert_base + i * 2 + 1, vert_base + next_i * 2, vert_base + next_i * 2 + 1])
+
+            # Дуга (четверть окружности)
+            arc_segments = 12
+            arc_base = len(vertices) // 3
+            
+            for i in range(arc_segments + 1):
+                t = i / arc_segments
+                angle = (np.pi / 2) * t  # 0 до 90 градусов
+                
+                # Центр дуги
+                center_x = bend_radius
+                center_z = vertical_length - bend_radius
+                
+                # Позиция на дуге
+                arc_x = center_x + bend_radius * np.sin(angle)  # sin для движения вправо
+                arc_z = center_z + bend_radius * np.cos(angle)  # cos для движения вниз
+                
+                # Сечение (круг) перпендикулярно направлению дуги
+                for j in range(segments):
+                    theta = (2 * np.pi * j) / segments
+                    # Локальные координаты сечения
+                    local_x = radius * np.cos(theta)
+                    local_y = radius * np.sin(theta)
+                    
+                    # Поворот сечения: вокруг оси Y
+                    x = arc_x + local_x * np.cos(angle)
+                    y = local_y
+                    z = arc_z - local_x * np.sin(angle)
+                    
+                    vertices.extend([x, y, z])
+
+            # Соединяем дугу
+            for i in range(arc_segments):
+                for j in range(segments):
+                    next_i = i + 1
+                    next_j = (j + 1) % segments
+                    
+                    idx = arc_base + i * segments + j
+                    idx_next_i = arc_base + next_i * segments + j
+                    idx_next_j = arc_base + i * segments + next_j
+                    idx_next_both = arc_base + next_i * segments + next_j
+                    
+                    indices.extend([idx, idx_next_j, idx_next_i])
+                    indices.extend([idx_next_j, idx_next_both, idx_next_i])
+
+            # Торцы
+            # Нижний торец вертикальной части (z=vertical_length)
+            bottom_center = len(vertices) // 3
+            vertices.extend([0, 0, vertical_length])
+            for i in range(segments):
+                next_i = (i + 1) % segments
+                indices.extend([bottom_center, vert_base + next_i * 2, vert_base + i * 2])
+
+        else:
+            # Прямая шпилька: цилиндр с торцами
+            for i in range(segments):
+                angle = (2 * np.pi * i) / segments
+                x = radius * np.cos(angle)
+                y = radius * np.sin(angle)
                 vertices.extend([x, y, 0])
                 vertices.extend([x, y, length])
 
-        # Индексы
-        for i in range(0, len(vertices) // 3 - 2, 2):
-            indices.extend([i, i + 1, i + 2])
-            indices.extend([i + 1, i + 3, i + 2])
+            # Соединяем цилиндр
+            for i in range(segments):
+                next_i = (i + 1) % segments
+                indices.extend([i * 2, next_i * 2, i * 2 + 1])
+                indices.extend([i * 2 + 1, next_i * 2, next_i * 2 + 1])
+
+            # Нижний торец (z=0)
+            center_bottom_idx = len(vertices) // 3
+            vertices.extend([0, 0, 0])
+            for i in range(segments):
+                next_i = (i + 1) % segments
+                indices.extend([center_bottom_idx, i * 2, next_i * 2])
+
+            # Верхний торец (z=length)
+            center_top_idx = len(vertices) // 3
+            vertices.extend([0, 0, length])
+            for i in range(segments):
+                next_i = (i + 1) % segments
+                indices.extend([center_top_idx, next_i * 2 + 1, i * 2 + 1])
 
         return {
             'id': getattr(component, 'id', f'mesh_{index}'),
@@ -486,27 +549,79 @@ class InstanceFactory:
         }
 
     def _create_washer_mesh(self, diameter, spec, color, index, position, component):
-        """Mesh шайбы (кольцо)"""
+        """Mesh шайбы (кольцо с торцами)"""
         thickness = spec.get('washer_thickness', 3)
         outer_radius = spec.get('washer_outer_diameter', diameter + 10) / 2
+        inner_radius = spec.get('washer_inner_diameter', diameter + 2) / 2
         z_offset = position[2]
 
         vertices = []
         indices = []
         segments = 32
 
-        # Внешнее и внутреннее кольцо
+        # Внешний цилиндр
+        outer_base = len(vertices) // 3
         for i in range(segments):
             angle = (2 * np.pi * i) / segments
-            x_outer = outer_radius * np.cos(angle)
-            y_outer = outer_radius * np.sin(angle)
-            vertices.extend([x_outer, y_outer, z_offset])
-            vertices.extend([x_outer, y_outer, z_offset + thickness])
+            x = outer_radius * np.cos(angle)
+            y = outer_radius * np.sin(angle)
+            vertices.extend([x, y, z_offset])
+            vertices.extend([x, y, z_offset + thickness])
 
-        # Индексы
-        for i in range(segments - 1):
-            indices.extend([i * 2, i * 2 + 1, (i + 1) * 2])
-            indices.extend([i * 2 + 1, (i + 1) * 2 + 1, (i + 1) * 2])
+        # Соединяем внешний цилиндр
+        for i in range(segments):
+            next_i = (i + 1) % segments
+            indices.extend([outer_base + i * 2, outer_base + i * 2 + 1, outer_base + next_i * 2])
+            indices.extend([outer_base + i * 2 + 1, outer_base + next_i * 2 + 1, outer_base + next_i * 2])
+
+        # Внутренний цилиндр (отверстие)
+        inner_base = len(vertices) // 3
+        for i in range(segments):
+            angle = (2 * np.pi * i) / segments
+            x = inner_radius * np.cos(angle)
+            y = inner_radius * np.sin(angle)
+            vertices.extend([x, y, z_offset])
+            vertices.extend([x, y, z_offset + thickness])
+
+        # Соединяем внутренний цилиндр (обратная нормаль)
+        for i in range(segments):
+            next_i = (i + 1) % segments
+            indices.extend([inner_base + i * 2, inner_base + next_i * 2 + 1, inner_base + next_i * 2])
+            indices.extend([inner_base + i * 2, inner_base + i * 2 + 1, inner_base + next_i * 2 + 1])
+
+        # Нижний торец (кольцо)
+        bottom_outer_base = len(vertices) // 3
+        for i in range(segments):
+            angle = (2 * np.pi * i) / segments
+            vertices.extend([outer_radius * np.cos(angle), outer_radius * np.sin(angle), z_offset])
+        
+        bottom_inner_base = len(vertices) // 3
+        for i in range(segments):
+            angle = (2 * np.pi * i) / segments
+            vertices.extend([inner_radius * np.cos(angle), inner_radius * np.sin(angle), z_offset])
+
+        # Соединяем нижний торец
+        for i in range(segments):
+            next_i = (i + 1) % segments
+            indices.extend([bottom_outer_base + i, bottom_inner_base + i, bottom_outer_base + next_i])
+            indices.extend([bottom_outer_base + next_i, bottom_inner_base + i, bottom_inner_base + next_i])
+
+        # Верхний торец (кольцо)
+        top_outer_base = len(vertices) // 3
+        for i in range(segments):
+            angle = (2 * np.pi * i) / segments
+            vertices.extend([outer_radius * np.cos(angle), outer_radius * np.sin(angle), z_offset + thickness])
+        
+        top_inner_base = len(vertices) // 3
+        for i in range(segments):
+            angle = (2 * np.pi * i) / segments
+            vertices.extend([inner_radius * np.cos(angle), inner_radius * np.sin(angle), z_offset + thickness])
+
+        # Соединяем верхний торец (обратная нормаль)
+        for i in range(segments):
+            next_i = (i + 1) % segments
+            indices.extend([top_outer_base + i, top_outer_base + next_i, top_inner_base + i])
+            indices.extend([top_outer_base + next_i, top_inner_base + next_i, top_inner_base + i])
 
         return {
             'id': getattr(component, 'id', f'mesh_{index}'),
@@ -518,7 +633,8 @@ class InstanceFactory:
                 'Type': 'WASHER',
                 'Diameter': diameter,
                 'OuterDiameter': outer_radius * 2,
-                'Thickness': thickness
+                'Thickness': thickness,
+                'InnerDiameter': inner_radius * 2
             }
         }
 
