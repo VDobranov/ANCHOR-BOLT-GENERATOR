@@ -84,12 +84,12 @@ def convert_ifc_to_mesh(ifc_file, element, weld_vertices=True):
 def convert_assembly_to_meshes(ifc_file, components, color_map=None):
     """
     Конвертация сборки болта в список Three.js mesh
-    
+
     Args:
         ifc_file: IFC документ
         components: список компонентов (IfcMechanicalFastener)
         color_map: dict {ObjectType: color} для раскраски
-    
+
     Returns:
         dict с meshes для Three.js
     """
@@ -100,17 +100,19 @@ def convert_assembly_to_meshes(ifc_file, components, color_map=None):
             'NUT': 0x696969,
             'ANCHORBOLT': 0x4F4F4F
         }
-    
+
     meshes = []
-    
+    geom_failures = []
+
     for component in components:
         mesh_data = convert_ifc_to_mesh(ifc_file, component)
         if mesh_data is None:
+            geom_failures.append(f"{component.ObjectType} ({component.Name})")
             continue
-        
+
         comp_type = component.ObjectType or 'UNKNOWN'
         color = color_map.get(comp_type, 0xCCCCCC)
-        
+
         meshes.append({
             'id': component.id(),
             'name': component.Name or f'Component_{component.id()}',
@@ -123,7 +125,12 @@ def convert_assembly_to_meshes(ifc_file, components, color_map=None):
                 'GlobalId': component.GlobalId
             }
         })
-    
+
+    if geom_failures:
+        print(f"Warning: ifcopenshell.geom failed for: {geom_failures}")
+        print("  Falling back to manual mesh generation")
+        return None  # Возвращаем None для использования fallback
+
     return {'meshes': meshes}
 
 
