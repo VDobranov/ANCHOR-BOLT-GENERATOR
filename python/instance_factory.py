@@ -533,11 +533,15 @@ class InstanceFactory:
     def _create_nut_mesh(self, diameter, spec, color, index, position, component):
         """Mesh гайки (шестиугольник)"""
         from gost_data import get_nut_dimensions
-        
+        import math
+
         nut_dim = get_nut_dimensions(diameter)
         height = nut_dim['height'] if nut_dim else 10
         s_width = nut_dim['s_width'] if nut_dim else diameter * 1.5
-        outer_radius = s_width / 2  # радиус описанной окружности шестиугольника
+        
+        # Размер под ключ (S) — расстояние между параллельными гранями
+        # Радиус описанной окружности (до вершин): R = S / cos(30°) = 2S/√3
+        outer_radius = s_width / math.cos(math.pi / 6)  # S / cos(30°)
         inner_radius = diameter / 2 + 0.5
         z_offset = position[2]
 
