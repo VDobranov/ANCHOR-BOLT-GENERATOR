@@ -334,14 +334,16 @@ class InstanceFactory:
             'NUT': 0x696969,
             'ANCHORBOLT': 0x4F4F4F
         }
-        
+
         # Конвертация IFC геометрии в Three.js mesh
+        # Используем только ifcopenshell.geom — fallback отключён
         mesh_data = convert_assembly_to_meshes(self.ifc, components, color_map)
-        
+
         if not mesh_data or not mesh_data.get('meshes'):
-            # Fallback: ручная генерация если geom не доступен
-            mesh_data = self._generate_fallback_mesh_data(components, bolt_type, diameter, length, color_map)
-        
+            # Если geom не вернул данные — возвращаем пустой список
+            print(f"Warning: ifcopenshell.geom failed to generate mesh data")
+            return {'meshes': []}
+
         return mesh_data
     
     def _generate_fallback_mesh_data(self, components, bolt_type, diameter, length, color_map):
@@ -538,10 +540,10 @@ class InstanceFactory:
         nut_dim = get_nut_dimensions(diameter)
         height = nut_dim['height'] if nut_dim else 10
         s_width = nut_dim['s_width'] if nut_dim else diameter * 1.5
-        
+
         # Размер под ключ (S) — расстояние между параллельными гранями
-        # Радиус описанной окружности (до вершин): R = S / cos(30°) = 2S/√3
-        outer_radius = s_width / math.cos(math.pi / 6)  # S / cos(30°)
+        # Радиус описанной окружности (до вершин): R = S / √3
+        outer_radius = s_width / math.sqrt(3)
         inner_radius = diameter / 2 + 0.5
         z_offset = position[2]
 

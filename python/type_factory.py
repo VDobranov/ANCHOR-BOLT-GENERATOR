@@ -177,10 +177,10 @@ class TypeFactory:
         # Получаем размер под ключ из DIM.py
         nut_dim = get_nut_dimensions(diameter)
         s_width = nut_dim['s_width'] if nut_dim else diameter * 1.5
-        
+
         # Размер под ключ (S) — расстояние между параллельными гранями
-        # Радиус описанной окружности (до вершин): R = S / cos(30°) = 2S/√3
-        outer_radius = s_width / math.cos(math.pi / 6)  # S / cos(30°)
+        # Радиус описанной окружности (до вершин): R = S / √3
+        outer_radius = s_width / math.sqrt(3)
         inner_radius = diameter / 2.0 + 0.5
 
         # Внешний шестиугольник
