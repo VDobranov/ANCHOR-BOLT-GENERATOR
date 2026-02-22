@@ -23,9 +23,14 @@ class BoltForm {
     /**
      * Инициализация обработчиков формы
      */
-    init() {
+    async init() {
         this.updateExecutionOptions();
-        this.updateLengthOptions();
+        
+        // Установить диаметр по умолчанию (М20) перед загрузкой опций
+        this.elements.diameter.value = '20';
+        
+        await this.updateDiameterOptions();
+        await this.updateLengthOptions();
         this.setupListeners();
     }
 
@@ -36,9 +41,10 @@ class BoltForm {
         const { boltType, execution, diameter, length, material } = this.elements;
 
         // Обновление опций исполнения и длины
-        boltType.addEventListener('change', () => {
+        boltType.addEventListener('change', async () => {
             this.updateExecutionOptions();
-            this.updateLengthOptions();
+            await this.updateDiameterOptions();
+            await this.updateLengthOptions();
             this.triggerChange();
         });
 
@@ -72,7 +78,7 @@ class BoltForm {
         if (boltTypeValue === '2.1' || boltTypeValue === '5') {
             execution.value = '1';
             if (executionGroup) executionGroup.style.display = 'none';
-        } 
+        }
         // Типы 1.1 и 1.2 определяют исполнение по второй цифре
         else if (boltTypeValue === '1.1' || boltTypeValue === '1.2') {
             execution.value = boltTypeValue === '1.1' ? '1' : '2';
@@ -81,11 +87,64 @@ class BoltForm {
     }
 
     /**
+     * Обновление опций диаметров в зависимости от типа болта
+     */
+    async updateDiameterOptions() {
+        const { boltType, diameter } = this.elements;
+        const boltTypeValue = boltType.value;
+
+        if (!boltTypeValue) return;
+
+        try {
+            const diameters = await this.getAvailableDiameters(boltTypeValue);
+
+            const currentValue = parseInt(diameter.value || '0');
+            diameter.innerHTML = '';
+
+            if (diameters.length > 0) {
+                diameters.forEach(d => {
+                    const option = document.createElement('option');
+                    option.value = d;
+                    option.textContent = `M${d}`;
+                    diameter.appendChild(option);
+                });
+
+                // Сохранить текущее значение если доступно, иначе первое
+                if (diameters.includes(currentValue)) {
+                    diameter.value = currentValue;
+                } else {
+                    diameter.value = diameters[0];
+                }
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки диаметров:', error);
+        }
+    }
+
+    /**
+     * Получение доступных диаметров для типа болта
+     */
+    async getAvailableDiameters(boltType) {
+        if (!this.pyodide) {
+            return [];
+        }
+
+        return this.pyodide.runPython(`
+            import sys
+            sys.path.insert(0, '/python')
+            import gost_data
+            limits = gost_data.DIAMETER_LIMITS.get("${boltType}", (12, 100))
+            min_d, max_d = limits
+            [d for d in gost_data.AVAILABLE_DIAMETERS if min_d <= d <= max_d]
+        `);
+    }
+
+    /**
      * Обновление опций длины из Python-модуля gost_data
      */
     async updateLengthOptions() {
         const { boltType, execution, diameter, length } = this.elements;
-        
+
         length.innerHTML = '';
 
         const type = boltType.value;
@@ -96,7 +155,7 @@ class BoltForm {
 
         try {
             const lengths = await this.getAvailableLengths(type, exec, diam);
-            
+
             if (lengths.length > 0) {
                 lengths.forEach(l => {
                     const option = document.createElement('option');

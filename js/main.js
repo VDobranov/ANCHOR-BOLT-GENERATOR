@@ -33,7 +33,7 @@ async function initializeApp() {
             pyodide,
             onParamsChange: handleParamsChange
         });
-        form.init();
+        await form.init();
         console.log('✓ Форма инициализирована');
 
         // Генерация болта по умолчанию
