@@ -133,9 +133,18 @@ class BoltForm {
             import sys
             sys.path.insert(0, '/python')
             import gost_data
-            limits = gost_data.DIAMETER_LIMITS.get("${boltType}", (12, 100))
-            min_d, max_d = limits
-            [d for d in gost_data.AVAILABLE_DIAMETERS if min_d <= d <= max_d]
+            
+            # Получаем диаметры, для которых есть доступные длины с массой
+            available_diameters = []
+            for d in gost_data.AVAILABLE_DIAMETERS:
+                # Проверяем, есть ли длины для этого диаметра и типа
+                for exec_val in [1, 2]:
+                    key = ("${boltType}", exec_val, d)
+                    if key in gost_data.AVAILABLE_LENGTHS and len(gost_data.AVAILABLE_LENGTHS[key]) > 0:
+                        available_diameters.append(d)
+                        break  # Достаточно одного исполнения
+            
+            sorted(set(available_diameters))
         `);
     }
 
