@@ -30,11 +30,49 @@ class GeometryBuilder:
     def create_composite_curve_stud(self, bolt_type, diameter, length, execution=1):
         """
         Создание составной кривой для шпильки
-        Для изогнутых болтов (1.1, 1.2): линия + дуга + линия
-        Для прямых (2.1, 5): одна линия
-        """
-        from gost_data import get_bolt_bend_radius
         
+        Для типа 1.1: подход BlenderBIM (AGGREGATE_FBOLTS.py)
+        - IfcIndexedPolyCurve с IfcCartesianPointList3D
+        - IfcLineIndex + IfcArcIndex + IfcLineIndex
+        - 5 точек: p1(0,0,0), p2(0,0,-Ll+r), p3(r-r/√2, 0, -Ll+r-r/√2), p4(r,0,-Ll), p5(r+L0,0,-Ll)
+        
+        Для типа 1.2, 2.1, 5: старый подход с IfcCompositeCurve
+        """
+        from gost_data import get_bolt_bend_radius, get_thread_length, get_bolt_hook_length
+
+        # ТОЛЬКО для типа 1.1 используем новый подход BlenderBIM
+        if bolt_type == '1.1':
+            R = get_bolt_bend_radius(diameter, length) or diameter
+            r = R + diameter / 2.0  # Радиус пути центра трубы
+            Ll = length - diameter / 2.0
+            L0 = get_thread_length(diameter, length) or 0
+            L2 = get_bolt_hook_length(diameter, length) or 0
+
+            # 5 точек как в BlenderBIM
+            p1 = [0.0, 0.0, 0.0]
+            p2 = [0.0, 0.0, -Ll + r]
+            p3 = [r - r / math.sqrt(2), 0.0, -Ll + r - r / math.sqrt(2)]
+            p4 = [r, 0.0, -Ll]
+            p5 = [r + L2, 0.0, -Ll]
+
+            # IfcCartesianPointList3D
+            point_list = self.ifc.create_entity('IfcCartesianPointList3D',
+                CoordList=[p1, p2, p3, p4, p5]
+            )
+
+            # Сегменты: линия + дуга + линия (как в BlenderBIM)
+            line1 = self.ifc.create_entity('IfcLineIndex', [1, 2])
+            arc = self.ifc.create_entity('IfcArcIndex', [2, 3, 4])
+            line2 = self.ifc.create_entity('IfcLineIndex', [4, 5])
+
+            # IfcIndexedPolyCurve
+            return self.ifc.create_entity('IfcIndexedPolyCurve',
+                Points=point_list,
+                Segments=[line1, arc, line2],
+                SelfIntersect=False
+            )
+
+        # Для типов 1.2, 2.1, 5 - старый подход
         segments = []
         has_bend = bolt_type in ['1.1', '1.2']
 
