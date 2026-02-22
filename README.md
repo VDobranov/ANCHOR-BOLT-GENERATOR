@@ -29,11 +29,11 @@ python3 -m http.server 8000
 ### Использование
 
 1. Выберите тип болта (1.1, 1.2, 2.1 или 5)
-2. Выберите диаметр (М12–М100)
+2. Выберите диаметр (М12–М48)
 3. Выберите длину (из доступных по ГОСТ)
 4. Выберите материал (09Г2С, ВСт3пс2 или 10Г2)
 5. Болт генерируется автоматически при изменении параметров
-6. Вращайте 3D-вид мышью (ЛКМ — вращение, ПКМ/колесо — панорамирование/зум)
+6. Вращайте 3D-вид мышью (ЛКМ — вращение, колесо — зум, ПКМ — панорамирование)
 7. Нажмите «Скачать IFC» для экспорта
 
 **Состав сборки определяется автоматически:**
@@ -55,20 +55,20 @@ anchor-bolt-generator/
 │   ├── main.js            # Оркестрация приложения
 │   └── init.js            # Точка входа
 ├── python/                 # Python модули (выполняются в браузере)
-│   ├── main.py            # Singleton IFC документа, кэширование ifcopenshell
+│   ├── main.py            # Singleton IFC документа
+│   ├── utils.py           # Общие утилиты (импорт ifcopenshell)
 │   ├── gost_data.py       # Справочники ГОСТ и валидация
 │   ├── type_factory.py    # Фабрика и кэширование типов
 │   ├── instance_factory.py # Создание инстансов и сборок
 │   ├── geometry_builder.py # Построение IFC геометрии (кривые, профили)
 │   ├── geometry_converter.py # Конвертация IFC → Three.js mesh (ifcopenshell.geom)
-│   ├── material_manager.py # Управление материалами
-│   ├── pset_manager.py    # Property Sets
-│   ├── ifc_generator.py   # Экспорт IFC
-│   └── requirements.txt   # Зависимости Python
+│   └── ifc_generator.py   # Экспорт IFC
 ├── wheels/                 # Python wheel для Pyodide
 │   └── ifcopenshell-*.whl
 ├── ai/                     # Документация архитектуры
-│   └── CONSOLIDATED_PLAN.md
+│   ├── CONSOLIDATED_PLAN.md
+│   ├── IMPLEMENTATION_SUMMARY.md
+│   └── Qwen_session_*.md  # Резюме сессий
 └── README.md
 ```
 
@@ -86,11 +86,13 @@ anchor-bolt-generator/
 | `viewer.js` | Класс `IFCViewer`: Three.js сцена, камера, меши, взаимодействие |
 | `ifcBridge.js` | Класс `IFCBridge`: загрузка Pyodide, установка ifcopenshell, вызов Python |
 | `main.js` | Оркестрация: инициализация, координация модулей |
-| `main.py` | Singleton `IFCDocument`: управление IFC файлом, кэширование ifcopenshell |
+| `main.py` | Singleton `IFCDocument`: управление IFC файлом |
+| `utils.py` | Централизованный импорт ifcopenshell (get_ifcopenshell) |
 | `type_factory.py` | Фабрика типов: кэширование `IfcMechanicalFastenerType` |
-| `instance_factory.py` | Создание инстансов: размещения, агрегации, mesh-данные |
+| `instance_factory.py` | Создание инстансов: размещения, агрегации, mesh-данные через ifcopenshell.geom |
 | `geometry_builder.py` | Построение IFC-геометрии: кривые, профили, выдавливание |
-| `geometry_converter.py` | Конвертация IFC → Three.js mesh через ifcopenshell.geom |
+| `geometry_converter.py` | Конвертация IFC → Three.js mesh через ifcopenshell.geom.create_shape() |
+| `ifc_generator.py` | Экспорт IFC файла, валидация документа |
 
 **Подход к генерации геометрии:**
 
@@ -98,7 +100,6 @@ anchor-bolt-generator/
 - Единый источник истины для геометрии
 - Отсутствие дублирования кода
 - Корректное соответствие 3D-вида и IFC-данных
-- Fallback на ручную генерацию при недоступности ifcopenshell.geom
 
 **Двухэтапная инициализация:**
 
@@ -143,13 +144,13 @@ IfcProject
 
 | Тип | Категория | Форма | Исполнения | Диаметры | Длины |
 |-----|----------|-------|-----------|---------|-------|
-| 1.1 | I | Изогнутый | 1, 2 | М12–М100 | 400–1600 |
-| 1.2 | I | Изогнутый | 1, 2 | М12–М100 | 400–1000 |
-| 2.1 | II | Прямой | 1 | М12–М100 | 500–1250 |
-| 5 | — | Футорка | 1 | М12–М100 | 500–1000 |
+| 1.1 | I | Изогнутый | 1, 2 | М12–М48 | 300–1400 |
+| 1.2 | I | Изогнутый | 1, 2 | М12–М48 | 300–1000 |
+| 2.1 | II | Прямой | 1 | М16–М48 | 500–1250 |
+| 5 | — | Футорка | 1 | М12–М48 | 300–1000 |
 
-**Доступные диаметры:**  
-М12, М16, М20, М24, М30, М36, М42, М48, М56, М64, М72, М80, М90, М100 (14 вариантов)
+**Доступные диаметры:**
+М12, М16, М20, М24, М30, М36, М42, М48 (8 вариантов по DIM.py/BlenderBIM)
 
 **Материалы (ГОСТ):**
 - **09Г2С** (ГОСТ 19281-2014) — σ_в = 490 МПа, низколегированная сталь
@@ -165,7 +166,6 @@ IfcProject
 | Pyodide | 0.26.0 | Python runtime в браузере |
 | IfcOpenShell | 0.8.4 | Работа с IFC |
 | IFC Standard | IFC4 ADD2 TC1 | Формат файлов |
-| Python | 3.13 | Логика IFC |
 
 ## API
 
@@ -181,11 +181,7 @@ const result = await bridge.generateBolt({
     execution: 1,
     diameter: 20,
     length: 800,
-    material: '09Г2С',
-    has_bottom_nut: false,
-    has_top_nut1: true,
-    has_top_nut2: true,
-    has_washers: true
+    material: '09Г2С'
 });
 
 // result.ifcData — IFC-строка для скачивания
@@ -208,10 +204,6 @@ ifc_str, mesh_data = generate_bolt_assembly({
     'length': 800,
     'material': '09Г2С'
 })
-
-# Конвертация IFC геометрии в Three.js mesh
-from geometry_converter import convert_assembly_to_meshes
-mesh_data = convert_assembly_to_meshes(ifc_doc, components, color_map)
 ```
 
 ## Примеры
@@ -258,7 +250,8 @@ mesh_data = convert_assembly_to_meshes(ifc_doc, components, color_map)
 | 9. Рефакторинг | ✅ Готово | Модульная архитектура (config, ui, form) |
 | 10. ifcopenshell.geom | ✅ Готово | Конвертация IFC → Three.js mesh |
 | 11. Геометрия сборок | ✅ Готово | Исправлена геометрия шпилек и шайб |
-| 12. Тестирование | ⏳ Планируется | Валидация IFC, примеры |
+| 12. Рефакторинг кода | ✅ Готово | Удаление мёртвого кода, централизация импортов |
+| 13. Тестирование | ⏳ Планируется | Валидация IFC, примеры |
 
 ## Известные ограничения
 
@@ -270,23 +263,33 @@ mesh_data = convert_assembly_to_meshes(ifc_doc, components, color_map)
 ## Развитие
 
 Планируемые функции:
-- [ ] Добавить все остальные типы болтов из ГОСТ
-- [ ] Поддержка импорта параметров из CSV/JSON
+- [ ] Валидация IFC файлов в BIM-приложениях (Revit, ArchiCAD, BonsaiBIM)
+- [ ] Добавление остальных диаметров (М56–М100) при наличии данных
 - [ ] Пакетная генерация болтов
 - [ ] Экспорт в другие форматы (STEP, STL)
-- [ ] Совместимость с BIM-приложениями (Revit, ArchiCAD)
-- [ ] Настройка размеров гаек/шайб
+- [ ] Расширенная обработка ошибок на фронтенде
 - [ ] История генерации
 
 ## Лицензия
 
 MIT
 
+## История рефакторинга
+
+### Рефакторинг (22.02.2026)
+- Удалён fallback mesh код (~340 строк) — используется только ifcopenshell.geom
+- Удалены неиспользуемые модули: material_manager.py, pset_manager.py, requirements.txt
+- Создан utils.py для централизации импорта ifcopenshell
+- Удалено дублирование BOLT_DIMENSIONS_SPEC и get_bolt_spec в gost_data.py
+- Обновлены config.js и ui.js (удалены несуществующие элементы)
+- **Итого:** удалено ~620 строк, добавлено ~80 строк
+
 ## Дополнительные ресурсы
 
 - **ГОСТ 24379.1-2012** — Болты фундаментные. Конструкция и размеры
 - **ГОСТ 19281-2014** — Прокат повышенной прочности. Общие технические условия
-- **IFC4 ADD2 TC1** — Industry Foundation Classes 4.0.2.1 (Version 4.0 - Addendum 2 - Technical Corrigendum 1) [Документация](https://standards.buildingsmart.org/IFC/RELEASE/IFC4/ADD2_TC1/HTML/)
+- **DIM.py (BlenderBIM)** — основной источник размеров болтов
+- **IFC4 ADD2 TC1** — Industry Foundation Classes 4.0.2.1 [Документация](https://standards.buildingsmart.org/IFC/RELEASE/IFC4/ADD2_TC1/HTML/)
 - [Three.js Documentation](https://threejs.org/docs/)
 - [Pyodide Documentation](https://pyodide.org/)
 
