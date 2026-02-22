@@ -333,26 +333,13 @@ class InstanceFactory:
             'ANCHORBOLT': 0x4F4F4F
         }
         
-        print(f"=== CONVERT IFC TO MESH ===")
-        print(f"Bolt type: {bolt_type}, Diameter: {diameter}, Length: {length}")
-        print(f"Components: {len(components)}")
-        
         # Конвертация IFC геометрии в Three.js mesh
         mesh_data = convert_assembly_to_meshes(self.ifc, components, color_map)
         
-        if mesh_data and mesh_data.get('meshes'):
-            print(f"Total meshes converted: {len(mesh_data['meshes'])}")
-            for i, mesh in enumerate(mesh_data['meshes']):
-                print(f"  Mesh {i}: {mesh['name']}")
-                print(f"    Type: {mesh['metadata']['Type']}, Vertices: {len(mesh['vertices']) // 3}, Indices: {len(mesh['indices']) // 3}")
-                if mesh['vertices']:
-                    print(f"    First vertex: {mesh['vertices'][:3]}")
-        else:
-            print("Warning: No meshes converted, falling back to manual generation")
+        if not mesh_data or not mesh_data.get('meshes'):
             # Fallback: ручная генерация если geom не доступен
             mesh_data = self._generate_fallback_mesh_data(components, bolt_type, diameter, length, color_map)
         
-        print(f"========================")
         return mesh_data
     
     def _generate_fallback_mesh_data(self, components, bolt_type, diameter, length, color_map):

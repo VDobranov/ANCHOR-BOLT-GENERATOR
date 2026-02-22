@@ -68,8 +68,6 @@ def convert_ifc_to_mesh(ifc_file, element, weld_vertices=True):
         # Преобразование индексов граней в плоский список
         indices = faces.flatten()
 
-        print(f"  Converted {element.Name}: {len(verts)//3} vertices, {len(faces)//3} faces")
-
         return {
             'vertices': verts.tolist(),
             'indices': indices.tolist(),

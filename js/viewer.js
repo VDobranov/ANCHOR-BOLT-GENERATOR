@@ -175,25 +175,6 @@ class IFCViewer {
             rotationY: this.controls.currentRotationY
         } : null;
 
-        // Логирование mesh-данных
-        console.log('=== MESH DATA ===');
-        console.log('Total meshes:', meshData?.meshes?.length || 0);
-        if (meshData?.meshes) {
-            meshData.meshes.forEach((m, i) => {
-                console.log(`Mesh ${i}: ${m.name} (id=${m.id})`);
-                console.log(`  Vertices: ${m.vertices?.length || 0} (${(m.vertices?.length || 0) / 3} points)`);
-                console.log(`  Indices: ${m.indices?.length || 0} (${(m.indices?.length || 0) / 3} triangles)`);
-                console.log(`  Normals: ${m.normals?.length || 0} (${m.normals ? 'from IFC' : 'computed'})`);
-                console.log(`  Color: 0x${m.color?.toString(16) || 'default'}`);
-                console.log(`  Metadata:`, m.metadata);
-                if (m.vertices && m.vertices.length > 0) {
-                    console.log(`  First vertex: [${m.vertices[0]}, ${m.vertices[1]}, ${m.vertices[2]}]`);
-                    console.log(`  Last vertex: [${m.vertices[m.vertices.length - 3]}, ${m.vertices[m.vertices.length - 2]}, ${m.vertices[m.vertices.length - 1]}]`);
-                }
-            });
-        }
-        console.log('================');
-
         // Очистка старых мешей
         this.meshes.forEach(item => {
             this.scene.remove(item.mesh);
