@@ -323,34 +323,49 @@ class InstanceFactory:
         return profile  # Упрощённо возвращаем оригинал
 
     def _generate_mesh_data(self, components, bolt_type, diameter, length, material):
-        """Генерация mesh данных для Three.js"""
-        meshes = []
+        """Генерация mesh данных через ifcopenshell.geom"""
+        from geometry_converter import convert_assembly_to_meshes
+        
         color_map = {
             'STUD': 0x8B8B8B,
             'WASHER': 0xA9A9A9,
             'NUT': 0x696969,
             'ANCHORBOLT': 0x4F4F4F
         }
-
-        print(f"=== GENERATE MESH DATA ===")
+        
+        print(f"=== CONVERT IFC TO MESH ===")
         print(f"Bolt type: {bolt_type}, Diameter: {diameter}, Length: {length}")
         print(f"Components: {len(components)}")
-
+        
+        # Конвертация IFC геометрии в Three.js mesh
+        mesh_data = convert_assembly_to_meshes(self.ifc, components, color_map)
+        
+        if mesh_data and mesh_data.get('meshes'):
+            print(f"Total meshes converted: {len(mesh_data['meshes'])}")
+            for i, mesh in enumerate(mesh_data['meshes']):
+                print(f"  Mesh {i}: {mesh['name']}")
+                print(f"    Type: {mesh['metadata']['Type']}, Vertices: {len(mesh['vertices']) // 3}, Indices: {len(mesh['indices']) // 3}")
+                if mesh['vertices']:
+                    print(f"    First vertex: {mesh['vertices'][:3]}")
+        else:
+            print("Warning: No meshes converted, falling back to manual generation")
+            # Fallback: ручная генерация если geom не доступен
+            mesh_data = self._generate_fallback_mesh_data(components, bolt_type, diameter, length, color_map)
+        
+        print(f"========================")
+        return mesh_data
+    
+    def _generate_fallback_mesh_data(self, components, bolt_type, diameter, length, color_map):
+        """Fallback: генерация mesh данных вручную (если ifcopenshell.geom недоступен)"""
+        meshes = []
+        
         for i, component in enumerate(components):
             mesh = self._create_fallback_mesh(
                 component, i, diameter, length, color_map, bolt_type
             )
             if mesh:
-                print(f"  Mesh {i}: {mesh['name']}")
-                print(f"    Type: {component.ObjectType}, Vertices: {len(mesh['vertices']) // 3}, Indices: {len(mesh['indices']) // 3}")
-                print(f"    First vertex: {mesh['vertices'][:3]}")
                 meshes.append(mesh)
-            else:
-                print(f"  Mesh {i}: FAILED to create")
-
-        print(f"Total meshes created: {len(meshes)}")
-        print(f"========================")
-
+        
         return {'meshes': meshes}
 
     def _create_fallback_mesh(self, component, index, diameter, length, color_map, bolt_type):

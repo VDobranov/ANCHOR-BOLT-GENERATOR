@@ -183,6 +183,7 @@ class IFCViewer {
                 console.log(`Mesh ${i}: ${m.name} (id=${m.id})`);
                 console.log(`  Vertices: ${m.vertices?.length || 0} (${(m.vertices?.length || 0) / 3} points)`);
                 console.log(`  Indices: ${m.indices?.length || 0} (${(m.indices?.length || 0) / 3} triangles)`);
+                console.log(`  Normals: ${m.normals?.length || 0} (${m.normals ? 'from IFC' : 'computed'})`);
                 console.log(`  Color: 0x${m.color?.toString(16) || 'default'}`);
                 console.log(`  Metadata:`, m.metadata);
                 if (m.vertices && m.vertices.length > 0) {
@@ -219,7 +220,14 @@ class IFCViewer {
                 new THREE.BufferAttribute(new Float32Array(transformedVertices), 3));
             geometry.setIndex(
                 new THREE.BufferAttribute(new Uint32Array(data.indices), 1));
-            geometry.computeVertexNormals();
+            
+            // Используем готовые нормали если есть, иначе вычисляем
+            if (data.normals && data.normals.length > 0) {
+                geometry.setAttribute('normal',
+                    new THREE.BufferAttribute(new Float32Array(data.normals), 3));
+            } else {
+                geometry.computeVertexNormals();
+            }
 
             const material = new THREE.MeshPhongMaterial({
                 color: data.color || 0x2563eb,
@@ -282,17 +290,18 @@ class IFCViewer {
     }
 
     /**
-     * Трансформация вершин из IFC (Z-up) в Three.js (Y-up)
+     * Трансформация вершин из IFC (Z-up, метры) в Three.js (Y-up, миллиметры)
      * @param {number[]} vertices
      * @returns {number[]}
      */
     transformVerticesForThreeJS(vertices) {
         const transformed = [];
         for (let i = 0; i < vertices.length; i += 3) {
+            // Конвертация метров в миллиметры + трансформация осей
             transformed.push(
-                vertices[i],      // x
-                vertices[i + 2],  // z -> y
-                -vertices[i + 1]  // -y -> z
+                vertices[i] * 1000,       // x (м → мм)
+                vertices[i + 2] * 1000,   // z -> y (м → мм)
+                -vertices[i + 1] * 1000   // -y -> z (м → мм)
             );
         }
         return transformed;

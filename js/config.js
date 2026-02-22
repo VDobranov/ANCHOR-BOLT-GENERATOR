@@ -22,7 +22,8 @@ const APP_CONFIG = {
         'python/geometry_builder.py',
         'python/ifc_generator.py',
         'python/material_manager.py',
-        'python/pset_manager.py'
+        'python/pset_manager.py',
+        'python/geometry_converter.py'
     ],
 
     // Таймауты

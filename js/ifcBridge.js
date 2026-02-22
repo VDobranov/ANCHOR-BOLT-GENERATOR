@@ -93,14 +93,21 @@ class IFCBridge {
         await this.pyodide.runPythonAsync(`
             import sys
             sys.path.insert(0, '/python')
-            
+
             # Проверяем, что ifcopenshell импортируется
             try:
                 import ifcopenshell
                 print(f'✓ ifcopenshell доступен: {ifcopenshell.__version__ if hasattr(ifcopenshell, "__version__") else "unknown"}')
             except ImportError as e:
                 raise RuntimeError(f'ifcopenshell не доступен: {e}')
-            
+
+            # Проверяем ifcopenshell.geom
+            try:
+                import ifcopenshell.geom
+                print('✓ ifcopenshell.geom доступен')
+            except ImportError as e:
+                print(f'⚠ ifcopenshell.geom не доступен: {e}')
+
             # Проверяем main.is_ifcopenshell_available()
             import main
             if not main.is_ifcopenshell_available():
