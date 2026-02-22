@@ -123,13 +123,10 @@ window.addEventListener('meshSelected', (e) => {
 /**
  * Обработчик кнопки download
  */
-document.addEventListener('DOMContentLoaded', () => {
-    const downloadBtn = document.getElementById('downloadBtn');
-    downloadBtn.addEventListener('click', downloadIFCFile);
+document.getElementById('downloadBtn').addEventListener('click', downloadIFCFile);
 
-    // Запуск инициализации
-    initializeApp();
-});
+// Запуск инициализации
+initializeApp();
 
 // Export для доступа из других модулей
 if (typeof module !== 'undefined' && module.exports) {

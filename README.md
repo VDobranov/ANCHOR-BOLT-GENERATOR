@@ -255,9 +255,9 @@ MIT
 
 ## Дополнительные ресурсы
 
-- **ГОСТ 24379.1-2012** — Болты фундаментные анкерные
-- **ГОСТ 19281-2014** — Материалы стальные
-- **IFC4 ADD2 TC1** — Стандарт информационного моделирования зданий
+- **ГОСТ 24379.1-2012** — Болты фундаментные. Конструкция и размеры
+- **ГОСТ 19281-2014** — Прокат повышенной прочности. Общие технические условия
+- **IFC4 ADD2 TC1** — Industry Foundation Classes 4.0.2.1 (Version 4.0 - Addendum 2 - Technical Corrigendum 1) [Документация](https://standards.buildingsmart.org/IFC/RELEASE/IFC4/ADD2_TC1/HTML/)
 - [Three.js Documentation](https://threejs.org/docs/)
 - [Pyodide Documentation](https://pyodide.org/)
 

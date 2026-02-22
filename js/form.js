@@ -13,11 +13,7 @@ class BoltForm {
             executionGroup: document.getElementById('executionGroup'),
             diameter: document.getElementById('diameter'),
             length: document.getElementById('length'),
-            material: document.getElementById('material'),
-            bottomNut: document.getElementById('bottomNut'),
-            topNut1: document.getElementById('topNut1'),
-            topNut2: document.getElementById('topNut2'),
-            washers: document.getElementById('washers')
+            material: document.getElementById('material')
         };
         
         this.debounceTimer = null;
@@ -30,8 +26,6 @@ class BoltForm {
     init() {
         this.updateExecutionOptions();
         this.updateLengthOptions();
-        this.updateBottomComponentsAvailability();
-        
         this.setupListeners();
     }
 
@@ -39,14 +33,12 @@ class BoltForm {
      * Настройка обработчиков событий
      */
     setupListeners() {
-        const { boltType, execution, diameter, length, material,
-                bottomNut, topNut1, topNut2, washers } = this.elements;
+        const { boltType, execution, diameter, length, material } = this.elements;
 
         // Обновление опций исполнения и длины
         boltType.addEventListener('change', () => {
             this.updateExecutionOptions();
             this.updateLengthOptions();
-            this.updateBottomComponentsAvailability();
             this.triggerChange();
         });
 
@@ -62,12 +54,6 @@ class BoltForm {
 
         length.addEventListener('change', () => this.triggerChange());
         material.addEventListener('change', () => this.triggerChange());
-
-        // Опциональные компоненты
-        bottomNut.addEventListener('change', () => this.triggerChange());
-        topNut1.addEventListener('change', () => this.triggerChange());
-        topNut2.addEventListener('change', () => this.triggerChange());
-        washers.addEventListener('change', () => this.triggerChange());
     }
 
     /**
@@ -134,8 +120,6 @@ class BoltForm {
             option.disabled = true;
             length.appendChild(option);
         }
-
-        this.updateBottomComponentsAvailability();
     }
 
     /**
@@ -143,7 +127,6 @@ class BoltForm {
      */
     async getAvailableLengths(boltType, execution, diameter) {
         if (!this.pyodide) {
-            // Fallback: пустой список если Pyodide недоступен
             return [];
         }
 
@@ -158,43 +141,17 @@ class BoltForm {
     }
 
     /**
-     * Обновление доступности нижних компонентов (гайки/шайбы)
-     */
-    updateBottomComponentsAvailability() {
-        const { boltType, bottomNut, washers } = this.elements;
-        const isBoltType2 = boltType.value.startsWith('2.');
-
-        // Нижняя гайка только для типа 2.x
-        bottomNut.disabled = !isBoltType2;
-        
-        // Шайбы доступны для всех типов
-        washers.disabled = false;
-
-        // Сброс нижней гайки если тип не 2.x
-        if (!isBoltType2) {
-            bottomNut.checked = false;
-        }
-    }
-
-    /**
      * Получение параметров формы
      */
     getParams() {
-        const { boltType, execution, diameter, length, material,
-                bottomNut, topNut1, topNut2, washers } = this.elements;
-
-        const isBoltType2 = boltType.value.startsWith('2.');
+        const { boltType, execution, diameter, length, material } = this.elements;
 
         return {
             bolt_type: boltType.value,
             execution: parseInt(execution.value || '1'),
             diameter: parseInt(diameter.value || '0'),
             length: parseInt(length.value || '0'),
-            material: material.value,
-            has_bottom_nut: isBoltType2 ? bottomNut.checked : false,
-            has_top_nut1: topNut1.checked,
-            has_top_nut2: topNut2.checked,
-            has_washers: washers.checked
+            material: material.value
         };
     }
 
@@ -213,21 +170,15 @@ class BoltForm {
      * Установка параметров формы
      */
     setParams(params) {
-        const { boltType, execution, diameter, length, material,
-                bottomNut, topNut1, topNut2, washers } = this.elements;
+        const { boltType, execution, diameter, length, material } = this.elements;
 
         boltType.value = params.bolt_type || '1.1';
         execution.value = params.execution || '1';
         diameter.value = params.diameter || '20';
         length.value = params.length || '800';
         material.value = params.material || '09Г2С';
-        bottomNut.checked = params.has_bottom_nut || false;
-        topNut1.checked = params.has_top_nut1 ?? true;
-        topNut2.checked = params.has_top_nut2 ?? true;
-        washers.checked = params.has_washers ?? true;
 
         this.updateExecutionOptions();
-        this.updateBottomComponentsAvailability();
     }
 
     /**
@@ -254,11 +205,7 @@ class BoltForm {
             execution: 1,
             diameter: 20,
             length: 800,
-            material: '09Г2С',
-            has_bottom_nut: false,
-            has_top_nut1: true,
-            has_top_nut2: true,
-            has_washers: true
+            material: '09Г2С'
         };
     }
 }

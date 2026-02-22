@@ -20,11 +20,13 @@ class InstanceFactory:
         self.ifc = ifc_doc
         self.type_factory = type_factory or TypeFactory(ifc_doc)
 
-    def create_bolt_assembly(self, bolt_type, execution, diameter, length, material,
-                            has_bottom_nut=False, has_top_nut1=False,
-                            has_top_nut2=False, has_washers=False):
+    def create_bolt_assembly(self, bolt_type, execution, diameter, length, material):
         """
         Создание полной сборки анкерного болта
+        
+        Состав сборки по умолчанию:
+        - Типы 1.1, 1.2, 5: шпилька + верхняя шайба + 2 верхних гайки
+        - Тип 2.1: шпилька + верхняя шайба + 2 верхних гайки + 2 нижних гайки
 
         Returns:
             dict с assembly, stud, components и mesh_data
@@ -34,6 +36,13 @@ class InstanceFactory:
         # Валидация параметров
         validate_parameters(bolt_type, execution, diameter, length, material)
         spec = get_bolt_spec(diameter)
+
+        # Автоматическое определение состава сборки по типу болта
+        has_top_washer = True
+        has_top_nut1 = True
+        has_top_nut2 = True
+        has_bottom_nut = bolt_type == '2.1'
+        has_bottom_nut2 = bolt_type == '2.1'
 
         # Получение типов
         stud_type = self.type_factory.get_or_create_stud_type(
@@ -81,7 +90,7 @@ class InstanceFactory:
         nut_height = spec.get('nut_height', 10)
 
         # Верхняя шайба (для всех типов)
-        if has_washers:
+        if has_top_washer:
             washer_top = self._create_component(
                 'Washer', f'Washer_Top_M{diameter}', 'WASHER',
                 (0, 0, washer_thickness / 2),
@@ -91,7 +100,7 @@ class InstanceFactory:
 
         # Верхняя гайка 1
         if has_top_nut1:
-            z_pos = washer_thickness / 2 if has_washers else 0
+            z_pos = washer_thickness / 2
             nut_top1 = self._create_component(
                 'Nut', f'Nut_Top1_M{diameter}', 'NUT',
                 (0, 0, z_pos + nut_height / 2),
@@ -101,8 +110,7 @@ class InstanceFactory:
 
         # Верхняя гайка 2
         if has_top_nut2:
-            z_pos = (washer_thickness + nut_height) if has_washers and has_top_nut1 else \
-                    (washer_thickness / 2 + nut_height) if has_washers else nut_height
+            z_pos = washer_thickness + nut_height
             nut_top2 = self._create_component(
                 'Nut', f'Nut_Top2_M{diameter}', 'NUT',
                 (0, 0, z_pos + nut_height / 2),
@@ -110,24 +118,25 @@ class InstanceFactory:
             )
             components.append(nut_top2)
 
-        # Нижняя шайба (только для типа 2.x)
-        if has_washers and bolt_type.startswith('2.'):
-            washer_bottom = self._create_component(
-                'Washer', f'Washer_Bottom_M{diameter}', 'WASHER',
-                (0, 0, length - washer_thickness / 2),
-                washer_type, washer_instances
-            )
-            components.append(washer_bottom)
-
-        # Нижняя гайка (только для типа 2.x)
-        if has_bottom_nut and bolt_type.startswith('2.'):
-            z_pos = length + washer_thickness / 2 if has_washers else length
+        # Нижняя гайка 1 (только для типа 2.1)
+        if has_bottom_nut:
+            z_pos = length - washer_thickness / 2 - nut_height / 2
             nut_bottom = self._create_component(
-                'Nut', f'Nut_Bottom_M{diameter}', 'NUT',
-                (0, 0, z_pos + nut_height / 2),
+                'Nut', f'Nut_Bottom1_M{diameter}', 'NUT',
+                (0, 0, z_pos),
                 nut_type, nut_instances
             )
             components.append(nut_bottom)
+
+        # Нижняя гайка 2 (только для типа 2.1)
+        if has_bottom_nut2:
+            z_pos = length - washer_thickness / 2 - nut_height * 1.5
+            nut_bottom2 = self._create_component(
+                'Nut', f'Nut_Bottom2_M{diameter}', 'NUT',
+                (0, 0, z_pos),
+                nut_type, nut_instances
+            )
+            components.append(nut_bottom2)
 
         # IfcRelDefinesByType для каждого типа
         self.ifc.create_entity('IfcRelDefinesByType',
@@ -179,8 +188,7 @@ class InstanceFactory:
 
         # Mesh data для 3D визуализации
         mesh_data = self._generate_mesh_data(
-            components, bolt_type, diameter, length, material,
-            has_bottom_nut, has_top_nut1, has_top_nut2, has_washers
+            components, bolt_type, diameter, length, material
         )
 
         return {
@@ -314,8 +322,7 @@ class InstanceFactory:
         """Дублирование профиля"""
         return profile  # Упрощённо возвращаем оригинал
 
-    def _generate_mesh_data(self, components, bolt_type, diameter, length, material,
-                           has_bottom_nut, has_top_nut1, has_top_nut2, has_washers):
+    def _generate_mesh_data(self, components, bolt_type, diameter, length, material):
         """Генерация mesh данных для Three.js"""
         meshes = []
         color_map = {
@@ -327,16 +334,14 @@ class InstanceFactory:
 
         for i, component in enumerate(components):
             mesh = self._create_fallback_mesh(
-                component, i, diameter, length, color_map,
-                bolt_type, has_bottom_nut, has_top_nut1, has_top_nut2, has_washers
+                component, i, diameter, length, color_map, bolt_type
             )
             if mesh:
                 meshes.append(mesh)
 
         return {'meshes': meshes}
 
-    def _create_fallback_mesh(self, component, index, diameter, length, color_map,
-                             bolt_type, has_bottom_nut, has_top_nut1, has_top_nut2, has_washers):
+    def _create_fallback_mesh(self, component, index, diameter, length, color_map, bolt_type):
         """Создание упрощённого mesh для визуализации"""
         comp_type = component.ObjectType or 'UNKNOWN'
         color = color_map.get(comp_type, 0xCCCCCC)
@@ -537,11 +542,7 @@ def generate_bolt_assembly(params):
         execution=params['execution'],
         diameter=params['diameter'],
         length=params['length'],
-        material=params['material'],
-        has_bottom_nut=params.get('has_bottom_nut', False),
-        has_top_nut1=params.get('has_top_nut1', False),
-        has_top_nut2=params.get('has_top_nut2', False),
-        has_washers=params.get('has_washers', False)
+        material=params['material']
     )
 
     # Экспорт в строку через временный файл
