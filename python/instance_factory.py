@@ -4,7 +4,7 @@ instance_factory.py — Создание инстансов болтов и сб
 
 import numpy as np
 from type_factory import TypeFactory
-from gost_data import validate_parameters, get_bolt_spec
+from gost_data import validate_parameters, get_nut_dimensions, get_washer_dimensions
 
 
 def _get_ifcopenshell():
@@ -32,10 +32,16 @@ class InstanceFactory:
             dict с assembly, stud, components и mesh_data
         """
         ifcopenshell = _get_ifcopenshell()
-        
+
         # Валидация параметров
         validate_parameters(bolt_type, execution, diameter, length, material)
-        spec = get_bolt_spec(diameter)
+        
+        # Получение размеров компонентов
+        nut_dim = get_nut_dimensions(diameter)
+        washer_dim = get_washer_dimensions(diameter)
+        
+        nut_height = nut_dim['height'] if nut_dim else 10
+        washer_thickness = washer_dim['thickness'] if washer_dim else 3
 
         # Автоматическое определение состава сборки по типу болта
         has_top_washer = True
@@ -84,10 +90,6 @@ class InstanceFactory:
         self._add_instance_representation(stud, stud_type)
         stud_instances.append(stud)
         components.append(stud)
-
-        # Размеры компонентов
-        washer_thickness = spec.get('washer_thickness', 3)
-        nut_height = spec.get('nut_height', 10)
 
         # Верхняя шайба (для всех типов)
         if has_top_washer:
@@ -359,7 +361,6 @@ class InstanceFactory:
         """Создание упрощённого mesh для визуализации"""
         comp_type = component.ObjectType or 'UNKNOWN'
         color = color_map.get(comp_type, 0xCCCCCC)
-        spec = get_bolt_spec(diameter)
 
         # Получение позиции из placement
         placement = component.ObjectPlacement
@@ -372,9 +373,9 @@ class InstanceFactory:
         if comp_type == 'STUD':
             return self._create_stud_mesh(diameter, length, bolt_type, color, index, component)
         elif comp_type == 'NUT':
-            return self._create_nut_mesh(diameter, spec, color, index, position, component)
+            return self._create_nut_mesh(diameter, None, color, index, position, component)
         elif comp_type == 'WASHER':
-            return self._create_washer_mesh(diameter, spec, color, index, position, component)
+            return self._create_washer_mesh(diameter, None, color, index, position, component)
 
         return None
 
@@ -531,8 +532,12 @@ class InstanceFactory:
 
     def _create_nut_mesh(self, diameter, spec, color, index, position, component):
         """Mesh гайки (шестиугольник)"""
-        height = spec.get('nut_height', 10)
-        outer_radius = diameter * 0.75
+        from gost_data import get_nut_dimensions
+        
+        nut_dim = get_nut_dimensions(diameter)
+        height = nut_dim['height'] if nut_dim else 10
+        s_width = nut_dim['s_width'] if nut_dim else diameter * 1.5
+        outer_radius = s_width / 2  # радиус описанной окружности шестиугольника
         inner_radius = diameter / 2 + 0.5
         z_offset = position[2]
 
@@ -579,9 +584,12 @@ class InstanceFactory:
 
     def _create_washer_mesh(self, diameter, spec, color, index, position, component):
         """Mesh шайбы (кольцо с торцами)"""
-        thickness = spec.get('washer_thickness', 3)
-        outer_radius = spec.get('washer_outer_diameter', diameter + 10) / 2
-        inner_radius = spec.get('washer_inner_diameter', diameter + 2) / 2
+        from gost_data import get_washer_dimensions
+        
+        washer_dim = get_washer_dimensions(diameter)
+        thickness = washer_dim['thickness'] if washer_dim else 3
+        outer_radius = washer_dim['outer_diameter'] / 2 if washer_dim else (diameter + 10) / 2
+        inner_radius = washer_dim['inner_diameter'] / 2 if washer_dim else (diameter + 2) / 2
         z_offset = position[2]
 
         vertices = []

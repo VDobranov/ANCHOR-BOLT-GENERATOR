@@ -33,11 +33,13 @@ class GeometryBuilder:
         Для изогнутых болтов (1.1, 1.2): линия + дуга + линия
         Для прямых (2.1, 5): одна линия
         """
+        from gost_data import get_bolt_bend_radius
+        
         segments = []
         has_bend = bolt_type in ['1.1', '1.2']
 
         if has_bend:
-            radius = diameter * (1.5 if bolt_type == '1.1' else 2.0)
+            radius = get_bolt_bend_radius(diameter, length) or diameter
             upper_length = length - radius
 
             # Верхняя вертикальная линия

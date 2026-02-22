@@ -4,7 +4,7 @@ type_factory.py — Фабрика для создания и кэширован
 """
 
 import math
-from gost_data import get_bolt_spec
+from gost_data import get_nut_dimensions, get_washer_dimensions
 
 
 def _get_ifcopenshell():
@@ -46,8 +46,8 @@ class TypeFactory:
         if key in self.types_cache:
             return self.types_cache[key]
 
-        spec = get_bolt_spec(diameter)
-        height = spec.get('nut_height', 10)
+        nut_dim = get_nut_dimensions(diameter)
+        height = nut_dim['height'] if nut_dim else 10
         type_name = f'Nut_M{diameter}_H{height}'
         ifcopenshell = _get_ifcopenshell()
 
@@ -68,9 +68,9 @@ class TypeFactory:
         if key in self.types_cache:
             return self.types_cache[key]
 
-        spec = get_bolt_spec(diameter)
-        outer_d = spec.get('washer_outer_diameter', diameter + 10)
-        thickness = spec.get('washer_thickness', 3)
+        washer_dim = get_washer_dimensions(diameter)
+        outer_d = washer_dim['outer_diameter'] if washer_dim else diameter + 10
+        thickness = washer_dim['thickness'] if washer_dim else 3
         type_name = f'Washer_M{diameter}_OD{outer_d}'
         ifcopenshell = _get_ifcopenshell()
 
