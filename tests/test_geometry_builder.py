@@ -27,7 +27,11 @@ class MockIfcDoc:
     
     def create_entity(self, entity_type, *args, **kwargs):
         # Поддержка как positional, так и keyword аргументов
-        entity = MockIfcEntity(entity_type, *args, **kwargs)
+        # Для IfcLineIndex и IfcArcIndex первый аргумент - список индексов
+        if entity_type in ['IfcLineIndex', 'IfcArcIndex'] and args:
+            entity = MockIfcEntity(entity_type, Indices=args[0])
+        else:
+            entity = MockIfcEntity(entity_type, *args, **kwargs)
         self.entities.append(entity)
         
         if entity_type not in self._by_type:
@@ -106,9 +110,12 @@ class TestCreateCompositeCurveStud:
         assert result is not None
         # Для типа 1.1 используется IfcIndexedPolyCurve (BlenderBIM подход)
         assert result.is_a() == 'IfcIndexedPolyCurve'
-        # Проверка, что Segments содержит list (IfcSegmentIndexSelect)
+        # Проверка, что Segments содержит list entity instances
         assert hasattr(result, 'Segments')
         assert len(result.Segments) == 3  # линия + дуга + линия
+        # Проверка что сегменты - это entity instances
+        for seg in result.Segments:
+            assert hasattr(seg, 'is_a') or isinstance(seg, MockIfcEntity)
 
     def test_create_curve_type_2_1_composite_curve(self):
         """Для типа 2.1 должен создаваться IfcCompositeCurve"""

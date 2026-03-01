@@ -30,17 +30,22 @@ class MockIfcDoc:
     def __init__(self):
         self.entities = []
         self._by_type = {}
-    
-    def create_entity(self, entity_type, **kwargs):
-        entity = MockIfcEntity(entity_type, **kwargs)
+
+    def create_entity(self, entity_type, *args, **kwargs):
+        # Поддержка как positional, так и keyword аргументов
+        # Для IfcLineIndex и IfcArcIndex первый аргумент - список индексов
+        if entity_type in ['IfcLineIndex', 'IfcArcIndex'] and args:
+            entity = MockIfcEntity(entity_type, Indices=args[0])
+        else:
+            entity = MockIfcEntity(entity_type, **kwargs)
         self.entities.append(entity)
-        
+
         if entity_type not in self._by_type:
             self._by_type[entity_type] = []
         self._by_type[entity_type].append(entity)
-        
+
         return entity
-    
+
     def by_type(self, entity_type):
         return self._by_type.get(entity_type, [])
 
