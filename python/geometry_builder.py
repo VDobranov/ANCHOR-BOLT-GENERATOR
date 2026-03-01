@@ -4,6 +4,7 @@ geometry_builder.py — Построение IFC геометрии
 """
 
 import math
+from utils import get_ifcopenshell
 
 
 class GeometryBuilder:
@@ -11,11 +12,32 @@ class GeometryBuilder:
 
     def __init__(self, ifc_doc):
         self.ifc = ifc_doc
+        self._context = None
 
     @staticmethod
     def to_float_list(coordinates):
         """Конвертация координат в список float"""
         return [float(x) for x in coordinates]
+
+    def _get_context(self):
+        """Получение или создание геометрического контекста"""
+        if self._context:
+            return self._context
+
+        contexts = self.ifc.by_type('IfcGeometricRepresentationContext')
+        if contexts:
+            self._context = contexts[0]
+            return self._context
+
+        self._context = self.ifc.create_entity('IfcGeometricRepresentationContext',
+            ContextType='Model',
+            CoordinateSpaceDimension=3,
+            Precision=1e-05,
+            WorldCoordinateSystem=self.ifc.create_entity('IfcAxis2Placement3D',
+                Location=self.ifc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0])
+            )
+        )
+        return self._context
 
     def create_line(self, point1, point2):
         """Создание IfcPolyline между двумя точками"""
@@ -137,104 +159,6 @@ class GeometryBuilder:
             Segments=segments, SelfIntersect=False
         )
 
-    def create_hexagon_profile(self, nominal_diameter, height):
-        """Создание шестиугольного профиля для гайки"""
-        outer_diameter = nominal_diameter * 1.5
-
-        vertices = []
-        for i in range(6):
-            angle = (i * 60 - 90) * math.pi / 180.0
-            x = outer_diameter / 2.0 * math.cos(angle)
-            y = outer_diameter / 2.0 * math.sin(angle)
-            vertices.append(self.ifc.create_entity('IfcCartesianPoint',
-                Coordinates=self.to_float_list([x, y])
-            ))
-
-        outer_loop = self.ifc.create_entity('IfcPolyline',
-            Points=vertices + [vertices[0]]
-        )
-
-        # Внутреннее отверстие
-        hole_center = self.ifc.create_entity('IfcCartesianPoint',
-            Coordinates=self.to_float_list([0, 0])
-        )
-        hole_placement = self.ifc.create_entity('IfcAxis2Placement2D',
-            Location=hole_center,
-            RefDirection=self.ifc.create_entity('IfcDirection',
-                DirectionRatios=self.to_float_list([1, 0])
-            )
-        )
-        hole_circle = self.ifc.create_entity('IfcCircle',
-            Radius=float(nominal_diameter / 2.0 + 0.5),
-            Position=hole_placement
-        )
-
-        return self.ifc.create_entity('IfcArbitraryProfileDefWithVoids',
-            ProfileType='AREA',
-            OuterCurve=outer_loop,
-            InnerCurves=[hole_circle]
-        )
-
-    def create_washer_profile(self, outer_diameter, inner_diameter):
-        """Создание профиля шайбы (кольцо)"""
-        center = self.ifc.create_entity('IfcCartesianPoint',
-            Coordinates=self.to_float_list([0, 0])
-        )
-
-        outer_placement = self.ifc.create_entity('IfcAxis2Placement2D',
-            Location=center,
-            RefDirection=self.ifc.create_entity('IfcDirection',
-                DirectionRatios=self.to_float_list([1, 0])
-            )
-        )
-        outer_circle = self.ifc.create_entity('IfcCircle',
-            Radius=float(outer_diameter / 2.0),
-            Position=outer_placement
-        )
-
-        inner_placement = self.ifc.create_entity('IfcAxis2Placement2D',
-            Location=center,
-            RefDirection=self.ifc.create_entity('IfcDirection',
-                DirectionRatios=self.to_float_list([1, 0])
-            )
-        )
-        inner_circle = self.ifc.create_entity('IfcCircle',
-            Radius=float(inner_diameter / 2.0),
-            Position=inner_placement
-        )
-
-        return self.ifc.create_entity('IfcArbitraryProfileDefWithVoids',
-            ProfileType='AREA',
-            OuterCurve=outer_circle,
-            InnerCurves=[inner_circle]
-        )
-
-    def create_extruded_solid(self, profile, extrusion_height, direction=(0, 0, 1)):
-        """Создание IfcExtrudedAreaSolid"""
-        base_point = self.ifc.create_entity('IfcCartesianPoint',
-            Coordinates=self.to_float_list([0, 0, 0])
-        )
-        base_placement = self.ifc.create_entity('IfcAxis2Placement3D',
-            Location=base_point,
-            Axis=self.ifc.create_entity('IfcDirection',
-                DirectionRatios=self.to_float_list(direction)
-            ),
-            RefDirection=self.ifc.create_entity('IfcDirection',
-                DirectionRatios=self.to_float_list([1, 0, 0])
-            )
-        )
-
-        extrusion_dir = self.ifc.create_entity('IfcDirection',
-            DirectionRatios=self.to_float_list(direction)
-        )
-
-        return self.ifc.create_entity('IfcExtrudedAreaSolid',
-            SweptArea=profile,
-            Position=base_placement,
-            ExtrudedDirection=extrusion_dir,
-            Depth=float(extrusion_height)
-        )
-
     def create_swept_disk_solid(self, axis_curve, radius):
         """Создание IfcSweptDiskSolid"""
         return self.ifc.create_entity('IfcSweptDiskSolid',
@@ -242,40 +166,163 @@ class GeometryBuilder:
             Radius=float(radius)
         )
 
-    def create_placement(self, location=(0, 0, 0), z_axis=(0, 0, 1), x_axis=(1, 0, 0)):
-        """Создание 3D размещения"""
-        location_point = self.ifc.create_entity('IfcCartesianPoint',
-            Coordinates=self.to_float_list(location)
+    def create_straight_stud_solid(self, diameter, length):
+        """Создание цилиндра для прямой шпильки через IfcExtrudedAreaSolid"""
+        context = self._get_context()
+        
+        placement = self.ifc.create_entity('IfcAxis2Placement3D',
+            Location=self.ifc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0])
         )
-        axis = self.ifc.create_entity('IfcDirection',
-            DirectionRatios=self.to_float_list(z_axis)
+        profile = self.ifc.create_entity('IfcCircleProfileDef',
+            ProfileType='AREA',
+            ProfileName='CircularProfile',
+            Radius=diameter / 2.0
         )
-        ref_direction = self.ifc.create_entity('IfcDirection',
-            DirectionRatios=self.to_float_list(x_axis)
+        direction = self.ifc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0])
+        swept_area = self.ifc.create_entity('IfcExtrudedAreaSolid',
+            SweptArea=profile,
+            Position=placement,
+            ExtrudedDirection=direction,
+            Depth=length
         )
+        
+        return self._create_shape_representation(context, swept_area)
 
-        return self.ifc.create_entity('IfcAxis2Placement3D',
-            Location=location_point, Axis=axis, RefDirection=ref_direction
+    def create_bent_stud_solid(self, bolt_type, diameter, length, execution):
+        """Создание геометрии изогнутой шпильки через IfcSweptDiskSolid"""
+        context = self._get_context()
+        
+        axis_curve = self.create_composite_curve_stud(bolt_type, diameter, length, execution)
+        swept_area = self.ifc.create_entity('IfcSweptDiskSolid',
+            Directrix=axis_curve,
+            Radius=float(diameter / 2.0)
         )
+        
+        return self._create_shape_representation(context, swept_area)
 
+    def create_nut_solid(self, diameter, height):
+        """Создание геометрии гайки (шестиугольник с отверстием)"""
+        from gost_data import get_nut_dimensions
+        
+        context = self._get_context()
+        
+        # Получаем размер под ключ из DIM.py
+        nut_dim = get_nut_dimensions(diameter)
+        s_width = nut_dim['s_width'] if nut_dim else diameter * 1.5
+        
+        # Размер под ключ (S) — расстояние между параллельными гранями
+        # Радиус описанной окружности (до вершин): R = S / √3
+        outer_radius = s_width / math.sqrt(3)
+        inner_radius = diameter / 2.0 + 0.5
+        
+        # Внешний шестиугольник
+        outer_points = []
+        for i in range(6):
+            angle = i * math.pi / 3
+            x = outer_radius * math.cos(angle)
+            y = outer_radius * math.sin(angle)
+            outer_points.append(self.ifc.create_entity('IfcCartesianPoint', Coordinates=[x, y]))
+        outer_points.append(outer_points[0])
+        
+        outer_polyline = self.ifc.create_entity('IfcPolyline', Points=outer_points)
+        
+        # Внутреннее отверстие
+        inner_center = self.ifc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0])
+        inner_circle = self.ifc.create_entity('IfcCircle',
+            Position=self.ifc.create_entity('IfcAxis2Placement2D', Location=inner_center),
+            Radius=inner_radius
+        )
+        
+        # Профиль с отверстием
+        profile = self.ifc.create_entity('IfcArbitraryProfileDefWithVoids',
+            ProfileType='AREA',
+            ProfileName='HexNutProfile',
+            OuterCurve=outer_polyline,
+            InnerCurves=[inner_circle]
+        )
+        
+        # Экструзия
+        placement = self.ifc.create_entity('IfcAxis2Placement3D',
+            Location=self.ifc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0])
+        )
+        direction = self.ifc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0])
+        swept_area = self.ifc.create_entity('IfcExtrudedAreaSolid',
+            SweptArea=profile,
+            Position=placement,
+            ExtrudedDirection=direction,
+            Depth=height
+        )
+        
+        return self._create_shape_representation(context, swept_area)
 
-# Convenience functions
-def create_stud_representation(ifc_doc, bolt_type, diameter, length, execution=1):
-    """Создание представления шпильки"""
-    builder = GeometryBuilder(ifc_doc)
-    axis_curve = builder.create_composite_curve_stud(bolt_type, diameter, length, execution)
-    return builder.create_swept_disk_solid(axis_curve, diameter / 2.0)
+    def create_washer_solid(self, inner_diameter, outer_diameter, thickness):
+        """Создание геометрии шайбы (кольцо)"""
+        context = self._get_context()
+        inner_radius = inner_diameter / 2.0 + 0.5
+        outer_radius = outer_diameter / 2.0
+        
+        center = self.ifc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0])
+        
+        outer_circle = self.ifc.create_entity('IfcCircle',
+            Position=self.ifc.create_entity('IfcAxis2Placement2D', Location=center),
+            Radius=outer_radius
+        )
+        inner_circle = self.ifc.create_entity('IfcCircle',
+            Position=self.ifc.create_entity('IfcAxis2Placement2D', Location=center),
+            Radius=inner_radius
+        )
+        
+        profile = self.ifc.create_entity('IfcArbitraryProfileDefWithVoids',
+            ProfileType='AREA',
+            ProfileName='WasherProfile',
+            OuterCurve=outer_circle,
+            InnerCurves=[inner_circle]
+        )
+        
+        placement = self.ifc.create_entity('IfcAxis2Placement3D',
+            Location=self.ifc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0])
+        )
+        direction = self.ifc.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0])
+        swept_area = self.ifc.create_entity('IfcExtrudedAreaSolid',
+            SweptArea=profile,
+            Position=placement,
+            ExtrudedDirection=direction,
+            Depth=thickness
+        )
+        
+        return self._create_shape_representation(context, swept_area)
 
+    def _create_shape_representation(self, context, swept_area):
+        """Создание IfcShapeRepresentation и IfcProductDefinitionShape"""
+        shape_rep = self.ifc.create_entity('IfcShapeRepresentation',
+            ContextOfItems=context,
+            RepresentationIdentifier='Body',
+            RepresentationType='SweptSolid',
+            Items=[swept_area]
+        )
+        
+        self.ifc.create_entity('IfcProductDefinitionShape',
+            Representations=[shape_rep]
+        )
+        
+        return shape_rep
 
-def create_nut_representation(ifc_doc, diameter, height):
-    """Создание представления гайки"""
-    builder = GeometryBuilder(ifc_doc)
-    profile = builder.create_hexagon_profile(diameter, height)
-    return builder.create_extruded_solid(profile, height)
-
-
-def create_washer_representation(ifc_doc, outer_diameter, inner_diameter, thickness):
-    """Создание представления шайбы"""
-    builder = GeometryBuilder(ifc_doc)
-    profile = builder.create_washer_profile(outer_diameter, inner_diameter)
-    return builder.create_extruded_solid(profile, thickness)
+    def associate_representation(self, product_type, shape_rep):
+        """Ассоциация представления с типом продукта через RepresentationMap"""
+        rep_maps = [m for m in self.ifc.by_type('IfcRepresentationMap')
+                    if m.MappedRepresentation == shape_rep]
+        
+        if not rep_maps:
+            rep_map = self.ifc.create_entity('IfcRepresentationMap',
+                MappingOrigin=self.ifc.create_entity('IfcAxis2Placement3D',
+                    Location=self.ifc.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0])
+                ),
+                MappedRepresentation=shape_rep
+            )
+            
+            if product_type.RepresentationMaps is None:
+                product_type.RepresentationMaps = [rep_map]
+            elif isinstance(product_type.RepresentationMaps, tuple):
+                product_type.RepresentationMaps = list(product_type.RepresentationMaps) + [rep_map]
+            else:
+                product_type.RepresentationMaps.append(rep_map)
