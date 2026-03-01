@@ -83,9 +83,10 @@ class GeometryBuilder:
             )
 
             # Сегменты: линия + дуга + линия (как в BlenderBIM)
-            line1 = self.ifc.create_entity('IfcLineIndex', [1, 2])
-            arc = self.ifc.create_entity('IfcArcIndex', [2, 3, 4])
-            line2 = self.ifc.create_entity('IfcLineIndex', [4, 5])
+            # IfcSegmentIndexSelect - в ifcopenshell это просто list/tuple
+            line1 = [1, 2]  # IfcLineIndex
+            arc = [2, 3, 4]  # IfcArcIndex
+            line2 = [4, 5]  # IfcLineIndex
 
             # IfcIndexedPolyCurve
             return self.ifc.create_entity('IfcIndexedPolyCurve',
