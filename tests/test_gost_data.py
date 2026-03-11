@@ -15,13 +15,7 @@ class TestBoltTypes:
         assert '1.2' in BOLT_TYPES
         assert '2.1' in BOLT_TYPES
         assert '5' in BOLT_TYPES
-
-    def test_bolt_type_structure(self):
-        """Структура типа болта должна содержать required поля"""
-        from gost_data import BOLT_TYPES
-        
-        for bolt_type, data in BOLT_TYPES.items():
-            assert 'name' in data
+        assert isinstance(BOLT_TYPES, set)
 
 
 class TestDiameters:
@@ -329,22 +323,23 @@ class TestGetTypeInfo:
     def test_get_bolt_type_info(self):
         """get_bolt_type_info должна возвращать информацию о типе"""
         from gost_data import get_bolt_type_info
-        
+
         result = get_bolt_type_info('1.1')
         assert result is not None
         assert 'name' in result
+        assert result['name'] == 'Тип 1. Исполнение 1'
 
     def test_get_bolt_type_info_not_found(self):
         """get_bolt_type_info должна возвращать пустой dict для неизвестного типа"""
         from gost_data import get_bolt_type_info
-        
+
         result = get_bolt_type_info('9.9')
         assert result == {}
 
     def test_get_material_info(self):
         """get_material_info должна возвращать информацию о материале"""
         from gost_data import get_material_info
-        
+
         result = get_material_info('09Г2С')
         assert result is not None
         assert 'gost' in result
@@ -352,6 +347,6 @@ class TestGetTypeInfo:
     def test_get_material_info_not_found(self):
         """get_material_info должна возвращать пустой dict для неизвестного материала"""
         from gost_data import get_material_info
-        
+
         result = get_material_info('Неизвестный')
         assert result == {}

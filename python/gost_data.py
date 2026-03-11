@@ -7,21 +7,16 @@ Based on ГОСТ 24379.1-2012 and related standards
 - Пустое значение массы = болт такого типа не существует
 """
 
-# Типы болтов и их характеристики
-BOLT_TYPES = {
-    '1.1': {
-        'name': 'Тип 1. Исполнение 1',
-    },
-    '1.2': {
-        'name': 'Тип 1. Исполнение 2',
-    },
-    '2.1': {
-        'name': 'Тип 2. Исполнение 1',
-    },
-    '5': {
-        'name': 'Тип 5',
-    }
-}
+# Типы болтов (допустимые значения)
+BOLT_TYPES = {'1.1', '1.2', '2.1', '5'}
+
+
+def get_bolt_type_name(bolt_type):
+    """Сформировать название типа болта из ключа"""
+    parts = bolt_type.split('.')
+    if len(parts) == 2:
+        return f"Тип {parts[0]}. Исполнение {parts[1]}"
+    return f"Тип {bolt_type}"
 
 # Доступные диаметры согласно ГОСТ (из dim.csv)
 AVAILABLE_DIAMETERS = [12, 16, 20, 24, 30, 36, 42, 48]
@@ -307,23 +302,6 @@ def get_bolt_mass(diameter, length, bolt_type='1.1'):
     return data[mass_idx]
 
 
-def get_bolt_mass_by_type(diameter, length, bolt_type, execution=1):
-    """
-    Получить массу болта с учётом типа и исполнения.
-    Для исполнений одного типа массы одинаковые.
-
-    Args:
-        diameter: Диаметр болта (мм)
-        length: Длина болта (мм)
-        bolt_type: Тип болта ('1.1', '1.2', '2.1', '5')
-        execution: Исполнение (1 или 2)
-
-    Returns:
-        Масса в кг или None, если болт такого типа не существует
-    """
-    return get_bolt_mass(diameter, length, bolt_type)
-
-
 def get_bolt_l1(diameter, length):
     """Получить длину отгиба (l1) для болта данного диаметра и длины"""
     key = f"{diameter}_{length}"
@@ -456,7 +434,7 @@ def validate_parameters(bolt_type, diameter, length, material):
 
 def get_bolt_type_info(bolt_type):
     """Get bolt type information"""
-    return BOLT_TYPES.get(bolt_type, {})
+    return {'name': get_bolt_type_name(bolt_type)} if bolt_type in BOLT_TYPES else {}
 
 
 def get_material_info(material):
