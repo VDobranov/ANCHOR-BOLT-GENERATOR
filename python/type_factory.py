@@ -43,7 +43,7 @@ class TypeFactory:
 
         # Создаём материал и ассоциируем с типом
         mat_name = get_material_name(material)
-        mat = self.material_manager.create_material(mat_name, category='Steel')
+        mat = self.material_manager.create_material(mat_name, category='Steel', material_key=material)
         self.material_manager.associate_material(stud_type, mat)
 
         self.types_cache[key] = stud_type
@@ -73,7 +73,7 @@ class TypeFactory:
 
         # Создаём материал и ассоциируем с типом
         mat_name = get_material_name(material)
-        mat = self.material_manager.create_material(mat_name, category='Steel')
+        mat = self.material_manager.create_material(mat_name, category='Steel', material_key=material)
         self.material_manager.associate_material(nut_type, mat)
 
         self.types_cache[key] = nut_type
@@ -104,7 +104,7 @@ class TypeFactory:
 
         # Создаём материал и ассоциируем с типом
         mat_name = get_material_name(material)
-        mat = self.material_manager.create_material(mat_name, category='Steel')
+        mat = self.material_manager.create_material(mat_name, category='Steel', material_key=material)
         self.material_manager.associate_material(washer_type, mat)
 
         self.types_cache[key] = washer_type

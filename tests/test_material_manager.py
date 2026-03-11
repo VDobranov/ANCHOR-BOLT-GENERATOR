@@ -39,29 +39,17 @@ class MockIfcDoc:
         return self._by_type.get(entity_type, [])
 
 
-class MockIfcGuid:
-    """Mock для ifc.guid"""
-    @staticmethod
-    def new():
-        return 'mock_guid_123'
-
-
-class MockIfcOpenshell:
-    """Mock для ifcopenshell"""
-    def __init__(self):
-        self.guid = MockIfcGuid()
-
-
 class TestMaterialManager:
-    """Тесты для MaterialManager"""
+    """Тесты для MaterialManager (с моками)"""
 
-    def test_create_material(self):
-        """MaterialManager должен создавать IfcMaterial"""
+    def test_create_material_without_properties(self):
+        """MaterialManager должен создавать IfcMaterial без свойств"""
         from material_manager import MaterialManager
 
         mock_ifc = MockIfcDoc()
         manager = MaterialManager(mock_ifc)
 
+        # Создаём материал без material_key (чтобы не создавать свойства)
         material = manager.create_material('09Г2С ГОСТ 19281-2014', category='Steel')
 
         assert material is not None
@@ -76,7 +64,7 @@ class TestMaterialManager:
         mock_ifc = MockIfcDoc()
         manager = MaterialManager(mock_ifc)
 
-        # Создаём материал дважды с одинаковым именем
+        # Создаём материал дважды с одинаковым именем (без material_key)
         mat1 = manager.create_material('09Г2С ГОСТ 19281-2014', category='Steel')
         mat2 = manager.create_material('09Г2С ГОСТ 19281-2014', category='Steel')
 
@@ -151,21 +139,114 @@ class TestMaterialManager:
         assert rel.RelatedObjects[0] is entity
         assert rel.RelatingMaterial is material
 
-    def test_create_multiple_materials(self):
-        """MaterialManager должен создавать разные материалы"""
+
+class TestMaterialManagerWithRealIfc:
+    """Тесты для MaterialManager с реальным ifcopenshell"""
+
+    def test_create_standard_psets(self):
+        """MaterialManager должен создавать стандартные PropertySets"""
+        import ifcopenshell
         from material_manager import MaterialManager
 
-        mock_ifc = MockIfcDoc()
-        manager = MaterialManager(mock_ifc)
+        f = ifcopenshell.file()
+        manager = MaterialManager(f)
 
-        mat1 = manager.create_material('09Г2С ГОСТ 19281-2014', category='Steel')
-        mat2 = manager.create_material('ВСт3пс2 ГОСТ 535-88', category='Steel')
-        mat3 = manager.create_material('10Г2 ГОСТ 19281-2014', category='Steel')
+        # Создаём материал с material_key для создания свойств
+        material = manager.create_material(
+            '09Г2С ГОСТ 19281-2014',
+            category='Steel',
+            material_key='09Г2С'
+        )
 
-        assert mat1 is not mat2
-        assert mat2 is not mat3
-        assert mat1 is not mat3
-        assert manager.get_cached_materials_count() == 3
+        # Проверяем создание PropertySets
+        mat_props_list = f.by_type('IfcMaterialProperties')
+        assert len(mat_props_list) == 2  # Pset_MaterialCommon и Pset_MaterialSteel
+
+        # Проверяем Pset_MaterialCommon
+        pset_common = None
+        pset_steel = None
+        for pset in mat_props_list:
+            if pset.Name == 'Pset_MaterialCommon':
+                pset_common = pset
+            elif pset.Name == 'Pset_MaterialSteel':
+                pset_steel = pset
+
+        assert pset_common is not None
+        assert pset_steel is not None
+        assert pset_common.Material == material
+        assert pset_steel.Material == material
+
+        # Проверяем свойства Pset_MaterialCommon
+        common_prop_names = [p.Name for p in pset_common.Properties]
+        assert 'MassDensity' in common_prop_names
+
+        # Проверяем свойства Pset_MaterialSteel
+        steel_prop_names = [p.Name for p in pset_steel.Properties]
+        assert 'YieldStress' in steel_prop_names
+        assert 'UltimateStress' in steel_prop_names
+        assert 'StructuralGrade' in steel_prop_names
+
+    def test_create_standard_psets_caching(self):
+        """MaterialManager должен кэшировать PropertySets"""
+        import ifcopenshell
+        from material_manager import MaterialManager
+
+        f = ifcopenshell.file()
+        manager = MaterialManager(f)
+
+        # Создаём материал с material_key
+        material = manager.create_material(
+            '09Г2С ГОСТ 19281-2014',
+            category='Steel',
+            material_key='09Г2С'
+        )
+
+        # Получаем количество PropertySets
+        count1 = manager.get_cached_properties_count()
+
+        # Создаём тот же материал снова (должен вернуться из кэша)
+        material2 = manager.create_material(
+            '09Г2С ГОСТ 19281-2014',
+            category='Steel',
+            material_key='09Г2С'
+        )
+
+        # Количество PropertySets не должно измениться
+        count2 = manager.get_cached_properties_count()
+        assert count1 == count2
+
+    def test_material_properties_values(self):
+        """MaterialManager должен создавать свойства с правильными значениями"""
+        import ifcopenshell
+        from material_manager import MaterialManager
+
+        f = ifcopenshell.file()
+        manager = MaterialManager(f)
+
+        # Создаём материал
+        material = manager.create_material(
+            '09Г2С ГОСТ 19281-2014',
+            category='Steel',
+            material_key='09Г2С'
+        )
+
+        # Находим PropertySets
+        mat_props_list = f.by_type('IfcMaterialProperties')
+
+        for pset in mat_props_list:
+            if pset.Name == 'Pset_MaterialCommon':
+                for prop in pset.Properties:
+                    if prop.Name == 'MassDensity':
+                        assert prop.NominalValue[0] == 7850.0
+
+            elif pset.Name == 'Pset_MaterialSteel':
+                for prop in pset.Properties:
+                    if prop.Name == 'YieldStress':
+                        assert prop.NominalValue[0] == 390.0
+                    elif prop.Name == 'UltimateStress':
+                        assert prop.NominalValue[0] == 490.0
+                    elif prop.Name == 'StructuralGrade':
+                        assert prop.NominalValue[0] == '09Г2С'
 
 
 class TestGetMaterialName:

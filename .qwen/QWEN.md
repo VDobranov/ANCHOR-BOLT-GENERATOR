@@ -322,6 +322,23 @@ ifc_str, mesh_data = generate_bolt_assembly({
 
 ## История недавнего рефакторинга
 
+### PropertySets материалов (11.03.2026)
+- Обновлён `material_manager.py`:
+  - Добавлен метод `create_material_properties()` — создание `IfcMaterialProperties`
+  - Добавлен метод `create_standard_psets()` — создание стандартных PropertySets
+  - **Pset_MaterialCommon**: `MassDensity` (плотность, кг/м³)
+  - **Pset_MaterialSteel**: `YieldStress`, `UltimateStress`, `StructuralGrade` (предел текучести, предел прочности, марка стали)
+  - Кэширование PropertySets по `(material, pset_name)`
+- Обновлён `type_factory.py`:
+  - Передаётся `material_key` в `create_material()` для создания свойств
+  - Все типы болтов теперь имеют PropertySets с механическими свойствами
+- Обновлены тесты:
+  - `tests/test_material_manager.py`: добавлены тесты с реальным ifcopenshell (3 теста)
+  - `tests/test_type_factory.py`: обновлён MockIfcDoc для поддержки IfcReal/IfcText
+- **Итого:** добавлено ~100 строк
+- **Тесты:** 95 passed, 1 skipped
+- **Риск:** Используется документация IFC4x3 для IFC4 ADD2 TC1 (Pset имена могут отличаться)
+
 ### Материалы IFC (11.03.2026)
 - Создан `material_manager.py`: управление материалами IFC
   - Класс `MaterialManager`: создание `IfcMaterial`, `IfcMaterialList`, `IfcRelAssociatesMaterial`
@@ -398,7 +415,8 @@ ifc_str, mesh_data = generate_bolt_assembly({
 | 11. Геометрия сборок | ✅ Готово | Исправлена геометрия шпилек и шайб |
 | 12. Очистка кода | ✅ Готово | Удаление мёртвого кода, централизация импортов |
 | 13. Материалы IFC | ✅ Готово | `IfcMaterial`, `IfcRelAssociatesMaterial`, `IfcMaterialList` |
-| 14. Тестирование | ⏳ Планируется | Валидация IFC, примеры |
+| 14. PropertySets материалов | ✅ Готово | `Pset_MaterialCommon`, `Pset_MaterialSteel` |
+| 15. Тестирование | ⏳ Планируется | Валидация IFC, примеры |
 
 ---
 

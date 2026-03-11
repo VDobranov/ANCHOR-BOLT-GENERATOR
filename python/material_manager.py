@@ -1,8 +1,12 @@
 """
 material_manager.py — Менеджер материалов IFC
 
-Управление созданием и кэшированием IfcMaterial, IfcMaterialList
-и ассоциаций через IfcRelAssociatesMaterial
+Управление созданием и кэшированием IfcMaterial, IfcMaterialList,
+IfcMaterialProperties и ассоциаций через IfcRelAssociatesMaterial
+
+Согласно IFC43 (риск: используется для IFC4 ADD2 TC1):
+- Pset_MaterialCommon: MassDensity
+- Pset_MaterialSteel: YieldStress, UltimateStress, StructuralGrade
 """
 
 from utils import get_ifcopenshell
@@ -14,8 +18,9 @@ class MaterialManager:
     def __init__(self, ifc_doc):
         self.ifc = ifc_doc
         self.materials_cache = {}
+        self.material_properties_cache = {}
 
-    def create_material(self, name, description=None, category=None):
+    def create_material(self, name, description=None, category=None, material_key=None):
         """
         Создание или получение материала по имени
 
@@ -23,6 +28,7 @@ class MaterialManager:
             name: Имя материала (например, "09Г2С ГОСТ 19281-2014")
             description: Описание материала (опционально)
             category: Категория материала (например, "Steel")
+            material_key: Ключ материала для создания свойств (например, "09Г2С")
 
         Returns:
             IfcMaterial сущность
@@ -39,6 +45,11 @@ class MaterialManager:
         )
 
         self.materials_cache[name] = material
+
+        # Создаём стандартные PropertySets если передан material_key
+        if material_key:
+            self.create_standard_psets(material, material_key)
+
         return material
 
     def get_material(self, name):
@@ -93,6 +104,96 @@ class MaterialManager:
         )
         return rel
 
+    def create_material_properties(self, material, pset_name, properties_dict):
+        """
+        Создание IfcMaterialProperties с набором свойств
+
+        Args:
+            material: IfcMaterial сущность
+            pset_name: Имя набора свойств (например, 'Pset_MaterialCommon')
+            properties_dict: Словарь свойств {name: value}
+
+        Returns:
+            IfcMaterialProperties сущность
+        """
+        # Создание IfcPropertySingleValue для каждого свойства
+        prop_entities = []
+        for prop_name, prop_value in properties_dict.items():
+            # Определяем тип значения
+            if isinstance(prop_value, (int, float)):
+                nominal_value = self.ifc.create_entity('IfcReal', float(prop_value))
+            elif isinstance(prop_value, str):
+                nominal_value = self.ifc.create_entity('IfcText', prop_value)
+            else:
+                continue
+
+            prop = self.ifc.create_entity(
+                'IfcPropertySingleValue',
+                Name=prop_name,
+                NominalValue=nominal_value
+            )
+            prop_entities.append(prop)
+
+        # Создание IfcMaterialProperties
+        mat_props = self.ifc.create_entity(
+            'IfcMaterialProperties',
+            Name=pset_name,
+            Properties=prop_entities,
+            Material=material
+        )
+
+        return mat_props
+
+    def create_standard_psets(self, material, material_key):
+        """
+        Создание стандартных PropertySets для материала
+
+        Создаёт:
+        - Pset_MaterialCommon: MassDensity
+        - Pset_MaterialSteel: YieldStress, UltimateStress, StructuralGrade
+
+        Args:
+            material: IfcMaterial сущность
+            material_key: Ключ материала (например, '09Г2С')
+        """
+        from gost_data import MATERIALS
+
+        # Проверка кэша
+        cache_key_common = (material, 'Pset_MaterialCommon')
+        cache_key_steel = (material, 'Pset_MaterialSteel')
+
+        if cache_key_common in self.material_properties_cache:
+            return
+
+        mat_info = MATERIALS.get(material_key)
+
+        if not mat_info:
+            return
+
+        # Pset_MaterialCommon
+        common_props = {
+            'MassDensity': mat_info['density']  # кг/м³
+        }
+        pset_common = self.create_material_properties(
+            material, 'Pset_MaterialCommon', common_props
+        )
+        self.material_properties_cache[cache_key_common] = pset_common
+
+        # Pset_MaterialSteel (для всех материалов в нашем случае)
+        steel_props = {
+            'YieldStress': mat_info['yield_strength'],  # МПа
+            'UltimateStress': mat_info['tensile_strength'],  # МПа
+            'StructuralGrade': material_key  # например, '09Г2С'
+        }
+        pset_steel = self.create_material_properties(
+            material, 'Pset_MaterialSteel', steel_props
+        )
+        self.material_properties_cache[cache_key_steel] = pset_steel
+
     def get_cached_materials_count(self):
         """Количество закэшированных материалов"""
         return len(self.materials_cache)
+
+    def get_cached_properties_count(self):
+        """Количество закэшированных PropertySets"""
+        return len(self.material_properties_cache)

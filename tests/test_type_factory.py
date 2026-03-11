@@ -11,29 +11,38 @@ class MockIfcEntity:
         self._kwargs = kwargs
         for key, value in kwargs.items():
             setattr(self, key, value)
-        
+
         # Установим RepresentationMaps по умолчанию для типов
         if entity_type == 'IfcMechanicalFastenerType':
             if not hasattr(self, 'RepresentationMaps'):
                 self.RepresentationMaps = None
-    
+
     def is_a(self):
         return self._entity_type
-    
+
     def __getattr__(self, name):
         return self._kwargs.get(name)
 
 
 class MockIfcDoc:
-    """Mock для IFC документа"""
+    """Mock для IFC документа с поддержкой IfcReal и IfcText"""
     def __init__(self):
         self.entities = []
         self._by_type = {}
 
     def create_entity(self, entity_type, *args, **kwargs):
+        # Поддержка IfcReal и IfcText для PropertySets
+        if entity_type == 'IfcReal':
+            # IfcReal создаётся с позиционным аргументом
+            value = args[0] if args else kwargs.get('Value', 0.0)
+            entity = MockIfcEntity(entity_type, Value=value)
+        elif entity_type == 'IfcText':
+            # IfcText создаётся с позиционным аргументом
+            value = args[0] if args else kwargs.get('Value', '')
+            entity = MockIfcEntity(entity_type, Value=value)
         # Поддержка как positional, так и keyword аргументов
         # Для IfcLineIndex и IfcArcIndex первый аргумент - список индексов
-        if entity_type in ['IfcLineIndex', 'IfcArcIndex'] and args:
+        elif entity_type in ['IfcLineIndex', 'IfcArcIndex'] and args:
             entity = MockIfcEntity(entity_type, Indices=args[0])
         else:
             entity = MockIfcEntity(entity_type, **kwargs)
