@@ -261,6 +261,30 @@ def get_bolt_bend_radius(diameter, length):
     return diameter
 
 
+def get_bolt_l1(diameter, length):
+    """Получить l1 (длина верхнего участка) для болта данного диаметра и длины"""
+    key = f"{diameter}_{length}"
+    if key in BOLT_DIM_DATA:
+        return BOLT_DIM_DATA[key][9]  # l1
+    return None
+
+
+def get_bolt_l2(diameter, length):
+    """Получить l2 (длина нижнего горизонтального участка) для болта данного диаметра и длины"""
+    key = f"{diameter}_{length}"
+    if key in BOLT_DIM_DATA:
+        return BOLT_DIM_DATA[key][10]  # l2
+    return None
+
+
+def get_bolt_l3(diameter, length):
+    """Получить l3 (длина нижнего участка) для болта данного диаметра и длины"""
+    key = f"{diameter}_{length}"
+    if key in BOLT_DIM_DATA:
+        return BOLT_DIM_DATA[key][11]  # l3
+    return None
+
+
 def get_thread_length(diameter, length):
     """Получить длину резьбы для болта данного диаметра и длины"""
     key = f"{diameter}_{length}"
