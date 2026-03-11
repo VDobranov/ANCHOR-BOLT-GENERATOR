@@ -317,24 +317,8 @@ class TestValidateParameters:
         assert len(errors) >= 2  # Минимум 2 ошибки
 
 
-class TestGetTypeInfo:
+class TestGetMaterialInfo:
     """Тесты для функций получения информации"""
-
-    def test_get_bolt_type_info(self):
-        """get_bolt_type_info должна возвращать информацию о типе"""
-        from gost_data import get_bolt_type_info
-
-        result = get_bolt_type_info('1.1')
-        assert result is not None
-        assert 'name' in result
-        assert result['name'] == 'Тип 1. Исполнение 1'
-
-    def test_get_bolt_type_info_not_found(self):
-        """get_bolt_type_info должна возвращать пустой dict для неизвестного типа"""
-        from gost_data import get_bolt_type_info
-
-        result = get_bolt_type_info('9.9')
-        assert result == {}
 
     def test_get_material_info(self):
         """get_material_info должна возвращать информацию о материале"""

@@ -266,7 +266,7 @@ def get_bolt_bend_radius(diameter, length):
     key = f"{diameter}_{length}"
     if key in BOLT_DIM_DATA:
         return BOLT_DIM_DATA[key][2]  # радиус загиба
-    return diameter  # fallback: R = d
+    return diameter
 
 
 def get_thread_length(diameter, length):
@@ -277,7 +277,7 @@ def get_thread_length(diameter, length):
     return None
 
 
-def get_bolt_mass(diameter, length, bolt_type='1.1'):
+def get_bolt_mass(diameter, length, bolt_type):
     """
     Получить массу болта данного диаметра, длины и типа.
     
@@ -430,11 +430,6 @@ def validate_parameters(bolt_type, diameter, length, material):
         raise ValueError('\n'.join(errors))
 
     return True
-
-
-def get_bolt_type_info(bolt_type):
-    """Get bolt type information"""
-    return {'name': get_bolt_type_name(bolt_type)} if bolt_type in BOLT_TYPES else {}
 
 
 def get_material_info(material):
