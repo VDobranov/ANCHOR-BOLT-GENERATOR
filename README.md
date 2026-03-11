@@ -257,7 +257,8 @@ ifc_str, mesh_data = generate_bolt_assembly({
 | 12. Рефакторинг кода | ✅ Готово | Удаление мёртвого кода, централизация импортов |
 | 13. Материалы IFC | ✅ Готово | IfcMaterial, IfcRelAssociatesMaterial, IfcMaterialList |
 | 14. PropertySets материалов | ✅ Готово | Pset_MaterialCommon, Pset_MaterialSteel |
-| 15. Тестирование | ⏳ Планируется | Валидация IFC, примеры |
+| 15. Точный алгоритм типа 1.2 | ✅ Готово | IfcIndexedPolyCurve с 6 точками, точная дуга |
+| 16. Тестирование | ⏳ Планируется | Валидация IFC, примеры |
 
 ## Известные ограничения
 
@@ -281,6 +282,23 @@ ifc_str, mesh_data = generate_bolt_assembly({
 MIT
 
 ## История рефакторинга
+
+### Точный алгоритм для типа 1.2 (11.03.2026)
+- Обновлён `geometry_builder.py`:
+  - Добавлен `_calculate_tangent_point()` — расчёт точки касания окружности
+  - Добавлен `_get_arc_vertex()` — расчёт вершины дуги по двум точкам и радиусу
+  - Добавлен `_calculate_stud_points_type_1_2()` — расчёт 6 точек для типа 1.2
+  - Обновлён `create_composite_curve_stud()`:
+    - Тип 1.2 использует `IfcIndexedPolyCurve` с 6 точками
+    - Сегменты: `IfcLineIndex((1,2,3))`, `IfcArcIndex((3,4,5))`, `IfcLineIndex((5,6))`
+    - Точная геометрия вместо аппроксимации полилинией (~12 сегментов)
+- Обновлён `gost_data.py`:
+  - Добавлены функции `get_bolt_l1()`, `get_bolt_l2()`, `get_bolt_l3()`
+- Обновлён `instance_factory.py`:
+  - IfcLocalPlacement для типа 1.2 смещён на `l0` (длина резьбы)
+  - Низ резьбы находится в Z=0 (точка начала координат)
+- **Итого:** добавлено ~195 строк
+- **Тесты:** 95 passed, 1 skipped
 
 ### PropertySets материалов (11.03.2026)
 - Обновлён `material_manager.py`:
