@@ -11,25 +11,15 @@ Based on ГОСТ 24379.1-2012 and related standards
 BOLT_TYPES = {
     '1.1': {
         'name': 'Тип 1. Исполнение 1',
-        'execution': [1, 2],
-        'has_bend': True,
-        'bend_radius_factor': 1.0  # R = d (из DIM.py)
     },
     '1.2': {
         'name': 'Тип 1. Исполнение 2',
-        'execution': [1, 2],
-        'has_bend': True,
-        'bend_radius_factor': 2.0  # R = d * 2
     },
     '2.1': {
         'name': 'Тип 2. Исполнение 1',
-        'execution': [1],
-        'has_bend': False
     },
     '5': {
         'name': 'Тип 5',
-        'execution': [1],
-        'has_bend': False
     }
 }
 
@@ -234,7 +224,7 @@ WASHER_DIM_DATA = {
     "48": [48, 50, 105, 14]
 }
 
-# Доступные длины для каждой комбинации типа, исполнения и диаметра
+# Доступные длины для каждой комбинации типа и диаметра
 # Генерируется автоматически из BOLT_DIM_DATA на основе наличия массы
 # Индексы масс в BOLT_DIM_DATA: 5=1.1, 6=1.2, 7=2.1, 8=5
 AVAILABLE_LENGTHS = {}
@@ -255,14 +245,13 @@ for key, data in BOLT_DIM_DATA.items():
     for bolt_type, mass_idx in MASS_INDICES.items():
         # Проверяем, что масса существует (не None)
         if mass_idx < len(data) and data[mass_idx] is not None:
-            # Для каждого типа добавляем длины для всех доступных исполнений
+            # Для каждого типа добавляем длины
             if bolt_type in BOLT_TYPES:
-                for execution in BOLT_TYPES[bolt_type]['execution']:
-                    type_key = (bolt_type, execution, diameter)
-                    if type_key not in AVAILABLE_LENGTHS:
-                        AVAILABLE_LENGTHS[type_key] = []
-                    if length not in AVAILABLE_LENGTHS[type_key]:
-                        AVAILABLE_LENGTHS[type_key].append(length)
+                type_key = (bolt_type, diameter)
+                if type_key not in AVAILABLE_LENGTHS:
+                    AVAILABLE_LENGTHS[type_key] = []
+                if length not in AVAILABLE_LENGTHS[type_key]:
+                    AVAILABLE_LENGTHS[type_key].append(length)
 
 # Сортировка длин
 for key in AVAILABLE_LENGTHS:
@@ -422,7 +411,7 @@ MATERIALS = {
 }
 
 
-def validate_parameters(bolt_type, execution, diameter, length, material):
+def validate_parameters(bolt_type, diameter, length, material):
     """Validate bolt parameters against ГОСТ standards"""
 
     errors = []
@@ -445,14 +434,11 @@ def validate_parameters(bolt_type, execution, diameter, length, material):
     if material not in MATERIALS:
         errors.append(f"Неизвестный материал: {material}")
 
-    # Validate execution and length
+    # Validate length
     if bolt_type in BOLT_TYPES:
-        if execution not in BOLT_TYPES[bolt_type]['execution']:
-            errors.append(f"Исполнение {execution} не поддерживается для типа {bolt_type}")
-
-        key = (bolt_type, execution, diameter)
+        key = (bolt_type, diameter)
         if key not in AVAILABLE_LENGTHS:
-            errors.append(f"Комбинация типа {bolt_type}, исполнения {execution}, диаметра М{diameter} не существует")
+            errors.append(f"Комбинация типа {bolt_type} и диаметра М{diameter} не существует")
         elif length not in AVAILABLE_LENGTHS[key]:
             available = AVAILABLE_LENGTHS[key]
             errors.append(f"Длина {length} недоступна. Доступные длины: {available}")

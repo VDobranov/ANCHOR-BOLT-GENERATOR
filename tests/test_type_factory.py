@@ -70,53 +70,52 @@ class TestGetOrCreateStudType:
     def test_get_or_create_stud_type_creates_entity(self):
         """get_or_create_stud_type должен создавать IfcMechanicalFastenerType"""
         from type_factory import TypeFactory
-        
+
         mock_ifc = MockIfcDoc()
         factory = TypeFactory(mock_ifc)
-        
-        result = factory.get_or_create_stud_type('1.1', 1, 20, 800, '09Г2С')
-        
+
+        result = factory.get_or_create_stud_type('1.1', 20, 800, '09Г2С')
+
         assert result is not None
         assert result.is_a() == 'IfcMechanicalFastenerType'
 
     def test_get_or_create_stud_type_name_format(self):
-        """Имя типа должно следовать формату Stud_M{diameter}x{length}_{type}_exec{execution}"""
+        """Имя типа должно следовать формату Stud_M{diameter}x{length}_{type}"""
         from type_factory import TypeFactory
-        
+
         mock_ifc = MockIfcDoc()
         factory = TypeFactory(mock_ifc)
-        
-        result = factory.get_or_create_stud_type('1.1', 1, 20, 800, '09Г2С')
-        
+
+        result = factory.get_or_create_stud_type('1.1', 20, 800, '09Г2С')
+
         assert 'Stud_M20x800' in result.Name
         assert '1.1' in result.Name
-        assert 'exec1' in result.Name
 
     def test_get_or_create_stud_type_caching(self):
         """get_or_create_stud_type должен кэшировать результаты"""
         from type_factory import TypeFactory
-        
+
         mock_ifc = MockIfcDoc()
         factory = TypeFactory(mock_ifc)
-        
+
         # Первый вызов
-        result1 = factory.get_or_create_stud_type('1.1', 1, 20, 800, '09Г2С')
+        result1 = factory.get_or_create_stud_type('1.1', 20, 800, '09Г2С')
         # Второй вызов с теми же параметрами
-        result2 = factory.get_or_create_stud_type('1.1', 1, 20, 800, '09Г2С')
-        
+        result2 = factory.get_or_create_stud_type('1.1', 20, 800, '09Г2С')
+
         # Должен вернуться тот же объект из кэша
         assert result1 is result2
 
     def test_get_or_create_stud_type_different_params_not_cached(self):
         """Разные параметры должны создавать разные типы"""
         from type_factory import TypeFactory
-        
+
         mock_ifc = MockIfcDoc()
         factory = TypeFactory(mock_ifc)
-        
-        result1 = factory.get_or_create_stud_type('1.1', 1, 20, 800, '09Г2С')
-        result2 = factory.get_or_create_stud_type('1.1', 1, 20, 1000, '09Г2С')  # Другая длина
-        
+
+        result1 = factory.get_or_create_stud_type('1.1', 20, 800, '09Г2С')
+        result2 = factory.get_or_create_stud_type('1.1', 20, 1000, '09Г2С')  # Другая длина
+
         assert result1 is not result2
         assert result1.Name != result2.Name
 
@@ -268,12 +267,12 @@ class TestGetCachedTypesCount:
     def test_get_cached_types_count_after_adding(self):
         """get_cached_types_count должен увеличиваться после добавления типов"""
         from type_factory import TypeFactory
-        
+
         mock_ifc = MockIfcDoc()
         factory = TypeFactory(mock_ifc)
-        
-        factory.get_or_create_stud_type('1.1', 1, 20, 800, '09Г2С')
+
+        factory.get_or_create_stud_type('1.1', 20, 800, '09Г2С')
         factory.get_or_create_nut_type(20, '09Г2С')
         factory.get_or_create_washer_type(20, '09Г2С')
-        
+
         assert factory.get_cached_types_count() == 3

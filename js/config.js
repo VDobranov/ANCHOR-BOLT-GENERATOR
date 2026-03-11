@@ -38,7 +38,6 @@ const APP_CONFIG = {
     // Параметры болта по умолчанию
     DEFAULT_BOLT_PARAMS: {
         bolt_type: '1.1',
-        execution: 1,
         diameter: 20,
         length: 800,
         material: '09Г2С'

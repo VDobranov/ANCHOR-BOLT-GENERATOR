@@ -49,15 +49,15 @@ class GeometryBuilder:
         )
         return self.ifc.create_entity('IfcPolyline', Points=[p1, p2])
 
-    def create_composite_curve_stud(self, bolt_type, diameter, length, execution=1):
+    def create_composite_curve_stud(self, bolt_type, diameter, length):
         """
         Создание составной кривой для шпильки
-        
+
         Для типа 1.1: подход BlenderBIM (AGGREGATE_FBOLTS.py)
         - IfcIndexedPolyCurve с IfcCartesianPointList3D
         - IfcLineIndex + IfcArcIndex + IfcLineIndex
         - 5 точек: p1(0,0,0), p2(0,0,-Ll+r), p3(r-r/√2, 0, -Ll+r-r/√2), p4(r,0,-Ll), p5(r+L0,0,-Ll)
-        
+
         Для типа 1.2, 2.1, 5: старый подход с IfcCompositeCurve
         """
         from gost_data import get_bolt_bend_radius, get_thread_length, get_bolt_hook_length
@@ -190,11 +190,11 @@ class GeometryBuilder:
         
         return self._create_shape_representation(context, swept_area)
 
-    def create_bent_stud_solid(self, bolt_type, diameter, length, execution):
+    def create_bent_stud_solid(self, bolt_type, diameter, length):
         """Создание геометрии изогнутой шпильки через IfcSweptDiskSolid"""
         context = self._get_context()
-        
-        axis_curve = self.create_composite_curve_stud(bolt_type, diameter, length, execution)
+
+        axis_curve = self.create_composite_curve_stud(bolt_type, diameter, length)
         swept_area = self.ifc.create_entity('IfcSweptDiskSolid',
             Directrix=axis_curve,
             Radius=float(diameter / 2.0)

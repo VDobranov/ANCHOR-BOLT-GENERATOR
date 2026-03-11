@@ -22,18 +22,6 @@ class TestBoltTypes:
         
         for bolt_type, data in BOLT_TYPES.items():
             assert 'name' in data
-            assert 'execution' in data
-            assert 'has_bend' in data
-            assert isinstance(data['execution'], list)
-            assert len(data['execution']) > 0
-
-    def test_bent_types_have_radius_factor(self):
-        """Изогнутые болты должны иметь bend_radius_factor"""
-        from gost_data import BOLT_TYPES
-        
-        for bolt_type, data in BOLT_TYPES.items():
-            if data['has_bend']:
-                assert 'bend_radius_factor' in data
 
 
 class TestDiameters:
@@ -162,12 +150,12 @@ class TestAvailableLengths:
         assert len(AVAILABLE_LENGTHS) > 0
 
     def test_available_lengths_structure(self):
-        """Ключи AVAILABLE_LENGTHS должны быть кортежами (type, exec, diameter)"""
+        """Ключи AVAILABLE_LENGTHS должны быть кортежами (type, diameter)"""
         from gost_data import AVAILABLE_LENGTHS
-        
+
         for key, lengths in AVAILABLE_LENGTHS.items():
             assert isinstance(key, tuple)
-            assert len(key) == 3
+            assert len(key) == 2
             assert isinstance(lengths, list)
             assert len(lengths) > 0
             # Проверка сортировки
@@ -275,7 +263,7 @@ class TestValidateParameters:
         from gost_data import validate_parameters
         
         # Должно работать без исключений
-        result = validate_parameters('1.1', 1, 20, 800, '09Г2С')
+        result = validate_parameters('1.1', 20, 800, '09Г2С')
         assert result is True
 
     def test_validate_invalid_bolt_type(self):
@@ -283,7 +271,7 @@ class TestValidateParameters:
         from gost_data import validate_parameters
         
         with pytest.raises(ValueError) as exc_info:
-            validate_parameters('9.9', 1, 20, 800, '09Г2С')
+            validate_parameters('9.9', 20, 800, '09Г2С')
         
         assert 'Неизвестный тип болта' in str(exc_info.value)
 
@@ -292,7 +280,7 @@ class TestValidateParameters:
         from gost_data import validate_parameters
         
         with pytest.raises(ValueError) as exc_info:
-            validate_parameters('1.1', 1, 999, 800, '09Г2С')
+            validate_parameters('1.1', 999, 800, '09Г2С')
         
         assert 'Неподдерживаемый диаметр' in str(exc_info.value)
 
@@ -302,44 +290,34 @@ class TestValidateParameters:
         
         # Тип 2.1 поддерживает диаметры от 16 мм
         with pytest.raises(ValueError) as exc_info:
-            validate_parameters('2.1', 1, 12, 800, '09Г2С')
+            validate_parameters('2.1', 12, 800, '09Г2С')
         
         assert 'недоступен для типа' in str(exc_info.value)
 
     def test_validate_invalid_material(self):
         """Валидация должна падать для неизвестного материала"""
         from gost_data import validate_parameters
-        
+
         with pytest.raises(ValueError) as exc_info:
-            validate_parameters('1.1', 1, 20, 800, 'НеизвестныйМатериал')
-        
+            validate_parameters('1.1', 20, 800, 'НеизвестныйМатериал')
+
         assert 'Неизвестный материал' in str(exc_info.value)
 
     def test_validate_invalid_length(self):
         """Валидация должна падать для недоступной длины"""
         from gost_data import validate_parameters
-        
-        with pytest.raises(ValueError) as exc_info:
-            validate_parameters('1.1', 1, 20, 9999, '09Г2С')
-        
-        assert 'недоступна' in str(exc_info.value)
 
-    def test_validate_invalid_execution(self):
-        """Валидация должна падать для неподдерживаемого исполнения"""
-        from gost_data import validate_parameters
-        
-        # Тип 2.1 поддерживает только исполнение 1
         with pytest.raises(ValueError) as exc_info:
-            validate_parameters('2.1', 2, 20, 800, '09Г2С')
-        
-        assert 'Исполнение' in str(exc_info.value)
+            validate_parameters('1.1', 20, 9999, '09Г2С')
+
+        assert 'недоступна' in str(exc_info.value)
 
     def test_validate_multiple_errors(self):
         """Валидация должна собирать несколько ошибок"""
         from gost_data import validate_parameters
         
         with pytest.raises(ValueError) as exc_info:
-            validate_parameters('9.9', 1, 999, 9999, 'Неизвестный')
+            validate_parameters('9.9', 999, 9999, 'Неизвестный')
         
         errors = str(exc_info.value).split('\n')
         assert len(errors) >= 2  # Минимум 2 ошибки

@@ -38,18 +38,13 @@ class BoltForm {
      * Настройка обработчиков событий
      */
     setupListeners() {
-        const { boltType, execution, diameter, length, material } = this.elements;
+        const { boltType, diameter, length, material } = this.elements;
 
-        // Обновление опций исполнения и длины
+        // Обновление опций диаметров и длины
         boltType.addEventListener('change', async () => {
             this.updateExecutionOptions();
             await this.updateDiameterOptions();
             await this.updateLengthOptions();
-            this.triggerChange();
-        });
-
-        execution.addEventListener('change', () => {
-            this.updateLengthOptions();
             this.triggerChange();
         });
 
@@ -133,17 +128,15 @@ class BoltForm {
             import sys
             sys.path.insert(0, '/python')
             import gost_data
-            
+
             # Получаем диаметры, для которых есть доступные длины с массой
             available_diameters = []
             for d in gost_data.AVAILABLE_DIAMETERS:
                 # Проверяем, есть ли длины для этого диаметра и типа
-                for exec_val in [1, 2]:
-                    key = ("${boltType}", exec_val, d)
-                    if key in gost_data.AVAILABLE_LENGTHS and len(gost_data.AVAILABLE_LENGTHS[key]) > 0:
-                        available_diameters.append(d)
-                        break  # Достаточно одного исполнения
-            
+                key = ("${boltType}", d)
+                if key in gost_data.AVAILABLE_LENGTHS and len(gost_data.AVAILABLE_LENGTHS[key]) > 0:
+                    available_diameters.append(d)
+
             sorted(set(available_diameters))
         `);
     }
@@ -152,18 +145,17 @@ class BoltForm {
      * Обновление опций длины из Python-модуля gost_data
      */
     async updateLengthOptions() {
-        const { boltType, execution, diameter, length } = this.elements;
+        const { boltType, diameter, length } = this.elements;
 
         length.innerHTML = '';
 
         const type = boltType.value;
-        const exec = parseInt(execution.value || '1');
         const diam = parseInt(diameter.value || '0');
 
         if (!type || !diam) return;
 
         try {
-            const lengths = await this.getAvailableLengths(type, exec, diam);
+            const lengths = await this.getAvailableLengths(type, diam);
 
             if (lengths.length > 0) {
                 lengths.forEach(l => {
@@ -193,7 +185,7 @@ class BoltForm {
     /**
      * Получение доступных длин через Pyodide
      */
-    async getAvailableLengths(boltType, execution, diameter) {
+    async getAvailableLengths(boltType, diameter) {
         if (!this.pyodide) {
             return [];
         }
@@ -202,7 +194,7 @@ class BoltForm {
             import sys
             sys.path.insert(0, '/python')
             import gost_data
-            key = ("${boltType}", ${execution}, ${diameter})
+            key = ("${boltType}", ${diameter})
             lengths = gost_data.AVAILABLE_LENGTHS.get(key, [])
             sorted(lengths)
         `);
@@ -212,11 +204,10 @@ class BoltForm {
      * Получение параметров формы
      */
     getParams() {
-        const { boltType, execution, diameter, length, material } = this.elements;
+        const { boltType, diameter, length, material } = this.elements;
 
         return {
             bolt_type: boltType.value,
-            execution: parseInt(execution.value || '1'),
             diameter: parseInt(diameter.value || '0'),
             length: parseInt(length.value || '0'),
             material: material.value
@@ -228,7 +219,6 @@ class BoltForm {
      */
     validateParams(params) {
         return params.bolt_type &&
-               params.execution &&
                params.diameter > 0 &&
                params.length > 0 &&
                params.material;
@@ -238,10 +228,9 @@ class BoltForm {
      * Установка параметров формы
      */
     setParams(params) {
-        const { boltType, execution, diameter, length, material } = this.elements;
+        const { boltType, diameter, length, material } = this.elements;
 
         boltType.value = params.bolt_type || '1.1';
-        execution.value = params.execution || '1';
         diameter.value = params.diameter || '20';
         length.value = params.length || '800';
         material.value = params.material || '09Г2С';
@@ -270,7 +259,6 @@ class BoltForm {
     getDefaultParams() {
         return {
             bolt_type: '1.1',
-            execution: 1,
             diameter: 20,
             length: 800,
             material: '09Г2С'

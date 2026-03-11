@@ -21,7 +21,6 @@ def valid_bolt_params():
     """Параметры валидного болта по умолчанию"""
     return {
         'bolt_type': '1.1',
-        'execution': 1,
         'diameter': 20,
         'length': 800,
         'material': '09Г2С'

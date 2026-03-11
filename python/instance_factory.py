@@ -14,10 +14,10 @@ class InstanceFactory:
         self.ifc = ifc_doc
         self.type_factory = type_factory or TypeFactory(ifc_doc)
 
-    def create_bolt_assembly(self, bolt_type, execution, diameter, length, material):
+    def create_bolt_assembly(self, bolt_type, diameter, length, material):
         """
         Создание полной сборки анкерного болта
-        
+
         Состав сборки по умолчанию:
         - Типы 1.1, 1.2, 5: шпилька + верхняя шайба + 2 верхних гайки
         - Тип 2.1: шпилька + верхняя шайба + 2 верхних гайки + 2 нижних гайки
@@ -28,12 +28,12 @@ class InstanceFactory:
         ifc = get_ifcopenshell()
 
         # Валидация параметров
-        validate_parameters(bolt_type, execution, diameter, length, material)
-        
+        validate_parameters(bolt_type, diameter, length, material)
+
         # Получение размеров компонентов
         nut_dim = get_nut_dimensions(diameter)
         washer_dim = get_washer_dimensions(diameter)
-        
+
         nut_height = nut_dim['height'] if nut_dim else 10
         washer_thickness = washer_dim['thickness'] if washer_dim else 3
 
@@ -46,7 +46,7 @@ class InstanceFactory:
 
         # Получение типов
         stud_type = self.type_factory.get_or_create_stud_type(
-            bolt_type, execution, diameter, length, material
+            bolt_type, diameter, length, material
         )
         nut_type = self.type_factory.get_or_create_nut_type(diameter, material)
         washer_type = self.type_factory.get_or_create_washer_type(diameter, material)
@@ -362,7 +362,6 @@ def generate_bolt_assembly(params):
     factory = InstanceFactory(ifc_doc)
     result = factory.create_bolt_assembly(
         bolt_type=params['bolt_type'],
-        execution=params['execution'],
         diameter=params['diameter'],
         length=params['length'],
         material=params['material']

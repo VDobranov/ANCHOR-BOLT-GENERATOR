@@ -101,12 +101,12 @@ class TestCreateCompositeCurveStud:
     def test_create_curve_type_1_1_indexed_polycurve(self):
         """Для типа 1.1 должен создаваться IfcIndexedPolyCurve"""
         from geometry_builder import GeometryBuilder
-        
+
         mock_ifc = MockIfcDoc()
         builder = GeometryBuilder(mock_ifc)
-        
-        result = builder.create_composite_curve_stud('1.1', 20, 800, 1)
-        
+
+        result = builder.create_composite_curve_stud('1.1', 20, 800)
+
         assert result is not None
         # Для типа 1.1 используется IfcIndexedPolyCurve (BlenderBIM подход)
         assert result.is_a() == 'IfcIndexedPolyCurve'
@@ -120,24 +120,24 @@ class TestCreateCompositeCurveStud:
     def test_create_curve_type_2_1_composite_curve(self):
         """Для типа 2.1 должен создаваться IfcCompositeCurve"""
         from geometry_builder import GeometryBuilder
-        
+
         mock_ifc = MockIfcDoc()
         builder = GeometryBuilder(mock_ifc)
-        
-        result = builder.create_composite_curve_stud('2.1', 20, 800, 1)
-        
+
+        result = builder.create_composite_curve_stud('2.1', 20, 800)
+
         assert result is not None
         assert result.is_a() == 'IfcCompositeCurve'
 
     def test_create_curve_type_5_composite_curve(self):
         """Для типа 5 должен создаваться IfcCompositeCurve"""
         from geometry_builder import GeometryBuilder
-        
+
         mock_ifc = MockIfcDoc()
         builder = GeometryBuilder(mock_ifc)
-        
-        result = builder.create_composite_curve_stud('5', 20, 800, 1)
-        
+
+        result = builder.create_composite_curve_stud('5', 20, 800)
+
         assert result is not None
         assert result.is_a() == 'IfcCompositeCurve'
 
@@ -148,15 +148,15 @@ class TestCreateSweptDiskSolid:
     def test_create_swept_disk_solid(self):
         """create_swept_disk_solid должен создавать IfcSweptDiskSolid"""
         from geometry_builder import GeometryBuilder
-        
+
         mock_ifc = MockIfcDoc()
         builder = GeometryBuilder(mock_ifc)
-        
+
         # Сначала создадим кривую
-        curve = builder.create_composite_curve_stud('2.1', 20, 800, 1)
-        
+        curve = builder.create_composite_curve_stud('2.1', 20, 800)
+
         result = builder.create_swept_disk_solid(curve, 10.0)
-        
+
         assert result is not None
         assert result.is_a() == 'IfcSweptDiskSolid'
 
@@ -183,24 +183,24 @@ class TestCreateBentStudSolid:
     def test_create_bent_stud_solid_type_1_1(self):
         """create_bent_stud_solid должен создавать геометрию изогнутой шпильки 1.1"""
         from geometry_builder import GeometryBuilder
-        
+
         mock_ifc = MockIfcDoc()
         builder = GeometryBuilder(mock_ifc)
-        
-        result = builder.create_bent_stud_solid('1.1', 20, 800, 1)
-        
+
+        result = builder.create_bent_stud_solid('1.1', 20, 800)
+
         assert result is not None
         assert result.is_a() == 'IfcShapeRepresentation'
 
     def test_create_bent_stud_solid_type_1_2(self):
         """create_bent_stud_solid должен создавать геометрию изогнутой шпильки 1.2"""
         from geometry_builder import GeometryBuilder
-        
+
         mock_ifc = MockIfcDoc()
         builder = GeometryBuilder(mock_ifc)
-        
-        result = builder.create_bent_stud_solid('1.2', 20, 800, 1)
-        
+
+        result = builder.create_bent_stud_solid('1.2', 20, 800)
+
         assert result is not None
         assert result.is_a() == 'IfcShapeRepresentation'
 

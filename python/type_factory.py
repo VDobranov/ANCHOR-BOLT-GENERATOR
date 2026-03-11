@@ -16,13 +16,13 @@ class TypeFactory:
         self.types_cache = {}
         self.builder = GeometryBuilder(ifc_doc)
 
-    def get_or_create_stud_type(self, bolt_type, execution, diameter, length, material):
+    def get_or_create_stud_type(self, bolt_type, diameter, length, material):
         """Создание/получение типа шпильки"""
-        key = ('stud', bolt_type, execution, diameter, length, material)
+        key = ('stud', bolt_type, diameter, length, material)
         if key in self.types_cache:
             return self.types_cache[key]
 
-        type_name = f'Stud_M{diameter}x{length}_{bolt_type}_exec{execution}'
+        type_name = f'Stud_M{diameter}x{length}_{bolt_type}'
         ifc = get_ifcopenshell()
         stud_type = self.ifc.create_entity('IfcMechanicalFastenerType',
             GlobalId=ifc.guid.new(),
@@ -33,9 +33,7 @@ class TypeFactory:
 
         # Делегируем построение геометрии в GeometryBuilder
         if bolt_type in ['1.1', '1.2']:
-            shape_rep = self.builder.create_bent_stud_solid(
-                bolt_type, diameter, length, execution
-            )
+            shape_rep = self.builder.create_bent_stud_solid(bolt_type, diameter, length)
         else:
             shape_rep = self.builder.create_straight_stud_solid(diameter, length)
 

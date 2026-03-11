@@ -81,14 +81,14 @@ class TestCreateBoltAssembly:
     def test_create_bolt_assembly_returns_dict(self):
         """create_bolt_assembly должен возвращать dict"""
         from instance_factory import InstanceFactory
-        
+
         mock_ifc = MockIfcDoc()
         factory = InstanceFactory(mock_ifc)
-        
+
         # Мокаем _generate_mesh_data чтобы избежать ifcopenshell.geom
         with patch.object(factory, '_generate_mesh_data', return_value={'meshes': []}):
-            result = factory.create_bolt_assembly('1.1', 1, 20, 800, '09Г2С')
-        
+            result = factory.create_bolt_assembly('1.1', 20, 800, '09Г2С')
+
         assert isinstance(result, dict)
         assert 'assembly' in result
         assert 'stud' in result
@@ -98,13 +98,13 @@ class TestCreateBoltAssembly:
     def test_create_bolt_assembly_creates_assembly(self):
         """create_bolt_assembly должен создавать сборку"""
         from instance_factory import InstanceFactory
-        
+
         mock_ifc = MockIfcDoc()
         factory = InstanceFactory(mock_ifc)
-        
+
         with patch.object(factory, '_generate_mesh_data', return_value={'meshes': []}):
-            result = factory.create_bolt_assembly('1.1', 1, 20, 800, '09Г2С')
-        
+            result = factory.create_bolt_assembly('1.1', 20, 800, '09Г2С')
+
         assembly = result['assembly']
         assert assembly is not None
         assert assembly.is_a() == 'IfcMechanicalFastener'
@@ -113,52 +113,52 @@ class TestCreateBoltAssembly:
     def test_create_bolt_assembly_name_format(self):
         """Имя сборки должно следовать формату"""
         from instance_factory import InstanceFactory
-        
+
         mock_ifc = MockIfcDoc()
         factory = InstanceFactory(mock_ifc)
-        
+
         with patch.object(factory, '_generate_mesh_data', return_value={'meshes': []}):
-            result = factory.create_bolt_assembly('1.1', 1, 20, 800, '09Г2С')
-        
+            result = factory.create_bolt_assembly('1.1', 20, 800, '09Г2С')
+
         assembly = result['assembly']
         assert 'AnchorBolt_1.1_M20x800' in assembly.Name
 
     def test_create_bolt_assembly_components_count_type_1_1(self):
         """Для типа 1.1 должно быть 4 компонента: шпилька + шайба + 2 гайки"""
         from instance_factory import InstanceFactory
-        
+
         mock_ifc = MockIfcDoc()
         factory = InstanceFactory(mock_ifc)
-        
+
         with patch.object(factory, '_generate_mesh_data', return_value={'meshes': []}):
-            result = factory.create_bolt_assembly('1.1', 1, 20, 800, '09Г2С')
-        
+            result = factory.create_bolt_assembly('1.1', 20, 800, '09Г2С')
+
         components = result['components']
         assert len(components) == 4  # stud + washer + 2 nuts
 
     def test_create_bolt_assembly_components_count_type_2_1(self):
         """Для типа 2.1 должно быть 6 компонентов: шпилька + шайба + 4 гайки"""
         from instance_factory import InstanceFactory
-        
+
         mock_ifc = MockIfcDoc()
         factory = InstanceFactory(mock_ifc)
-        
+
         with patch.object(factory, '_generate_mesh_data', return_value={'meshes': []}):
-            result = factory.create_bolt_assembly('2.1', 1, 20, 800, '09Г2С')
-        
+            result = factory.create_bolt_assembly('2.1', 20, 800, '09Г2С')
+
         components = result['components']
         assert len(components) == 6  # stud + washer + 4 nuts
 
     def test_create_bolt_assembly_stud_type(self):
         """Шпилька должна иметь ObjectType = STUD"""
         from instance_factory import InstanceFactory
-        
+
         mock_ifc = MockIfcDoc()
         factory = InstanceFactory(mock_ifc)
-        
+
         with patch.object(factory, '_generate_mesh_data', return_value={'meshes': []}):
-            result = factory.create_bolt_assembly('1.1', 1, 20, 800, '09Г2С')
-        
+            result = factory.create_bolt_assembly('1.1', 20, 800, '09Г2С')
+
         stud = result['stud']
         assert stud is not None
         assert stud.ObjectType == 'STUD'
@@ -166,17 +166,17 @@ class TestCreateBoltAssembly:
     def test_create_bolt_assembly_creates_relations(self):
         """create_bolt_assembly должен создавать отношения"""
         from instance_factory import InstanceFactory
-        
+
         mock_ifc = MockIfcDoc()
         factory = InstanceFactory(mock_ifc)
-        
+
         with patch.object(factory, '_generate_mesh_data', return_value={'meshes': []}):
-            result = factory.create_bolt_assembly('1.1', 1, 20, 800, '09Г2С')
-        
+            result = factory.create_bolt_assembly('1.1', 20, 800, '09Г2С')
+
         # Проверка создания IfcRelDefinesByType
         rel_defines = mock_ifc.by_type('IfcRelDefinesByType')
         assert len(rel_defines) > 0
-        
+
         # Проверка создания IfcRelAggregates
         rel_aggregates = mock_ifc.by_type('IfcRelAggregates')
         assert len(rel_aggregates) > 0
@@ -246,17 +246,16 @@ class TestGenerateBoltAssembly:
     def test_generate_bolt_assembly_returns_tuple(self):
         """generate_bolt_assembly должна возвращать кортеж (ifc_str, mesh_data)"""
         from instance_factory import generate_bolt_assembly
-        
+
         # Примечание: этот тест требует работающего ifcopenshell
         # В среде без ifcopenshell он может упасть
         params = {
             'bolt_type': '1.1',
-            'execution': 1,
             'diameter': 20,
             'length': 800,
             'material': '09Г2С'
         }
-        
+
         try:
             result = generate_bolt_assembly(params)
             assert isinstance(result, tuple)
