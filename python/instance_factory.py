@@ -4,7 +4,8 @@ instance_factory.py — Создание инстансов болтов и сб
 
 from utils import get_ifcopenshell
 from type_factory import TypeFactory
-from gost_data import validate_parameters, get_nut_dimensions, get_washer_dimensions
+from gost_data import validate_parameters, get_nut_dimensions, get_washer_dimensions, get_material_name
+from material_manager import MaterialManager
 
 
 class InstanceFactory:
@@ -13,6 +14,7 @@ class InstanceFactory:
     def __init__(self, ifc_doc, type_factory=None):
         self.ifc = ifc_doc
         self.type_factory = type_factory or TypeFactory(ifc_doc)
+        self.material_manager = MaterialManager(ifc_doc)
 
     def create_bolt_assembly(self, bolt_type, diameter, length, material):
         """
@@ -67,6 +69,12 @@ class InstanceFactory:
             PredefinedType='ANCHORBOLT'
         )
         self._add_instance_representation(assembly, assembly_type)
+
+        # Создаём материал сборки и ассоциируем с assembly
+        mat_name = get_material_name(material)
+        mat = self.material_manager.get_material(mat_name)
+        if mat:
+            self.material_manager.associate_material(assembly, mat)
 
         # Компоненты
         components = []

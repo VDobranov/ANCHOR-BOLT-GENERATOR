@@ -54,6 +54,7 @@ ANCHOR-BOLT-GENERATOR/
 │   ├── main.py             # Singleton IFCDocument, базовая структура
 │   ├── utils.py            # Централизованный импорт ifcopenshell
 │   ├── gost_data.py        # Справочники ГОСТ, валидация, таблицы размеров
+│   ├── material_manager.py # Менеджер материалов IFC (IfcMaterial, IfcRelAssociatesMaterial)
 │   ├── type_factory.py     # TypeFactory: кэширование IfcMechanicalFastenerType
 │   ├── instance_factory.py # InstanceFactory: создание инстансов, сборок
 │   ├── geometry_builder.py # Геометрия IFC: кривые, профили, выдавливание
@@ -168,6 +169,7 @@ IfcProject
 |--------|-----------------|
 | `main.py` | Singleton `IFCDocument`: жизненный цикл IFC-файла, базовая структура |
 | `utils.py` | Централизованный импорт `ifcopenshell` (`get_ifcopenshell`) |
+| `material_manager.py` | Менеджер материалов: создание `IfcMaterial`, `IfcMaterialList`, `IfcRelAssociatesMaterial` |
 | `gost_data.py` | Словари ГОСТ, валидация параметров, таблицы размеров |
 | `type_factory.py` | `TypeFactory`: кэширование `IfcMechanicalFastenerType` по ключу `(тип, диаметр, длина, исполнение, материал)` |
 | `instance_factory.py` | `InstanceFactory`: создание инстансов, размещений, агрегаций, данных mesh через `ifcopenshell.geom` |
@@ -320,6 +322,23 @@ ifc_str, mesh_data = generate_bolt_assembly({
 
 ## История недавнего рефакторинга
 
+### Материалы IFC (11.03.2026)
+- Создан `material_manager.py`: управление материалами IFC
+  - Класс `MaterialManager`: создание `IfcMaterial`, `IfcMaterialList`, `IfcRelAssociatesMaterial`
+  - Кэширование материалов по имени
+  - Ассоциация материалов с типами болтов и сборками
+- Обновлён `gost_data.py`: добавлена функция `get_material_name()`
+  - Формат имени: "09Г2С ГОСТ 19281-2014"
+- Обновлён `type_factory.py`: интеграция с `MaterialManager`
+  - Все типы болтов (шпилька, гайка, шайба) ассоциируются с материалами
+  - Сборки используют `IfcMaterialList`
+- Обновлён `instance_factory.py`: ассоциация материалов с assembly instances
+- Обновлён `main.py`: инициализация `MaterialManager`, сохранение/восстановление при reset
+- Создан `tests/test_material_manager.py`: 11 тестов
+- Обновлены `tests/test_type_factory.py`: 6 тестов на ассоциацию материалов
+- **Итого:** добавлено ~250 строк (новый функционал)
+- **Тесты:** 93 passed, 1 skipped
+
 ### Рефакторинг (11.03.2026)
 - Удалены неиспользуемые функции (11 функций):
   - `gost_data.py`: `get_bolt_type_name()`, `get_bolt_l1()`, `get_bolt_l2()`, `get_bolt_l3()`, `get_bolt_r()`, `get_bolt_all_dimensions()`, `get_material_info()`
@@ -378,7 +397,8 @@ ifc_str, mesh_data = generate_bolt_assembly({
 | 10. ifcopenshell.geom | ✅ Готово | Конвертация IFC → mesh Three.js |
 | 11. Геометрия сборок | ✅ Готово | Исправлена геометрия шпилек и шайб |
 | 12. Очистка кода | ✅ Готово | Удаление мёртвого кода, централизация импортов |
-| 13. Тестирование | ⏳ Планируется | Валидация IFC, примеры |
+| 13. Материалы IFC | ✅ Готово | `IfcMaterial`, `IfcRelAssociatesMaterial`, `IfcMaterialList` |
+| 14. Тестирование | ⏳ Планируется | Валидация IFC, примеры |
 
 ---
 

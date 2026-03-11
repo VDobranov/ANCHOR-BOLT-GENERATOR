@@ -29,7 +29,7 @@ class MockIfcDoc:
     def __init__(self):
         self.entities = []
         self._by_type = {}
-    
+
     def create_entity(self, entity_type, *args, **kwargs):
         # Поддержка как positional, так и keyword аргументов
         # Для IfcLineIndex и IfcArcIndex первый аргумент - список индексов
@@ -38,13 +38,13 @@ class MockIfcDoc:
         else:
             entity = MockIfcEntity(entity_type, **kwargs)
         self.entities.append(entity)
-        
+
         if entity_type not in self._by_type:
             self._by_type[entity_type] = []
         self._by_type[entity_type].append(entity)
-        
+
         return entity
-    
+
     def by_type(self, entity_type):
         return self._by_type.get(entity_type, [])
 
@@ -258,10 +258,10 @@ class TestGetCachedTypesCount:
     def test_get_cached_types_count_empty(self):
         """get_cached_types_count должен возвращать 0 для пустого кэша"""
         from type_factory import TypeFactory
-        
+
         mock_ifc = MockIfcDoc()
         factory = TypeFactory(mock_ifc)
-        
+
         assert factory.get_cached_types_count() == 0
 
     def test_get_cached_types_count_after_adding(self):
@@ -276,3 +276,106 @@ class TestGetCachedTypesCount:
         factory.get_or_create_washer_type(20, '09Г2С')
 
         assert factory.get_cached_types_count() == 3
+
+
+class TestMaterialAssociation:
+    """Тесты для проверки ассоциации материалов"""
+
+    def test_stud_type_creates_material(self):
+        """get_or_create_stud_type должен создавать IfcMaterial"""
+        from type_factory import TypeFactory
+
+        mock_ifc = MockIfcDoc()
+        factory = TypeFactory(mock_ifc)
+
+        factory.get_or_create_stud_type('1.1', 20, 800, '09Г2С')
+
+        # Проверяем, что был создан IfcMaterial
+        materials = mock_ifc.by_type('IfcMaterial')
+        assert len(materials) == 1
+        assert materials[0].Name == '09Г2С ГОСТ 19281-2014'
+        assert materials[0].Category == 'Steel'
+
+    def test_stud_type_creates_rel_associates_material(self):
+        """get_or_create_stud_type должен создавать IfcRelAssociatesMaterial"""
+        from type_factory import TypeFactory
+
+        mock_ifc = MockIfcDoc()
+        factory = TypeFactory(mock_ifc)
+
+        stud_type = factory.get_or_create_stud_type('1.1', 20, 800, '09Г2С')
+
+        # Проверяем, что была создана связь
+        rel_associates = mock_ifc.by_type('IfcRelAssociatesMaterial')
+        assert len(rel_associates) == 1
+        rel = rel_associates[0]
+        assert len(rel.RelatedObjects) == 1
+        assert rel.RelatedObjects[0] is stud_type
+
+    def test_nut_type_creates_material(self):
+        """get_or_create_nut_type должен создавать IfcMaterial и связь"""
+        from type_factory import TypeFactory
+
+        mock_ifc = MockIfcDoc()
+        factory = TypeFactory(mock_ifc)
+
+        factory.get_or_create_nut_type(20, '09Г2С')
+
+        materials = mock_ifc.by_type('IfcMaterial')
+        rel_associates = mock_ifc.by_type('IfcRelAssociatesMaterial')
+
+        assert len(materials) == 1
+        assert materials[0].Name == '09Г2С ГОСТ 19281-2014'
+        assert len(rel_associates) == 1
+
+    def test_washer_type_creates_material(self):
+        """get_or_create_washer_type должен создавать IfcMaterial и связь"""
+        from type_factory import TypeFactory
+
+        mock_ifc = MockIfcDoc()
+        factory = TypeFactory(mock_ifc)
+
+        factory.get_or_create_washer_type(20, '09Г2С')
+
+        materials = mock_ifc.by_type('IfcMaterial')
+        rel_associates = mock_ifc.by_type('IfcRelAssociatesMaterial')
+
+        assert len(materials) == 1
+        assert materials[0].Name == '09Г2С ГОСТ 19281-2014'
+        assert len(rel_associates) == 1
+
+    def test_same_material_cached(self):
+        """Одинаковые материалы должны кэшироваться"""
+        from type_factory import TypeFactory
+
+        mock_ifc = MockIfcDoc()
+        factory = TypeFactory(mock_ifc)
+
+        # Создаём несколько типов с одинаковым материалом
+        factory.get_or_create_stud_type('1.1', 20, 800, '09Г2С')
+        factory.get_or_create_nut_type(20, '09Г2С')
+        factory.get_or_create_washer_type(20, '09Г2С')
+
+        # Должен быть создан только один материал
+        materials = mock_ifc.by_type('IfcMaterial')
+        assert len(materials) == 1
+
+        # Но три связи
+        rel_associates = mock_ifc.by_type('IfcRelAssociatesMaterial')
+        assert len(rel_associates) == 3
+
+    def test_different_materials(self):
+        """Разные материалы должны создаваться отдельно"""
+        from type_factory import TypeFactory
+
+        mock_ifc = MockIfcDoc()
+        factory = TypeFactory(mock_ifc)
+
+        factory.get_or_create_stud_type('1.1', 20, 800, '09Г2С')
+        factory.get_or_create_nut_type(20, 'ВСт3пс2')
+
+        materials = mock_ifc.by_type('IfcMaterial')
+        assert len(materials) == 2
+        material_names = {m.Name for m in materials}
+        assert '09Г2С ГОСТ 19281-2014' in material_names
+        assert 'ВСт3пс2 ГОСТ 535-88' in material_names

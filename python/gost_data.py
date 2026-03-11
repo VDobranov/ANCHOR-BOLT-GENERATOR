@@ -320,6 +320,22 @@ MATERIALS = {
 }
 
 
+def get_material_name(material):
+    """
+    Форматирование имени материала для IFC
+
+    Args:
+        material: Название материала (например, '09Г2С')
+
+    Returns:
+        Строка в формате: "09Г2С ГОСТ 19281-2014"
+    """
+    info = MATERIALS.get(material)
+    if info:
+        return f"{material} ГОСТ {info['gost']}"
+    return material
+
+
 def validate_parameters(bolt_type, diameter, length, material):
     """Validate bolt parameters against ГОСТ standards"""
 

@@ -4,8 +4,9 @@ type_factory.py — Фабрика для создания и кэширован
 """
 
 from utils import get_ifcopenshell
-from gost_data import get_nut_dimensions, get_washer_dimensions
+from gost_data import get_nut_dimensions, get_washer_dimensions, get_material_name
 from geometry_builder import GeometryBuilder
+from material_manager import MaterialManager
 
 
 class TypeFactory:
@@ -15,6 +16,7 @@ class TypeFactory:
         self.ifc = ifc_doc
         self.types_cache = {}
         self.builder = GeometryBuilder(ifc_doc)
+        self.material_manager = MaterialManager(ifc_doc)
 
     def get_or_create_stud_type(self, bolt_type, diameter, length, material):
         """Создание/получение типа шпильки"""
@@ -38,6 +40,12 @@ class TypeFactory:
             shape_rep = self.builder.create_straight_stud_solid(diameter, length)
 
         self.builder.associate_representation(stud_type, shape_rep)
+
+        # Создаём материал и ассоциируем с типом
+        mat_name = get_material_name(material)
+        mat = self.material_manager.create_material(mat_name, category='Steel')
+        self.material_manager.associate_material(stud_type, mat)
+
         self.types_cache[key] = stud_type
         return stud_type
 
@@ -62,6 +70,12 @@ class TypeFactory:
         # Делегируем построение геометрии в GeometryBuilder
         shape_rep = self.builder.create_nut_solid(diameter, height)
         self.builder.associate_representation(nut_type, shape_rep)
+
+        # Создаём материал и ассоциируем с типом
+        mat_name = get_material_name(material)
+        mat = self.material_manager.create_material(mat_name, category='Steel')
+        self.material_manager.associate_material(nut_type, mat)
+
         self.types_cache[key] = nut_type
         return nut_type
 
@@ -87,6 +101,12 @@ class TypeFactory:
         # Делегируем построение геометрии в GeometryBuilder
         shape_rep = self.builder.create_washer_solid(diameter, outer_d, thickness)
         self.builder.associate_representation(washer_type, shape_rep)
+
+        # Создаём материал и ассоциируем с типом
+        mat_name = get_material_name(material)
+        mat = self.material_manager.create_material(mat_name, category='Steel')
+        self.material_manager.associate_material(washer_type, mat)
+
         self.types_cache[key] = washer_type
         return washer_type
 
@@ -105,6 +125,16 @@ class TypeFactory:
             PredefinedType='ANCHORBOLT'
         )
 
+        # Создаём материал сборки (MaterialList)
+        mat_name = get_material_name(material)
+        mat = self.material_manager.get_material(mat_name)
+        if mat:
+            # Создаём список материалов для сборки (шпилька + гайки + шайбы)
+            material_list = self.material_manager.create_material_list(
+                [mat, mat, mat]  # Все компоненты из одного материала
+            )
+            self.material_manager.associate_material(assembly_type, material_list)
+
         # Сборка не имеет собственной геометрии
         self.types_cache[key] = assembly_type
         return assembly_type
@@ -112,3 +142,7 @@ class TypeFactory:
     def get_cached_types_count(self):
         """Количество закэшированных типов"""
         return len(self.types_cache)
+
+    def get_cached_materials_count(self):
+        """Количество закэшированных материалов"""
+        return self.material_manager.get_cached_materials_count()

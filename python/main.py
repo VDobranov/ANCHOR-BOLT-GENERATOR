@@ -4,25 +4,27 @@ main.py — Entry point для Pyodide
 """
 
 from utils import get_ifcopenshell
+from material_manager import MaterialManager
 
 
 class IFCDocument:
     """Класс для управления IFC документом"""
-    
+
     _instance = None
-    
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
         return cls._instance
-    
+
     def __init__(self):
         if self._initialized:
             return
         self.file = None
+        self.material_manager = None
         self._initialized = True
-    
+
     def initialize(self, schema='IFC4'):
         """Инициализация нового документа"""
         ifc = get_ifcopenshell()
@@ -35,6 +37,7 @@ class IFCDocument:
             self.file = ifc.file(schema='IFC4X3')
 
         self._create_base_structure()
+        self.material_manager = MaterialManager(self.file)
         return self.file
     
     def reset(self):
@@ -46,18 +49,22 @@ class IFCDocument:
         # Сохраняем базовые структуры
         projects = self.file.by_type('IfcProject')
         project = projects[0] if projects else None
-        
+
         sites = self.file.by_type('IfcSite')
         site = sites[0] if sites else None
-        
+
         buildings = self.file.by_type('IfcBuilding')
         building = buildings[0] if buildings else None
-        
+
         storeys = self.file.by_type('IfcBuildingStorey')
         storey = storeys[0] if storeys else None
-        
-        materials = self.file.by_type('IfcMaterial')
-        
+
+        # Сохраняем имена материалов для восстановления
+        material_names = []
+        if self.material_manager:
+            for name in self.material_manager.materials_cache.keys():
+                material_names.append(name)
+
         # Удаляем все MechanicalFastener и связанные сущности
         fasteners = self.file.by_type('IfcMechanicalFastener')
         fastener_types = self.file.by_type('IfcMechanicalFastenerType')
@@ -65,21 +72,30 @@ class IFCDocument:
         rel_aggregates = self.file.by_type('IfcRelAggregates')
         rel_connects = self.file.by_type('IfcRelConnectsElements')
         rel_contained = self.file.by_type('IfcRelContainedInSpatialStructure')
-        
+        rel_associates = self.file.by_type('IfcRelAssociatesMaterial')
+        material_lists = self.file.by_type('IfcMaterialList')
+
         # Удаляем отношения
-        for entity in rel_defines + rel_aggregates + rel_connects + rel_contained:
+        for entity in rel_defines + rel_aggregates + rel_connects + rel_contained + rel_associates:
             try:
                 self.file.remove(entity)
             except Exception:
                 pass
-        
+
         # Удаляем болты и их типы
         for entity in fasteners + fastener_types:
             try:
                 self.file.remove(entity)
             except Exception:
                 pass
-        
+
+        # Удаляем материалы и списки материалов
+        for entity in material_lists:
+            try:
+                self.file.remove(entity)
+            except Exception:
+                pass
+
         # Пересоздаём базовую структуру
         self.file = None
         try:
@@ -88,17 +104,13 @@ class IFCDocument:
             self.file = ifc.file(schema='IFC4X3')
 
         self._create_base_structure()
-        
-        # Восстанавливаем материалы если были
-        if materials:
-            for mat in materials:
-                try:
-                    new_mat = self.file.create_entity('IfcMaterial',
-                        Name=mat.Name,
-                        Description=mat.Description
-                    )
-                except Exception:
-                    pass
+
+        # Восстанавливаем material_manager
+        self.material_manager = MaterialManager(self.file)
+
+        # Восстанавливаем материалы
+        for mat_name in material_names:
+            self.material_manager.create_material(mat_name, category='Steel')
 
     def _create_base_structure(self):
         """Создание базовой IFC структуры: Project/Site/Building/Storey"""
@@ -199,6 +211,14 @@ def reset_ifc_document():
     doc = get_document()
     doc.reset()
     return doc.get_file()
+
+
+def get_material_manager():
+    """Получение менеджера материалов"""
+    doc = get_document()
+    if doc.material_manager is None:
+        doc.initialize()
+    return doc.material_manager
 
 
 if __name__ == '__main__':
