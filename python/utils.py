@@ -9,7 +9,7 @@ _ifcopenshell_cache = None
 def get_ifcopenshell():
     """
     Получение ifcopenshell с ленивым импортом
-    
+
     Returns:
         ifcopenshell модуль или None если недоступен
     """
@@ -21,8 +21,3 @@ def get_ifcopenshell():
         except ImportError:
             return None
     return _ifcopenshell_cache
-
-
-def is_ifcopenshell_available():
-    """Проверка доступности ifcopenshell"""
-    return get_ifcopenshell() is not None

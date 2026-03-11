@@ -129,24 +129,3 @@ class IFCGenerator:
             'errors': errors,
             'warnings': warnings
         }
-
-
-def export_ifc_file(ifc_doc, filepath, bolt_type, diameter, length):
-    """Экспорт IFC файла с метаданными"""
-    gen = IFCGenerator(ifc_doc)
-    validation = gen.validate()
-
-    if not validation['valid']:
-        return {'status': 'error', 'errors': validation['errors']}
-
-    try:
-        gen.export_to_file(filepath)
-        return {
-            'status': 'success',
-            'filepath': filepath,
-            'filename': f'bolt_{bolt_type}_M{diameter}x{length}.ifc',
-            'validation': validation,
-            'summary': gen.get_summary()
-        }
-    except Exception as e:
-        return {'status': 'error', 'message': str(e)}

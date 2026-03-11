@@ -236,18 +236,6 @@ class TestHelperFunctions:
         assert 'outer_diameter' in result
         assert 'thickness' in result
 
-    def test_get_bolt_all_dimensions(self):
-        """get_bolt_all_dimensions должна возвращать все размеры"""
-        from gost_data import get_bolt_all_dimensions
-        
-        result = get_bolt_all_dimensions(20, 800)
-        assert result is not None
-        assert 'L' in result
-        assert 'l' in result
-        assert 'R' in result
-        assert 'd' in result
-        assert 'l0' in result
-
 
 class TestValidateParameters:
     """Тесты для валидации параметров"""
@@ -309,28 +297,9 @@ class TestValidateParameters:
     def test_validate_multiple_errors(self):
         """Валидация должна собирать несколько ошибок"""
         from gost_data import validate_parameters
-        
+
         with pytest.raises(ValueError) as exc_info:
             validate_parameters('9.9', 999, 9999, 'Неизвестный')
-        
+
         errors = str(exc_info.value).split('\n')
         assert len(errors) >= 2  # Минимум 2 ошибки
-
-
-class TestGetMaterialInfo:
-    """Тесты для функций получения информации"""
-
-    def test_get_material_info(self):
-        """get_material_info должна возвращать информацию о материале"""
-        from gost_data import get_material_info
-
-        result = get_material_info('09Г2С')
-        assert result is not None
-        assert 'gost' in result
-
-    def test_get_material_info_not_found(self):
-        """get_material_info должна возвращать пустой dict для неизвестного материала"""
-        from gost_data import get_material_info
-
-        result = get_material_info('Неизвестный')
-        assert result == {}

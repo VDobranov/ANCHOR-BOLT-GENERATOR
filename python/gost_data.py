@@ -10,14 +10,6 @@ Based on ГОСТ 24379.1-2012 and related standards
 # Типы болтов (допустимые значения)
 BOLT_TYPES = {'1.1', '1.2', '2.1', '5'}
 
-
-def get_bolt_type_name(bolt_type):
-    """Сформировать название типа болта из ключа"""
-    parts = bolt_type.split('.')
-    if len(parts) == 2:
-        return f"Тип {parts[0]}. Исполнение {parts[1]}"
-    return f"Тип {bolt_type}"
-
 # Доступные диаметры согласно ГОСТ (из dim.csv)
 AVAILABLE_DIAMETERS = [12, 16, 20, 24, 30, 36, 42, 48]
 
@@ -302,67 +294,6 @@ def get_bolt_mass(diameter, length, bolt_type):
     return data[mass_idx]
 
 
-def get_bolt_l1(diameter, length):
-    """Получить длину отгиба (l1) для болта данного диаметра и длины"""
-    key = f"{diameter}_{length}"
-    if key in BOLT_DIM_DATA and len(BOLT_DIM_DATA[key]) > 9:
-        return BOLT_DIM_DATA[key][9]
-    return None
-
-
-def get_bolt_l2(diameter, length):
-    """Получить длину вылета с отгибом (l2) для болта данного диаметра и длины"""
-    key = f"{diameter}_{length}"
-    if key in BOLT_DIM_DATA and len(BOLT_DIM_DATA[key]) > 10:
-        return BOLT_DIM_DATA[key][10]
-    return None
-
-
-def get_bolt_l3(diameter, length):
-    """Получить смещение отгиба (l3) для болта данного диаметра и длины"""
-    key = f"{diameter}_{length}"
-    if key in BOLT_DIM_DATA and len(BOLT_DIM_DATA[key]) > 11:
-        return BOLT_DIM_DATA[key][11]
-    return None
-
-
-def get_bolt_r(diameter, length):
-    """Получить радиус отгиба (r) для болта данного диаметра и длины"""
-    key = f"{diameter}_{length}"
-    if key in BOLT_DIM_DATA and len(BOLT_DIM_DATA[key]) > 12:
-        return BOLT_DIM_DATA[key][12]
-    return None
-
-
-def get_bolt_all_dimensions(diameter, length):
-    """
-    Получить все размеры болта в виде словаря.
-    
-    Args:
-        diameter: Диаметр болта (мм)
-        length: Длина болта (мм)
-    
-    Returns:
-        Словарь с размерами или None, если болт не найден
-    """
-    key = f"{diameter}_{length}"
-    if key not in BOLT_DIM_DATA:
-        return None
-    
-    data = BOLT_DIM_DATA[key]
-    return {
-        'L': data[0] if len(data) > 0 else None,           # Длина
-        'l': data[1] if len(data) > 1 else None,           # Вылет крюка
-        'R': data[2] if len(data) > 2 else None,           # Радиус загиба
-        'd': data[3] if len(data) > 3 else None,           # Диаметр
-        'l0': data[4] if len(data) > 4 else None,          # Длина резьбы
-        'l1': data[9] if len(data) > 9 else None,          # Длина отгиба
-        'l2': data[10] if len(data) > 10 else None,        # Длина вылета с отгибом
-        'l3': data[11] if len(data) > 11 else None,        # Смещение отгиба
-        'r': data[12] if len(data) > 12 else None          # Радиус отгиба
-    }
-
-
 # Материалы согласно ГОСТ
 MATERIALS = {
     '09Г2С': {
@@ -430,11 +361,6 @@ def validate_parameters(bolt_type, diameter, length, material):
         raise ValueError('\n'.join(errors))
 
     return True
-
-
-def get_material_info(material):
-    """Get material information"""
-    return MATERIALS.get(material, {})
 
 
 def get_nut_dimensions(diameter):

@@ -3,7 +3,7 @@ main.py — Entry point для Pyodide
 Управление IFC документом и ifcopenshell
 """
 
-from utils import get_ifcopenshell, is_ifcopenshell_available
+from utils import get_ifcopenshell
 
 
 class IFCDocument:

@@ -381,20 +381,3 @@ def generate_bolt_assembly(params):
     os.unlink(temp_path)
 
     return (ifc_str, result['mesh_data'])
-
-
-def get_element_properties(element_id):
-    """Получение свойств элемента по ID"""
-    from main import get_ifc_document
-    ifc_doc = get_ifc_document()
-
-    entities = ifc_doc.by_id(element_id)
-    if entities:
-        entity = entities[0]
-        return {
-            'id': entity.id(),
-            'name': getattr(entity, 'Name', 'Unknown'),
-            'type': entity.is_a(),
-            'object_type': getattr(entity, 'ObjectType', None)
-        }
-    return {}

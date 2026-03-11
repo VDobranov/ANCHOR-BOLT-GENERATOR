@@ -127,18 +127,3 @@ def convert_assembly_to_meshes(ifc_file, components, color_map=None):
         return None  # Возвращаем None для использования fallback
 
     return {'meshes': meshes}
-
-
-def generate_bolt_mesh_from_ifc(ifc_file, assembly_data):
-    """
-    Генерация mesh данных из готовой IFC сборки
-    
-    Args:
-        ifc_file: IFC документ
-        assembly_data: dict с assembly и components
-    
-    Returns:
-        dict с meshes для Three.js
-    """
-    components = assembly_data.get('components', [])
-    return convert_assembly_to_meshes(ifc_file, components)

@@ -107,11 +107,6 @@ class IFCBridge {
                 print('✓ ifcopenshell.geom доступен')
             except ImportError as e:
                 print(f'⚠ ifcopenshell.geom не доступен: {e}')
-
-            # Проверяем main.is_ifcopenshell_available()
-            import main
-            if not main.is_ifcopenshell_available():
-                raise RuntimeError('ifcopenshell не доступен в main модуле')
         `);
     }
 
@@ -120,11 +115,7 @@ class IFCBridge {
             import sys
             sys.path.insert(0, '/python')
             import main as ifc_main
-            
-            # Проверяем доступность ifcopenshell
-            if not ifc_main.is_ifcopenshell_available():
-                raise RuntimeError('ifcopenshell не доступен перед инициализацией документа')
-            
+
             ifc_main.initialize_base_document()
             print('✓ Базовый документ инициализирован')
         `);
@@ -161,18 +152,6 @@ class IFCBridge {
 
     getIFCData() {
         return this.currentIFCData;
-    }
-
-    async getElementProperties(elementId) {
-        try {
-            return await this.pyodide.runPythonAsync(`
-                from instance_factory import get_element_properties
-                get_element_properties('${elementId}')
-            `);
-        } catch (error) {
-            console.error('Error getting element properties:', error);
-            return {};
-        }
     }
 }
 
