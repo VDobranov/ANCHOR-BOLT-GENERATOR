@@ -144,12 +144,14 @@ IfcProject
 
 **Поддерживаемые типы болтов:**
 
-| Тип | Категория | Форма | Исполнения | Диаметры | Длины |
-|-----|----------|-------|-----------|---------|-------|
-| 1.1 | I | Изогнутый | 1, 2 | М12–М48 | 300–1400 |
-| 1.2 | I | Изогнутый | 1, 2 | М12–М48 | 300–1000 |
-| 2.1 | II | Прямой | 1 | М16–М48 | 500–1250 |
-| 5 | — | Футорка | 1 | М12–М48 | 300–1000 |
+| Тип | Форма | Диаметры | Длины |
+|-----|-------|----------|-------|
+| 1.1 | Изогнутый | М12–М48 | 300–1400 |
+| 1.2 | Изогнутый | М12–М48 | 300–1000 |
+| 2.1 | Прямой | М16–М48 | 500–1250 |
+| 5 | Футорка | М12–М48 | 300–1000 |
+
+**Примечание:** Исполнение определяется автоматически по типу болта (1.1 → исполнение 1, 1.2 → исполнение 2, и т.д.).
 
 **Доступные диаметры:**
 М12, М16, М20, М24, М30, М36, М42, М48 (8 вариантов по DIM.py/BlenderBIM)
@@ -180,7 +182,6 @@ const bridge = await initializeIFCBridge(pyodide);
 // Генерация болта
 const result = await bridge.generateBolt({
     bolt_type: '1.1',
-    execution: 1,
     diameter: 20,
     length: 800,
     material: '09Г2С'
@@ -201,7 +202,6 @@ ifc_doc = initialize_base_document()
 from instance_factory import generate_bolt_assembly
 ifc_str, mesh_data = generate_bolt_assembly({
     'bolt_type': '1.1',
-    'execution': 1,
     'diameter': 20,
     'length': 800,
     'material': '09Г2С'
@@ -277,6 +277,18 @@ ifc_str, mesh_data = generate_bolt_assembly({
 MIT
 
 ## История рефакторинга
+
+### Рефакторинг (11.03.2026)
+- Удалены неиспользуемые функции (11 функций):
+  - `gost_data.py`: `get_bolt_type_name()`, `get_bolt_l1()`, `get_bolt_l2()`, `get_bolt_l3()`, `get_bolt_r()`, `get_bolt_all_dimensions()`, `get_material_info()`
+  - `instance_factory.py`: `get_element_properties()`
+  - `geometry_converter.py`: `generate_bolt_mesh_from_ifc()`
+  - `ifc_generator.py`: `export_ifc_file()`
+  - `utils.py`: `is_ifcopenshell_available()`
+- Удалены тесты для удалённых функций (5 тестов)
+- Обновлён `ifcBridge.js`: удалена проверка `is_ifcopenshell_available()` и метод `getElementProperties()`
+- **Итого:** удалено 199 строк, добавлено 8 строк (чистая очистка)
+- **Тесты:** 76 passed, 1 skipped
 
 ### Рефакторинг (22.02.2026)
 - Удалён fallback mesh код (~340 строк) — используется только ifcopenshell.geom
