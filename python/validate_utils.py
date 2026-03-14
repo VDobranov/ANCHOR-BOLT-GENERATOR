@@ -3,10 +3,10 @@ validate_utils.py — Утилиты для валидации IFC файлов
 
 Использование:
     from validate_utils import validate_ifc_file, assert_valid_ifc
-    
+
     # Валидация файла
     errors = validate_ifc_file(ifc_doc)
-    
+
     # Assert в тестах
     assert_valid_ifc(ifc_doc)
 """
@@ -23,51 +23,69 @@ except ImportError:
 
 class IFCValidationHandler(logging.Handler):
     """Handler для сбора ошибок валидации"""
-    
+
     def __init__(self):
         super().__init__()
         self.errors: List[str] = []
-    
+        self.current_error_lines: List[str] = []
+
     def emit(self, record):
+        # Собираем все сообщения уровня ERROR и выше
         if record.levelno >= logging.ERROR:
-            self.errors.append(self.format(record))
+            msg = self.format(record)
+            if msg:
+                self.current_error_lines.append(msg)
+            # Если сообщение пустое, но есть накопленные строки - сохраняем их как одну ошибку
+            elif self.current_error_lines:
+                self.errors.append('\n'.join(self.current_error_lines))
+                self.current_error_lines = []
+
+    def flush(self):
+        # Сохраняем оставшиеся ошибки при завершении
+        if self.current_error_lines:
+            self.errors.append('\n'.join(self.current_error_lines))
+            self.current_error_lines = []
 
 
-def validate_ifc_file(ifc_doc) -> Optional[List[Any]]:
+def validate_ifc_file(ifc_doc, express_rules: bool = True) -> Optional[List[str]]:
     """
     Валидация IFC документа
-    
+
     Args:
         ifc_doc: IFC документ (ifcopenshell.file)
-    
+        express_rules: Если True, проверяются EXPRESS правила (типы данных, 
+            правила WHERE и т.д.). По умолчанию True для полной валидации.
+
     Returns:
         Список ошибок или None если документ валиден
     """
     if not HAS_VALIDATE:
         raise RuntimeError("ifcopenshell.validate не доступен")
-    
-    # Создаём logger для сбора ошибок
-    logger = logging.getLogger('IFC_Validation')
-    logger.setLevel(logging.ERROR)
-    
-    # Очищаем существующие handlers
-    logger.handlers = []
-    
-    # Добавляем handler для сбора ошибок
+
+    # Используем root logger для перехвата всех сообщений
+    root_logger = logging.getLogger()
+    original_level = root_logger.level
+    root_logger.setLevel(logging.ERROR)
+
+    # Сохраняем существующие handlers
+    original_handlers = root_logger.handlers[:]
+    root_logger.handlers = []
+
+    # Добавляем наш handler
     handler = IFCValidationHandler()
-    logger.addHandler(handler)
-    
-    # Запускаем валидацию
-    result = ifc_validate.validate(ifc_doc, logger)
-    
-    # Проверяем результат
-    if result is None:
-        return None
-    
-    if hasattr(result, '__len__') and len(result) == 0:
-        return None
-    
-    return result
+    root_logger.addHandler(handler)
+
+    try:
+        # Запускаем валидацию с проверкой EXPRESS правил
+        ifc_validate.validate(ifc_doc, root_logger, express_rules=express_rules)
+    finally:
+        # Восстанавливаем logger
+        handler.flush()
+        root_logger.handlers = original_handlers
+        root_logger.setLevel(original_level)
+
+    errors = handler.errors if handler.errors else None
+    return errors
 
 
 def assert_valid_ifc(ifc_doc, msg: str = None):

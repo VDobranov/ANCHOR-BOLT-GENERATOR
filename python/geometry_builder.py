@@ -338,8 +338,17 @@ class GeometryBuilder:
         return self._create_shape_representation(context, swept_area)
 
     def _create_shape_representation(self, context, swept_area):
-        """Создание IfcShapeRepresentation и IfcProductDefinitionShape через shape_builder"""
-        shape_rep = self.builder.get_representation(context, [swept_area], "SweptSolid")
+        """Создание IfcShapeRepresentation"""
+        # Создаём IfcShapeRepresentation с обязательным RepresentationIdentifier
+        # В IFC4 RepresentationIdentifier обязателен для Body представлений
+        # Для IfcSweptDiskSolid используем тип 'AdvancedSweptSolid'
+        shape_rep = self.ifc.create_entity('IfcShapeRepresentation',
+            ContextOfItems=context,
+            RepresentationIdentifier='Body',  # Обязательно для IFC4
+            RepresentationType='AdvancedSweptSolid',  # Совместим с IfcSweptDiskSolid
+            Items=[swept_area]
+        )
+        
         return shape_rep
 
     def associate_representation(self, product_type, shape_rep):
