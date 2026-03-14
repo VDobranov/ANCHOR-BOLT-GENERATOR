@@ -2,31 +2,17 @@
 
 ❗ В СТАДИИ РАЗРАБОТКИ ❗
 
-Генератор анкерных болтов (фундаментных болтов) по ГОСТ 24379.1-2012 с экспортом в IFC4 и 3D визуализацией в браузере.
-
-## Обзор
-
-Приложение позволяет:
-- ✅ Создавать анкерные болты согласно ГОСТ 24379.1-2012
-- ✅ Визуализировать болты в 3D с помощью Three.js
-- ✅ Экспортировать результат в файл IFC (Industry Foundation Classes) для BIM
-- ✅ Работает полностью в браузере (Python выполняется через Pyodide)
-- ✅ Динамическое кэширование типов
-- ✅ Полная валидация по ГОСТ
-- ✅ Автоматическое определение состава сборки по типу болта
-- ✅ Конвертация геометрии через ifcopenshell.geom (единый источник истины)
+Генератор анкерных болтов (фундаментных болтов) по ГОСТ 24379.1-2012 с экспортом в IFC и 3D визуализацией в браузере.
 
 ## Быстрый старт
 
-### Локально
+### Запуск
 
 ```bash
-# 1. Запустить HTTP-сервер
 python3 -m http.server 8000
-
-# 2. Открыть в браузере
-# http://localhost:8000
 ```
+
+Откройте в браузере: **http://localhost:8000**
 
 ### Использование
 
@@ -34,117 +20,16 @@ python3 -m http.server 8000
 2. Выберите диаметр (М12–М48)
 3. Выберите длину (из доступных по ГОСТ)
 4. Выберите материал (09Г2С, ВСт3пс2 или 10Г2)
-5. Болт генерируется автоматически при изменении параметров
-6. Вращайте 3D-вид мышью (ЛКМ — вращение, колесо — зум, ПКМ — панорамирование)
-7. Нажмите «Скачать IFC» для экспорта
+5. Вращайте 3D-вид мышью (ЛКМ — вращение, колесо — зум)
+6. Нажмите «Скачать IFC» для экспорта
 
 **Состав сборки определяется автоматически:**
-- Типы 1.1, 1.2, 5: шпилька + верхняя шайба + 2 верхних гайки
-- Тип 2.1: шпилька + верхняя шайба + 2 верхних гайки + 2 нижних гайки
+- Типы 1.1, 1.2, 5: шпилька + шайба + 2 гайки
+- Тип 2.1: шпилька + шайба + 4 гайки
 
-## Структура проекта
+## Параметры болтов
 
-```
-anchor-bolt-generator/
-├── index.html              # Главная страница
-├── style.css               # Стили
-├── js/                     # JavaScript модули
-│   ├── config.js          # Константы и конфигурация
-│   ├── ui.js              # UI утилиты (статусы, toggle, download)
-│   ├── form.js            # Управление формой и валидация
-│   ├── viewer.js          # 3D визуализация (Three.js)
-│   ├── ifcBridge.js       # Мост JS ↔ Python (Pyodide)
-│   ├── main.js            # Оркестрация приложения
-│   └── init.js            # Точка входа
-├── python/                 # Python модули (выполняются в браузере)
-│   ├── main.py            # Singleton IFC документа
-│   ├── utils.py           # Общие утилиты (импорт ifcopenshell)
-│   ├── gost_data.py       # Справочники ГОСТ и валидация
-│   ├── material_manager.py # Менеджер материалов IFC (IfcMaterial, IfcRelAssociatesMaterial)
-│   ├── type_factory.py    # Фабрика и кэширование типов
-│   ├── instance_factory.py # Создание инстансов и сборок
-│   ├── geometry_builder.py # Построение IFC геометрии (кривые, профили)
-│   ├── geometry_converter.py # Конвертация IFC → Three.js mesh (ifcopenshell.geom)
-│   └── ifc_generator.py   # Экспорт IFC
-├── wheels/                 # Python wheel для Pyodide
-│   └── ifcopenshell-*.whl
-├── ai/                     # Документация архитектуры
-│   ├── CONSOLIDATED_PLAN.md
-│   ├── IMPLEMENTATION_SUMMARY.md
-│   └── Qwen_session_*.md  # Резюме сессий
-└── README.md
-```
-
-## Технические детали
-
-### Архитектура
-
-**Модульная структура:**
-
-| Модуль | Ответственность |
-|--------|----------------|
-| `config.js` | Константы: URL wheel, список Python-модулей, параметры по умолчанию |
-| `ui.js` | UI-утилиты: статусы, переключение элементов, download |
-| `form.js` | Класс `BoltForm`: обработка формы, валидация, debouncing |
-| `viewer.js` | Класс `IFCViewer`: Three.js сцена, камера, меши, взаимодействие |
-| `ifcBridge.js` | Класс `IFCBridge`: загрузка Pyodide, установка ifcopenshell, вызов Python |
-| `main.js` | Оркестрация: инициализация, координация модулей |
-| `main.py` | Singleton `IFCDocument`: управление IFC файлом |
-| `utils.py` | Централизованный импорт ifcopenshell (get_ifcopenshell) |
-| `material_manager.py` | Менеджер материалов: создание `IfcMaterial`, `IfcMaterialList`, `IfcRelAssociatesMaterial` |
-| `type_factory.py` | Фабрика типов: кэширование `IfcMechanicalFastenerType` |
-| `instance_factory.py` | Создание инстансов: размещения, агрегации, mesh-данные через ifcopenshell.geom |
-| `geometry_builder.py` | Построение IFC-геометрии через ifcopenshell.util.shape_builder: кривые, профили, выдавливание |
-| `geometry_converter.py` | Конвертация IFC → Three.js mesh через ifcopenshell.geom.create_shape() |
-| `ifc_generator.py` | Экспорт IFC файла, валидация документа |
-
-**Подход к генерации геометрии:**
-
-Геометрия строится **один раз** в IFC-модели через `type_factory.py` (IfcSweptDiskSolid, IfcExtrudedAreaSolid), затем конвертируется в mesh для Three.js через `geometry_converter.py` с использованием `ifcopenshell.geom.create_shape()`. Это обеспечивает:
-- Единый источник истины для геометрии
-- Отсутствие дублирования кода
-- Корректное соответствие 3D-вида и IFC-данных
-
-**Двухэтапная инициализация:**
-
-1. **При загрузке** (один раз):
-   - Загрузка Pyodide (~80 МБ)
-   - Установка зависимостей: `typing_extensions` → `numpy` → `shapely` → `ifcopenshell`
-   - Проверка доступности ifcopenshell.geom
-   - Загрузка Python-модулей в виртуальную ФС
-   - Создание базовой IFC-структуры (Project → Site → Building → Storey)
-
-2. **При генерации** (каждый запрос):
-   - Валидация параметров через `gost_data.py`
-   - Автоматическое определение состава сборки по типу болта
-   - Получение или создание типов (кэширование)
-   - Создание инстансов с размещениями
-   - Конвертация IFC-геометрии в mesh через ifcopenshell.geom
-   - Обновление 3D-сцены
-
-### IFC-иерархия
-
-```
-IfcProject
-└── IfcSite
-    └── IfcBuilding
-        └── IfcBuildingStorey
-            └── IfcMechanicalFastener (Assembly: ANCHORBOLT)
-                ├── IfcMechanicalFastener (Stud: USERDEFINED)
-                ├── IfcMechanicalFastener (Nut #1: USERDEFINED) [опц.]
-                ├── IfcMechanicalFastener (Washer #1: USERDEFINED) [опц.]
-                ├── IfcMechanicalFastener (Nut #2: USERDEFINED) [опц.]
-                └── IfcMechanicalFastener (Washer #2: USERDEFINED) [опц.]
-```
-
-**Кэширование типов:**
-- Ключ: `(тип, диаметр, длина, исполнение, материал)`
-- Один раз созданный тип переиспользуется
-- Оптимизирует размер IFC-файла и производительность
-
-### GOST-справочники
-
-**Поддерживаемые типы болтов:**
+### Типы и размеры
 
 | Тип | Форма | Диаметры | Длины |
 |-----|-------|----------|-------|
@@ -153,241 +38,30 @@ IfcProject
 | 2.1 | Прямой | М16–М48 | 500–1250 |
 | 5 | Футорка | М12–М48 | 300–1000 |
 
-**Примечание:** Исполнение определяется автоматически по типу болта (1.1 → исполнение 1, 1.2 → исполнение 2, и т.д.).
+### Материалы
 
-**Доступные диаметры:**
-М12, М16, М20, М24, М30, М36, М42, М48 (8 вариантов по DIM.py/BlenderBIM)
-
-**Материалы (ГОСТ):**
-- **09Г2С** (ГОСТ 19281-2014) — σ_в = 490 МПа, низколегированная сталь
-- **ВСт3пс2** (ГОСТ 535-88) — σ_в = 345 МПа, углеродистая конструкционная сталь
-- **10Г2** (ГОСТ 19281-2014) — σ_в = 490 МПа, низколегированная сталь
+| Материал | ГОСТ | Описание |
+|----------|------|----------|
+| 09Г2С | 19281-2014 | Низколегированная сталь (490 МПа) |
+| ВСт3пс2 | 535-88 | Углеродистая сталь (345 МПа) |
+| 10Г2 | 19281-2014 | Низколегированная сталь (490 МПа) |
 
 ## Технологии
 
-| Компонент | Версия | Назначение |
-|-----------|--------|-----------|
-| HTML/CSS/JS | HTML5 | Frontend |
-| Three.js | r128 | 3D-визуализация |
-| Pyodide | 0.26.0 | Python runtime в браузере |
-| IfcOpenShell | 0.8.4 | Работа с IFC |
-| IFC Standard | IFC4 ADD2 TC1 | Формат файлов |
+- **Three.js r128** — 3D визуализация в браузере
+- **Pyodide 0.26.0** — Python в браузере (WebAssembly)
+- **IfcOpenShell 0.8.4** — создание IFC файлов
+- **IFC4 ADD2 TC1** — стандарт BIM-моделей
 
-## API
+## Планы развития
 
-### JavaScript
-
-```javascript
-// Инициализация (автоматически при загрузке)
-const bridge = await initializeIFCBridge(pyodide);
-
-// Генерация болта
-const result = await bridge.generateBolt({
-    bolt_type: '1.1',
-    diameter: 20,
-    length: 800,
-    material: '09Г2С'
-});
-
-// result.ifcData — IFC-строка для скачивания
-// result.meshData — данные для 3D-визуализации
-```
-
-### Python
-
-```python
-# Инициализация
-from main import initialize_base_document, get_ifc_document
-ifc_doc = initialize_base_document()
-
-# Генерация болта
-from instance_factory import generate_bolt_assembly
-ifc_str, mesh_data = generate_bolt_assembly({
-    'bolt_type': '1.1',
-    'diameter': 20,
-    'length': 800,
-    'material': '09Г2С'
-})
-```
-
-## Примеры
-
-### Пример 1: Простая шпилька
-
-```
-Тип: 1.1, Исполнение: 1
-Диаметр: М20, Длина: 800 мм
-Материал: 09Г2С
-Состав: шпилька + шайба + 2 гайки (автоматически)
-```
-
-### Пример 2: Полная сборка типа 2.1
-
-```
-Тип: 2.1, Исполнение: 1
-Диаметр: М24, Длина: 1000 мм
-Материал: 10Г2
-Состав: шпилька + шайба + 2 верхних гайки + 2 нижних гайки (автоматически)
-```
-
-### Пример 3: Экспорт в IFC
-
-```
-Тип: 1.1, Исполнение: 1
-Диаметр: М20, Длина: 500 мм
-Материал: 09Г2С
-Файл: bolt_1.1_M20x500.ifc
-```
-
-## Статус разработки
-
-| Этап | Статус | Описание |
-|------|--------|---------|
-| 1. Инфраструктура | ✅ Готово | HTML, CSS, JS основа, Pyodide |
-| 2. GOST-справочники | ✅ Готово | gost_data.py с полными таблицами |
-| 3. Geometry Builder | ✅ Готово | Построение кривых и профилей |
-| 4. Type Factory | ✅ Готово | Кэширование типов |
-| 5. Materials & PSets | ✅ Готово | Материалы и свойства |
-| 6. Instance Factory | ✅ Готово | Создание инстансов и сборка |
-| 7. IFC Generator | ✅ Готово | Экспорт в IFC |
-| 8. Интеграция | ✅ Готово | Полная JS/Python интеграция |
-| 9. Рефакторинг | ✅ Готово | Модульная архитектура (config, ui, form) |
-| 10. ifcopenshell.geom | ✅ Готово | Конвертация IFC → Three.js mesh |
-| 11. Геометрия сборок | ✅ Готово | Исправлена геометрия шпилек и шайб |
-| 12. Рефакторинг кода | ✅ Готово | Удаление мёртвого кода, централизация импортов |
-| 13. Материалы IFC | ✅ Готово | IfcMaterial, IfcRelAssociatesMaterial, IfcMaterialList |
-| 14. PropertySets материалов | ✅ Готово | Pset_MaterialCommon, Pset_MaterialSteel |
-| 15. Точный алгоритм типа 1.2 | ✅ Готово | IfcIndexedPolyCurve с 6 точками, точная дуга |
-| 16. Тестирование | ⏳ Планируется | Валидация IFC, примеры |
-
-## Известные ограничения
-
-1. **Pyodide-совместимость** — некоторые сложные IFC-примитивы требуют упрощения
-2. **Производительность** — первая загрузка Pyodide занимает 2–3 сек
-3. **Браузер** — требуется современный браузер с поддержкой WebGL
-4. **Память** — большие сборки могут потребовать больше памяти
-
-## Развитие
-
-Планируемые функции:
-- [ ] Валидация IFC файлов в BIM-приложениях (Revit, ArchiCAD, BonsaiBIM)
-- [ ] Добавление остальных диаметров (М56–М100) при наличии данных
+- [ ] Валидация IFC в Revit, ArchiCAD, BonsaiBIM
+- [ ] Новые диаметры (М56–М100)
 - [ ] Пакетная генерация болтов
-- [ ] Экспорт в другие форматы (STEP, STL)
-- [ ] Расширенная обработка ошибок на фронтенде
-- [ ] История генерации
+- [ ] Экспорт в STEP, STL
 
 ## Лицензия
 
 MIT
-
-## История рефакторинга
-
-### Переход на ifcopenshell.util.shape_builder (14.03.2026)
-- Обновлён `geometry_builder.py`:
-  - **Workaround для циклического импорта VectorType** (IfcOpenShell #7562)
-  - Используется `ShapeBuilder` для создания геометрии:
-    - `polyline()` — кривые с поддержкой дуг через `arc_points`
-    - `circle()` — круглые профили
-    - `profile()` — профили с отверстиями
-    - `extrude()` — выдавливание профилей
-    - `create_swept_disk_solid()` — заметание по кривой
-    - `get_representation()` — создание представления
-  - Сохранена точная математика для типов 1.1 и 1.2:
-    - `_calculate_tangent_point()` — точка касания окружности
-    - `_get_arc_vertex()` — вершина дуги по двум точкам и радиусу
-    - `_calculate_stud_points_type_1_2()` — 6 точек для типа 1.2
-  - Улучшен `_get_context()` — fallback для создания контекста вручную
-- Обновлён `js/ifcBridge.js`:
-  - Добавлена установка `shapely` через micropip
-  - Добавлена проверка импорта `shapely`
-- Обновлены тесты:
-  - `tests/test_geometry_builder.py`: 13 тестов (mock ShapeBuilder)
-  - `tests/test_type_factory.py`: 36 тестов (mock ShapeBuilder)
-  - `tests/test_instance_factory.py`: 16 тестов (mock ShapeBuilder)
-- **Итого:** удалено ~100 строк самописного кода, переведено на стандартный API
-- **Тесты:** 93 passed, 1 skipped
-
-### Точный алгоритм для типа 1.2 (11.03.2026)
-- Обновлён `geometry_builder.py`:
-  - Добавлен `_calculate_tangent_point()` — расчёт точки касания окружности
-  - Добавлен `_get_arc_vertex()` — расчёт вершины дуги по двум точкам и радиусу
-  - Добавлен `_calculate_stud_points_type_1_2()` — расчёт 6 точек для типа 1.2
-  - Обновлён `create_composite_curve_stud()`:
-    - Тип 1.2 использует `IfcIndexedPolyCurve` с 6 точками
-    - Сегменты: `IfcLineIndex((1,2,3))`, `IfcArcIndex((3,4,5))`, `IfcLineIndex((5,6))`
-    - Точная геометрия вместо аппроксимации полилинией (~12 сегментов)
-- Обновлён `gost_data.py`:
-  - Добавлены функции `get_bolt_l1()`, `get_bolt_l2()`, `get_bolt_l3()`
-- Обновлён `instance_factory.py`:
-  - IfcLocalPlacement для типа 1.2 смещён на `l0` (длина резьбы)
-  - Низ резьбы находится в Z=0 (точка начала координат)
-- **Итого:** добавлено ~195 строк
-- **Тесты:** 95 passed, 1 skipped
-
-### PropertySets материалов (11.03.2026)
-- Обновлён `material_manager.py`:
-  - Добавлен метод `create_material_properties()` — создание `IfcMaterialProperties`
-  - Добавлен метод `create_standard_psets()` — создание стандартных PropertySets
-  - **Pset_MaterialCommon**: `MassDensity` (плотность, кг/м³)
-  - **Pset_MaterialSteel**: `YieldStress`, `UltimateStress`, `StructuralGrade` (предел текучести, предел прочности, марка стали)
-  - Кэширование PropertySets по `(material, pset_name)`
-- Обновлён `type_factory.py`:
-  - Передаётся `material_key` в `create_material()` для создания свойств
-  - Все типы болтов теперь имеют PropertySets с механическими свойствами
-- Обновлены тесты:
-  - `tests/test_material_manager.py`: добавлены тесты с реальным ifcopenshell (3 теста)
-  - `tests/test_type_factory.py`: обновлён MockIfcDoc для поддержки IfcReal/IfcText
-- **Итого:** добавлено ~100 строк
-- **Тесты:** 95 passed, 1 skipped
-- **Риск:** Используется документация IFC4x3 для IFC4 ADD2 TC1 (Pset имена могут отличаться)
-
-### Материалы IFC (11.03.2026)
-- Создан `material_manager.py`: управление материалами IFC
-  - Класс `MaterialManager`: создание `IfcMaterial`, `IfcMaterialList`, `IfcRelAssociatesMaterial`
-  - Кэширование материалов по имени
-  - Ассоциация материалов с типами болтов и сборками
-- Обновлён `gost_data.py`: добавлена функция `get_material_name()`
-  - Формат имени: "09Г2С ГОСТ 19281-2014"
-- Обновлён `type_factory.py`: интеграция с `MaterialManager`
-  - Все типы болтов (шпилька, гайка, шайба) ассоциируются с материалами
-  - Сборки используют `IfcMaterialList`
-- Обновлён `instance_factory.py`: ассоциация материалов с assembly instances
-- Обновлён `main.py`: инициализация `MaterialManager`, сохранение/восстановление при reset
-- Создан `tests/test_material_manager.py`: 11 тестов
-- Обновлены `tests/test_type_factory.py`: 6 тестов на ассоциацию материалов
-- **Итого:** добавлено ~250 строк (новый функционал)
-- **Тесты:** 93 passed, 1 skipped
-
-### Рефакторинг (11.03.2026)
-- Удалены неиспользуемые функции (11 функций):
-  - `gost_data.py`: `get_bolt_type_name()`, `get_bolt_l1()`, `get_bolt_l2()`, `get_bolt_l3()`, `get_bolt_r()`, `get_bolt_all_dimensions()`, `get_material_info()`
-  - `instance_factory.py`: `get_element_properties()`
-  - `geometry_converter.py`: `generate_bolt_mesh_from_ifc()`
-  - `ifc_generator.py`: `export_ifc_file()`
-  - `utils.py`: `is_ifcopenshell_available()`
-- Удалены тесты для удалённых функций (5 тестов)
-- Обновлён `ifcBridge.js`: удалена проверка `is_ifcopenshell_available()` и метод `getElementProperties()`
-- **Итого:** удалено 199 строк, добавлено 8 строк (чистая очистка)
-- **Тесты:** 76 passed, 1 skipped
-
-### Рефакторинг (22.02.2026)
-- Удалён fallback mesh код (~340 строк) — используется только ifcopenshell.geom
-- Удалены неиспользуемые модули: material_manager.py, pset_manager.py, requirements.txt
-- Создан utils.py для централизации импорта ifcopenshell
-- Удалено дублирование BOLT_DIMENSIONS_SPEC и get_bolt_spec в gost_data.py
-- Обновлены config.js и ui.js (удалены несуществующие элементы)
-- **Итого:** удалено ~620 строк, добавлено ~80 строк
-
-## Дополнительные ресурсы
-
-- **ГОСТ 24379.1-2012** — Болты фундаментные. Конструкция и размеры
-- **ГОСТ 19281-2014** — Прокат повышенной прочности. Общие технические условия
-- **DIM.py (BlenderBIM)** — основной источник размеров болтов
-- **IFC4 ADD2 TC1** — Industry Foundation Classes 4.0.2.1 [Документация](https://standards.buildingsmart.org/IFC/RELEASE/IFC4/ADD2_TC1/HTML/)
-- [Three.js Documentation](https://threejs.org/docs/)
-- [Pyodide Documentation](https://pyodide.org/)
-
-## Контакты
 
 Разработано с помощью AI-ассистентов (Claude, Qwen)
