@@ -51,23 +51,6 @@ python3 -m http.server 8000
 - **IfcOpenShell 0.8.4** — создание IFC файлов
 - **IFC4 ADD2 TC1** — стандарт BIM-моделей
 
-## Валидация IFC
-
-Проект включает автоматическую валидацию сгенерированных IFC файлов:
-
-```bash
-# Запуск тестов с валидацией
-pytest tests/
-```
-
-**Проверки:**
-- ✅ EXPRESS правила (IfcShapeRepresentation.HasRepresentationIdentifier)
-- ✅ Типы представлений (IfcShapeRepresentation.CorrectItemsForType)
-- ✅ Структура документа (Project, Site, Building, Storey)
-- ✅ Наличие OwnerHistory с ID #1
-- ✅ Материалы и отношения (IfcRelAssociatesMaterial)
-- ✅ Геометрия компонентов (4+ mesh)
-
 ## Планы развития
 
 - [ ] Новые диаметры (М56–М100)
