@@ -12,10 +12,11 @@ validate_utils.py — Утилиты для валидации IFC файлов
 """
 
 import logging
-from typing import List, Optional, Any
+from typing import Any, List, Optional
 
 try:
     from ifcopenshell import validate as ifc_validate
+
     HAS_VALIDATE = True
 except ImportError:
     HAS_VALIDATE = False
@@ -37,13 +38,13 @@ class IFCValidationHandler(logging.Handler):
                 self.current_error_lines.append(msg)
             # Если сообщение пустое, но есть накопленные строки - сохраняем их как одну ошибку
             elif self.current_error_lines:
-                self.errors.append('\n'.join(self.current_error_lines))
+                self.errors.append("\n".join(self.current_error_lines))
                 self.current_error_lines = []
 
     def flush(self):
         # Сохраняем оставшиеся ошибки при завершении
         if self.current_error_lines:
-            self.errors.append('\n'.join(self.current_error_lines))
+            self.errors.append("\n".join(self.current_error_lines))
             self.current_error_lines = []
 
 
@@ -53,7 +54,7 @@ def validate_ifc_file(ifc_doc, express_rules: bool = True) -> Optional[List[str]
 
     Args:
         ifc_doc: IFC документ (ifcopenshell.file)
-        express_rules: Если True, проверяются EXPRESS правила (типы данных, 
+        express_rules: Если True, проверяются EXPRESS правила (типы данных,
             правила WHERE и т.д.). По умолчанию True для полной валидации.
 
     Returns:
@@ -91,24 +92,24 @@ def validate_ifc_file(ifc_doc, express_rules: bool = True) -> Optional[List[str]
 def assert_valid_ifc(ifc_doc, msg: str = None):
     """
     Assert для проверки валидности IFC документа в тестах
-    
+
     Args:
         ifc_doc: IFC документ (ifcopenshell.file)
         msg: Сообщение об ошибке (опционально)
-    
+
     Raises:
         AssertionError: Если документ не валиден
     """
     errors = validate_ifc_file(ifc_doc)
-    
+
     if errors:
         error_msg = f"IFC валидация не пройдена: {len(errors)} ошибок\n"
         for i, error in enumerate(errors[:10], 1):
             error_msg += f"  {i}. {error}\n"
         if len(errors) > 10:
             error_msg += f"  ... и ещё {len(errors) - 10} ошибок"
-        
+
         if msg:
             error_msg = f"{msg}\n{error_msg}"
-        
+
         raise AssertionError(error_msg)

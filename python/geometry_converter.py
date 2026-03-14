@@ -14,6 +14,7 @@ def _get_ifcopenshell_geom():
         return None
     try:
         import ifcopenshell.geom
+
         return ifcopenshell.geom
     except ImportError:
         return None
@@ -43,7 +44,7 @@ def convert_ifc_to_mesh(ifc_file, element, weld_vertices=True):
         settings.set(settings.USE_WORLD_COORDS, True)
 
         # Проверка наличия геометрии у элемента
-        if not hasattr(element, 'Representation') or not element.Representation:
+        if not hasattr(element, "Representation") or not element.Representation:
             print(f"Warning: Element {element.GlobalId} has no representation")
             return None
 
@@ -64,14 +65,15 @@ def convert_ifc_to_mesh(ifc_file, element, weld_vertices=True):
         indices = faces.flatten()
 
         return {
-            'vertices': verts.tolist(),
-            'indices': indices.tolist(),
-            'normals': normals.tolist()
+            "vertices": verts.tolist(),
+            "indices": indices.tolist(),
+            "normals": normals.tolist(),
         }
 
     except Exception as e:
         print(f"Warning: Could not convert element {element.GlobalId} ({element.ObjectType}): {e}")
         import traceback
+
         traceback.print_exc()
         return None
 
@@ -89,12 +91,7 @@ def convert_assembly_to_meshes(ifc_file, components, color_map=None):
         dict с meshes для Three.js
     """
     if color_map is None:
-        color_map = {
-            'STUD': 0x8B8B8B,
-            'WASHER': 0xA9A9A9,
-            'NUT': 0x696969,
-            'ANCHORBOLT': 0x4F4F4F
-        }
+        color_map = {"STUD": 0x8B8B8B, "WASHER": 0xA9A9A9, "NUT": 0x696969, "ANCHORBOLT": 0x4F4F4F}
 
     meshes = []
     geom_failures = []
@@ -105,25 +102,24 @@ def convert_assembly_to_meshes(ifc_file, components, color_map=None):
             geom_failures.append(f"{component.ObjectType} ({component.Name})")
             continue
 
-        comp_type = component.ObjectType or 'UNKNOWN'
+        comp_type = component.ObjectType or "UNKNOWN"
         color = color_map.get(comp_type, 0xCCCCCC)
 
-        meshes.append({
-            'id': component.id(),
-            'name': component.Name or f'Component_{component.id()}',
-            'vertices': mesh_data['vertices'],
-            'indices': mesh_data['indices'],
-            'normals': mesh_data['normals'],
-            'color': color,
-            'metadata': {
-                'Type': comp_type,
-                'GlobalId': component.GlobalId
+        meshes.append(
+            {
+                "id": component.id(),
+                "name": component.Name or f"Component_{component.id()}",
+                "vertices": mesh_data["vertices"],
+                "indices": mesh_data["indices"],
+                "normals": mesh_data["normals"],
+                "color": color,
+                "metadata": {"Type": comp_type, "GlobalId": component.GlobalId},
             }
-        })
+        )
 
     if geom_failures:
         print(f"Warning: ifcopenshell.geom failed for: {geom_failures}")
         print("  Falling back to manual mesh generation")
         return None  # Возвращаем None для использования fallback
 
-    return {'meshes': meshes}
+    return {"meshes": meshes}

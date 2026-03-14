@@ -8,17 +8,17 @@ Based on ГОСТ 24379.1-2012 and related standards
 """
 
 # Типы болтов (допустимые значения)
-BOLT_TYPES = {'1.1', '1.2', '2.1', '5'}
+BOLT_TYPES = {"1.1", "1.2", "2.1", "5"}
 
 # Доступные диаметры согласно ГОСТ (из dim.csv)
 AVAILABLE_DIAMETERS = [12, 16, 20, 24, 30, 36, 42, 48]
 
 # Ограничения диаметров по типам болтов
 DIAMETER_LIMITS = {
-    '1.1': (12, 48),  # М12–М48
-    '1.2': (12, 48),  # М12–М48
-    '2.1': (16, 48),  # М16–М48
-    '5': (12, 48)     # М12–М48
+    "1.1": (12, 48),  # М12–М48
+    "1.2": (12, 48),  # М12–М48
+    "2.1": (16, 48),  # М16–М48
+    "5": (12, 48),  # М12–М48
 }
 
 # Параметры болтов из dim.csv
@@ -182,7 +182,7 @@ BOLT_DIM_DATA = {
     "48_2360": [2360, 150, 48, 48, 150, 38.07, 38.07, None, None, 400, 200, 100, 40],
     "48_2500": [2500, 150, 48, 48, 150, 40.13, 40.13, 47.37, None, 400, 200, 100, 40],
     "48_2650": [2650, 150, 48, 48, 150, 42.26, 42.26, None, None, 400, 200, 100, 40],
-    "48_2800": [2800, 150, 48, 48, 150, 44.39, 44.39, 51.63, None, 400, 200, 100, 40]
+    "48_2800": [2800, 150, 48, 48, 150, 44.39, 44.39, 51.63, None, 400, 200, 100, 40],
 }
 
 # Параметры гаек из DIM.py
@@ -195,7 +195,7 @@ NUT_DIM_DATA = {
     "30": [30, 46, 25.6],
     "36": [36, 55, 31],
     "42": [42, 65, 34],
-    "48": [48, 75, 38]
+    "48": [48, 75, 38],
 }
 
 # Параметры шайб из DIM.py
@@ -208,7 +208,7 @@ WASHER_DIM_DATA = {
     "30": [30, 32, 80, 10],
     "36": [36, 38, 90, 10],
     "42": [42, 44, 95, 14],
-    "48": [48, 50, 105, 14]
+    "48": [48, 50, 105, 14],
 }
 
 # Доступные длины для каждой комбинации типа и диаметра
@@ -217,16 +217,11 @@ WASHER_DIM_DATA = {
 AVAILABLE_LENGTHS = {}
 
 # Индексы масс по типам болтов
-MASS_INDICES = {
-    '1.1': 5,
-    '1.2': 6,
-    '2.1': 7,
-    '5': 8
-}
+MASS_INDICES = {"1.1": 5, "1.2": 6, "2.1": 7, "5": 8}
 
 # Автогенерация AVAILABLE_LENGTHS из BOLT_DIM_DATA на основе наличия массы
 for key, data in BOLT_DIM_DATA.items():
-    diameter = int(key.split('_')[0])
+    diameter = int(key.split("_")[0])
     length = int(data[0])
 
     for bolt_type, mass_idx in MASS_INDICES.items():
@@ -296,51 +291,51 @@ def get_thread_length(diameter, length):
 def get_bolt_mass(diameter, length, bolt_type):
     """
     Получить массу болта данного диаметра, длины и типа.
-    
+
     Args:
         diameter: Диаметр болта (мм)
         length: Длина болта (мм)
         bolt_type: Тип болта ('1.1', '1.2', '2.1', '5')
-    
+
     Returns:
         Масса в кг или None, если болт такого типа не существует
     """
     key = f"{diameter}_{length}"
     if key not in BOLT_DIM_DATA:
         return None
-    
+
     data = BOLT_DIM_DATA[key]
     mass_idx = MASS_INDICES.get(bolt_type)
-    
+
     if mass_idx is None or mass_idx >= len(data):
         return None
-    
+
     return data[mass_idx]
 
 
 # Материалы согласно ГОСТ
 MATERIALS = {
-    '09Г2С': {
-        'gost': '19281-2014',
-        'tensile_strength': 490,  # МПа
-        'yield_strength': 390,
-        'density': 7850,  # кг/м³
-        'description': 'Низколегированная сталь'
+    "09Г2С": {
+        "gost": "19281-2014",
+        "tensile_strength": 490,  # МПа
+        "yield_strength": 390,
+        "density": 7850,  # кг/м³
+        "description": "Низколегированная сталь",
     },
-    'ВСт3пс2': {
-        'gost': '535-88',
-        'tensile_strength': 345,
-        'yield_strength': 235,
-        'density': 7850,
-        'description': 'Углеродистая конструкционная сталь'
+    "ВСт3пс2": {
+        "gost": "535-88",
+        "tensile_strength": 345,
+        "yield_strength": 235,
+        "density": 7850,
+        "description": "Углеродистая конструкционная сталь",
     },
-    '10Г2': {
-        'gost': '19281-2014',
-        'tensile_strength': 490,
-        'yield_strength': 390,
-        'density': 7850,
-        'description': 'Низколегированная сталь'
-    }
+    "10Г2": {
+        "gost": "19281-2014",
+        "tensile_strength": 490,
+        "yield_strength": 390,
+        "density": 7850,
+        "description": "Низколегированная сталь",
+    },
 }
 
 
@@ -377,7 +372,9 @@ def validate_parameters(bolt_type, diameter, length, material):
     if bolt_type in DIAMETER_LIMITS:
         min_d, max_d = DIAMETER_LIMITS[bolt_type]
         if diameter < min_d or diameter > max_d:
-            errors.append(f"Диаметр М{diameter} недоступен для типа {bolt_type}. Доступен диапазон: М{min_d}–М{max_d}")
+            errors.append(
+                f"Диаметр М{diameter} недоступен для типа {bolt_type}. Доступен диапазон: М{min_d}–М{max_d}"
+            )
 
     # Validate material
     if material not in MATERIALS:
@@ -395,10 +392,12 @@ def validate_parameters(bolt_type, diameter, length, material):
             # Дополнительная проверка: масса для данного типа должна существовать
             mass = get_bolt_mass(diameter, length, bolt_type)
             if mass is None:
-                errors.append(f"Болт типа {bolt_type} с параметрами М{diameter}×{length} не существует (нет массы)")
+                errors.append(
+                    f"Болт типа {bolt_type} с параметрами М{diameter}×{length} не существует (нет массы)"
+                )
 
     if errors:
-        raise ValueError('\n'.join(errors))
+        raise ValueError("\n".join(errors))
 
     return True
 
@@ -407,11 +406,7 @@ def get_nut_dimensions(diameter):
     """Get nut dimensions for given diameter"""
     data = NUT_DIM_DATA.get(str(diameter))
     if data:
-        return {
-            'diameter': data[0],
-            's_width': data[1],  # размер под ключ
-            'height': data[2]
-        }
+        return {"diameter": data[0], "s_width": data[1], "height": data[2]}  # размер под ключ
     return None
 
 
@@ -420,18 +415,18 @@ def get_washer_dimensions(diameter):
     data = WASHER_DIM_DATA.get(str(diameter))
     if data:
         return {
-            'nominal_diameter': data[0],
-            'inner_diameter': data[1],
-            'outer_diameter': data[2],
-            'thickness': data[3]
+            "nominal_diameter": data[0],
+            "inner_diameter": data[1],
+            "outer_diameter": data[2],
+            "thickness": data[3],
         }
     return None
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Test validation
     try:
-        validate_parameters('1.1', 1, 20, 800, '09Г2С')
+        validate_parameters("1.1", 1, 20, 800, "09Г2С")
         print("✓ Validation passed")
 
         # Test dimensions

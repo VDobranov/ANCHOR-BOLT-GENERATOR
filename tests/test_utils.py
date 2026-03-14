@@ -1,6 +1,7 @@
 """
 Тесты для utils.py
 """
+
 import pytest
 
 
@@ -13,11 +14,11 @@ class TestUtils:
 
         result = get_ifcopenshell()
         # В среде Pyodide должен возвращать модуль, в обычном Python - None
-        assert result is None or hasattr(result, 'file')
+        assert result is None or hasattr(result, "file")
 
     def test_get_ifcopenshell_cached(self):
         """get_ifcopenshell должен кэшировать результат"""
-        from utils import get_ifcopenshell, _ifcopenshell_cache
+        from utils import _ifcopenshell_cache, get_ifcopenshell
 
         # Первый вызов
         result1 = get_ifcopenshell()

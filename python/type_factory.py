@@ -3,10 +3,10 @@ type_factory.py — Фабрика для создания и кэширован
 Вся геометрия делегирована в geometry_builder.py
 """
 
-from utils import get_ifcopenshell
-from gost_data import get_nut_dimensions, get_washer_dimensions, get_material_name
 from geometry_builder import GeometryBuilder
+from gost_data import get_material_name, get_nut_dimensions, get_washer_dimensions
 from material_manager import MaterialManager
+from utils import get_ifcopenshell
 
 
 class TypeFactory:
@@ -18,27 +18,28 @@ class TypeFactory:
         self.builder = GeometryBuilder(ifc_doc)
         self.material_manager = MaterialManager(ifc_doc)
         # Получаем OwnerHistory из документа
-        owner_histories = self.ifc.by_type('IfcOwnerHistory')
+        owner_histories = self.ifc.by_type("IfcOwnerHistory")
         self.owner_history = owner_histories[0] if owner_histories else None
 
     def get_or_create_stud_type(self, bolt_type, diameter, length, material):
         """Создание/получение типа шпильки"""
-        key = ('stud', bolt_type, diameter, length, material)
+        key = ("stud", bolt_type, diameter, length, material)
         if key in self.types_cache:
             return self.types_cache[key]
 
-        type_name = f'Stud_M{diameter}x{length}_{bolt_type}'
+        type_name = f"Stud_M{diameter}x{length}_{bolt_type}"
         ifc = get_ifcopenshell()
-        stud_type = self.ifc.create_entity('IfcMechanicalFastenerType',
+        stud_type = self.ifc.create_entity(
+            "IfcMechanicalFastenerType",
             GlobalId=ifc.guid.new(),
             OwnerHistory=self.owner_history,
             Name=type_name,
-            PredefinedType='USERDEFINED',
-            ElementType='STUD'
+            PredefinedType="USERDEFINED",
+            ElementType="STUD",
         )
 
         # Делегируем построение геометрии в GeometryBuilder
-        if bolt_type in ['1.1', '1.2']:
+        if bolt_type in ["1.1", "1.2"]:
             shape_rep = self.builder.create_bent_stud_solid(bolt_type, diameter, length)
         else:
             shape_rep = self.builder.create_straight_stud_solid(diameter, length)
@@ -47,7 +48,9 @@ class TypeFactory:
 
         # Создаём материал и ассоциируем с типом
         mat_name = get_material_name(material)
-        mat = self.material_manager.create_material(mat_name, category='Steel', material_key=material)
+        mat = self.material_manager.create_material(
+            mat_name, category="Steel", material_key=material
+        )
         self.material_manager.associate_material(stud_type, mat)
 
         self.types_cache[key] = stud_type
@@ -55,21 +58,22 @@ class TypeFactory:
 
     def get_or_create_nut_type(self, diameter, material):
         """Создание/получение типа гайки"""
-        key = ('nut', diameter, material)
+        key = ("nut", diameter, material)
         if key in self.types_cache:
             return self.types_cache[key]
 
         nut_dim = get_nut_dimensions(diameter)
-        height = nut_dim['height'] if nut_dim else 10
-        type_name = f'Nut_M{diameter}_H{height}'
+        height = nut_dim["height"] if nut_dim else 10
+        type_name = f"Nut_M{diameter}_H{height}"
         ifc = get_ifcopenshell()
 
-        nut_type = self.ifc.create_entity('IfcMechanicalFastenerType',
+        nut_type = self.ifc.create_entity(
+            "IfcMechanicalFastenerType",
             GlobalId=ifc.guid.new(),
             OwnerHistory=self.owner_history,
             Name=type_name,
-            PredefinedType='USERDEFINED',
-            ElementType='NUT'
+            PredefinedType="USERDEFINED",
+            ElementType="NUT",
         )
 
         # Делегируем построение геометрии в GeometryBuilder
@@ -78,7 +82,9 @@ class TypeFactory:
 
         # Создаём материал и ассоциируем с типом
         mat_name = get_material_name(material)
-        mat = self.material_manager.create_material(mat_name, category='Steel', material_key=material)
+        mat = self.material_manager.create_material(
+            mat_name, category="Steel", material_key=material
+        )
         self.material_manager.associate_material(nut_type, mat)
 
         self.types_cache[key] = nut_type
@@ -86,22 +92,23 @@ class TypeFactory:
 
     def get_or_create_washer_type(self, diameter, material):
         """Создание/получение типа шайбы"""
-        key = ('washer', diameter, material)
+        key = ("washer", diameter, material)
         if key in self.types_cache:
             return self.types_cache[key]
 
         washer_dim = get_washer_dimensions(diameter)
-        outer_d = washer_dim['outer_diameter'] if washer_dim else diameter + 10
-        thickness = washer_dim['thickness'] if washer_dim else 3
-        type_name = f'Washer_M{diameter}_OD{outer_d}'
+        outer_d = washer_dim["outer_diameter"] if washer_dim else diameter + 10
+        thickness = washer_dim["thickness"] if washer_dim else 3
+        type_name = f"Washer_M{diameter}_OD{outer_d}"
         ifc = get_ifcopenshell()
 
-        washer_type = self.ifc.create_entity('IfcMechanicalFastenerType',
+        washer_type = self.ifc.create_entity(
+            "IfcMechanicalFastenerType",
             GlobalId=ifc.guid.new(),
             OwnerHistory=self.owner_history,
             Name=type_name,
-            PredefinedType='USERDEFINED',
-            ElementType='WASHER'
+            PredefinedType="USERDEFINED",
+            ElementType="WASHER",
         )
 
         # Делегируем построение геометрии в GeometryBuilder
@@ -110,7 +117,9 @@ class TypeFactory:
 
         # Создаём материал и ассоциируем с типом
         mat_name = get_material_name(material)
-        mat = self.material_manager.create_material(mat_name, category='Steel', material_key=material)
+        mat = self.material_manager.create_material(
+            mat_name, category="Steel", material_key=material
+        )
         self.material_manager.associate_material(washer_type, mat)
 
         self.types_cache[key] = washer_type
@@ -118,18 +127,19 @@ class TypeFactory:
 
     def get_or_create_assembly_type(self, bolt_type, diameter, material):
         """Создание/получение типа сборки"""
-        key = ('assembly', bolt_type, diameter, material)
+        key = ("assembly", bolt_type, diameter, material)
         if key in self.types_cache:
             return self.types_cache[key]
 
-        type_name = f'AnchorBoltAssembly_{bolt_type}_M{diameter}_{material}'
+        type_name = f"AnchorBoltAssembly_{bolt_type}_M{diameter}_{material}"
         ifc = get_ifcopenshell()
 
-        assembly_type = self.ifc.create_entity('IfcMechanicalFastenerType',
+        assembly_type = self.ifc.create_entity(
+            "IfcMechanicalFastenerType",
             GlobalId=ifc.guid.new(),
             OwnerHistory=self.owner_history,
             Name=type_name,
-            PredefinedType='ANCHORBOLT'
+            PredefinedType="ANCHORBOLT",
         )
 
         # Создаём материал сборки (MaterialList)

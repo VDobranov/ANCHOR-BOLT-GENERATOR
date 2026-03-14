@@ -17,6 +17,7 @@ def get_ifcopenshell():
     if _ifcopenshell_cache is None:
         try:
             import ifcopenshell as _ifc
+
             _ifcopenshell_cache = _ifc
         except ImportError:
             return None

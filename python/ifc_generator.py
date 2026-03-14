@@ -14,36 +14,34 @@ class IFCGenerator:
         f = self.ifc
 
         # Единицы
-        length_unit = f.create_entity('IfcSIUnit',
-            UnitType='LENGTHUNIT', Prefix='MILLI', Name='METRE'
+        length_unit = f.create_entity(
+            "IfcSIUnit", UnitType="LENGTHUNIT", Prefix="MILLI", Name="METRE"
         )
-        mass_unit = f.create_entity('IfcSIUnit',
-            UnitType='MASSUNIT', Name='GRAM'
-        )
-        plane_angle = f.create_entity('IfcSIUnit',
-            UnitType='PLANEANGLEUNIT', Name='RADIAN'
-        )
+        mass_unit = f.create_entity("IfcSIUnit", UnitType="MASSUNIT", Name="GRAM")
+        plane_angle = f.create_entity("IfcSIUnit", UnitType="PLANEANGLEUNIT", Name="RADIAN")
 
-        unit_assignment = f.create_entity('IfcUnitAssignment',
-            Units=[length_unit, mass_unit, plane_angle]
+        unit_assignment = f.create_entity(
+            "IfcUnitAssignment", Units=[length_unit, mass_unit, plane_angle]
         )
 
         # Геометрический контекст
-        world_coordinate_system = f.create_entity('IfcAxis2Placement3D',
-            Location=f.create_entity('IfcCartesianPoint', Coordinates=[0.0, 0.0, 0.0]),
-            Axis=f.create_entity('IfcDirection', DirectionRatios=[0.0, 0.0, 1.0]),
-            RefDirection=f.create_entity('IfcDirection', DirectionRatios=[1.0, 0.0, 0.0])
+        world_coordinate_system = f.create_entity(
+            "IfcAxis2Placement3D",
+            Location=f.create_entity("IfcCartesianPoint", Coordinates=[0.0, 0.0, 0.0]),
+            Axis=f.create_entity("IfcDirection", DirectionRatios=[0.0, 0.0, 1.0]),
+            RefDirection=f.create_entity("IfcDirection", DirectionRatios=[1.0, 0.0, 0.0]),
         )
 
-        geometric_context = f.create_entity('IfcGeometricRepresentationContext',
-            ContextType='Model',
+        geometric_context = f.create_entity(
+            "IfcGeometricRepresentationContext",
+            ContextType="Model",
             CoordinateSpaceDimension=3,
             Precision=1e-05,
-            WorldCoordinateSystem=world_coordinate_system
+            WorldCoordinateSystem=world_coordinate_system,
         )
 
         # Привязка к проекту
-        projects = f.by_type('IfcProject')
+        projects = f.by_type("IfcProject")
         if not projects:
             raise ValueError("IfcProject не найден")
 
@@ -63,22 +61,22 @@ class IFCGenerator:
     def get_summary(self):
         """Получение сводки по документу"""
         return {
-            'project': self._get_project_info(),
-            'entities_count': len(self.ifc),
-            'entity_types': self._count_entity_types(),
-            'mechanical_fasteners': self._count_fasteners(),
-            'materials': self._count_materials()
+            "project": self._get_project_info(),
+            "entities_count": len(self.ifc),
+            "entity_types": self._count_entity_types(),
+            "mechanical_fasteners": self._count_fasteners(),
+            "materials": self._count_materials(),
         }
 
     def _get_project_info(self):
         """Информация о проекте"""
-        projects = self.ifc.by_type('IfcProject')
+        projects = self.ifc.by_type("IfcProject")
         if projects:
             proj = projects[0]
             return {
-                'name': proj.Name or 'Unnamed',
-                'description': proj.Description or '',
-                'schema': self.ifc.schema
+                "name": proj.Name or "Unnamed",
+                "description": proj.Description or "",
+                "schema": self.ifc.schema,
             }
         return {}
 
@@ -92,19 +90,19 @@ class IFCGenerator:
 
     def _count_fasteners(self):
         """Подсчёт болтов"""
-        fasteners = self.ifc.by_type('IfcMechanicalFastener')
+        fasteners = self.ifc.by_type("IfcMechanicalFastener")
         grouped = {}
         for f in fasteners:
-            ftype = f.ObjectType or 'Unknown'
+            ftype = f.ObjectType or "Unknown"
             grouped[ftype] = grouped.get(ftype, 0) + 1
-        return {'total': len(fasteners), 'by_type': grouped}
+        return {"total": len(fasteners), "by_type": grouped}
 
     def _count_materials(self):
         """Подсчёт материалов"""
-        materials = self.ifc.by_type('IfcMaterial')
+        materials = self.ifc.by_type("IfcMaterial")
         return {
-            'total': len(materials),
-            'materials': [{'name': m.Name, 'description': m.Description} for m in materials]
+            "total": len(materials),
+            "materials": [{"name": m.Name, "description": m.Description} for m in materials],
         }
 
     def validate(self):
@@ -112,20 +110,16 @@ class IFCGenerator:
         errors = []
         warnings = []
 
-        if not self.ifc.by_type('IfcProject'):
+        if not self.ifc.by_type("IfcProject"):
             errors.append("IfcProject не найден")
 
-        if not self.ifc.schema.startswith('IFC4'):
+        if not self.ifc.schema.startswith("IFC4"):
             warnings.append(f"Схема {self.ifc.schema}, ожидается IFC4")
 
-        if not self.ifc.by_type('IfcBuildingStorey'):
+        if not self.ifc.by_type("IfcBuildingStorey"):
             warnings.append("IfcBuildingStorey не найден")
 
-        if not self.ifc.by_type('IfcMechanicalFastener'):
+        if not self.ifc.by_type("IfcMechanicalFastener"):
             warnings.append("IfcMechanicalFastener не найден")
 
-        return {
-            'valid': len(errors) == 0,
-            'errors': errors,
-            'warnings': warnings
-        }
+        return {"valid": len(errors) == 0, "errors": errors, "warnings": warnings}
