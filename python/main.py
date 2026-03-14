@@ -216,16 +216,19 @@ END-ISO-10303-21;
         # Иерархия: Project -> Site -> Building -> Storey
         f.create_entity('IfcRelAggregates',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=self.owner_history,
             RelatingObject=project,
             RelatedObjects=[site]
         )
         f.create_entity('IfcRelAggregates',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=self.owner_history,
             RelatingObject=site,
             RelatedObjects=[building]
         )
         f.create_entity('IfcRelAggregates',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=self.owner_history,
             RelatingObject=building,
             RelatedObjects=[storey]
         )

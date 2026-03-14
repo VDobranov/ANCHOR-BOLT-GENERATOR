@@ -19,6 +19,9 @@ class MaterialManager:
         self.ifc = ifc_doc
         self.materials_cache = {}
         self.material_properties_cache = {}
+        # Получаем OwnerHistory из документа
+        owner_histories = self.ifc.by_type('IfcOwnerHistory')
+        self.owner_history = owner_histories[0] if owner_histories else None
 
     def create_material(self, name, description=None, category=None, material_key=None):
         """
@@ -98,6 +101,7 @@ class MaterialManager:
         rel = self.ifc.create_entity(
             'IfcRelAssociatesMaterial',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=self.owner_history,
             Name=f'MaterialAssociation_{entity.Name}',
             RelatedObjects=[entity],
             RelatingMaterial=material

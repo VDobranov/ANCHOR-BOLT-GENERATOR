@@ -161,24 +161,28 @@ class InstanceFactory:
         # IfcRelDefinesByType для каждого типа
         self.ifc.create_entity('IfcRelDefinesByType',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=owner_history,
             RelatingType=assembly_type,
             RelatedObjects=[assembly]
         )
         if stud_instances:
             self.ifc.create_entity('IfcRelDefinesByType',
                 GlobalId=ifc.guid.new(),
+                OwnerHistory=owner_history,
                 RelatingType=stud_type,
                 RelatedObjects=stud_instances
             )
         if nut_instances:
             self.ifc.create_entity('IfcRelDefinesByType',
                 GlobalId=ifc.guid.new(),
+                OwnerHistory=owner_history,
                 RelatingType=nut_type,
                 RelatedObjects=nut_instances
             )
         if washer_instances:
             self.ifc.create_entity('IfcRelDefinesByType',
                 GlobalId=ifc.guid.new(),
+                OwnerHistory=owner_history,
                 RelatingType=washer_type,
                 RelatedObjects=washer_instances
             )
@@ -187,6 +191,7 @@ class InstanceFactory:
         if storey:
             self.ifc.create_entity('IfcRelContainedInSpatialStructure',
                 GlobalId=ifc.guid.new(),
+                OwnerHistory=owner_history,
                 RelatingStructure=storey,
                 RelatedElements=[assembly] + components
             )
@@ -194,6 +199,7 @@ class InstanceFactory:
         # IfcRelAggregates
         self.ifc.create_entity('IfcRelAggregates',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=owner_history,
             RelatingObject=assembly,
             RelatedObjects=components
         )
@@ -202,6 +208,7 @@ class InstanceFactory:
         for i in range(len(components) - 1):
             self.ifc.create_entity('IfcRelConnectsElements',
                 GlobalId=ifc.guid.new(),
+                OwnerHistory=owner_history,
                 RelatingElement=components[i],
                 RelatedElement=components[i + 1]
             )

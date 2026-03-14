@@ -17,6 +17,9 @@ class TypeFactory:
         self.types_cache = {}
         self.builder = GeometryBuilder(ifc_doc)
         self.material_manager = MaterialManager(ifc_doc)
+        # Получаем OwnerHistory из документа
+        owner_histories = self.ifc.by_type('IfcOwnerHistory')
+        self.owner_history = owner_histories[0] if owner_histories else None
 
     def get_or_create_stud_type(self, bolt_type, diameter, length, material):
         """Создание/получение типа шпильки"""
@@ -28,6 +31,7 @@ class TypeFactory:
         ifc = get_ifcopenshell()
         stud_type = self.ifc.create_entity('IfcMechanicalFastenerType',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=self.owner_history,
             Name=type_name,
             PredefinedType='USERDEFINED',
             ElementType='STUD'
@@ -62,6 +66,7 @@ class TypeFactory:
 
         nut_type = self.ifc.create_entity('IfcMechanicalFastenerType',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=self.owner_history,
             Name=type_name,
             PredefinedType='USERDEFINED',
             ElementType='NUT'
@@ -93,6 +98,7 @@ class TypeFactory:
 
         washer_type = self.ifc.create_entity('IfcMechanicalFastenerType',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=self.owner_history,
             Name=type_name,
             PredefinedType='USERDEFINED',
             ElementType='WASHER'
@@ -121,6 +127,7 @@ class TypeFactory:
 
         assembly_type = self.ifc.create_entity('IfcMechanicalFastenerType',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=self.owner_history,
             Name=type_name,
             PredefinedType='ANCHORBOLT'
         )
