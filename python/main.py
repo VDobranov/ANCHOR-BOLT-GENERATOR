@@ -284,6 +284,9 @@ def get_ifc_document():
 def reset_ifc_document():
     """Сброс IFC документа и создание нового"""
     doc = get_document()
+    # Если документ ещё не инициализирован, создаём новый
+    if doc.file is None:
+        return doc.initialize()
     doc.reset()
     return doc.get_file()
 
