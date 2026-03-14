@@ -74,20 +74,35 @@ class IFCBridge {
 
         // Загрузка Python модулей
         const cacheBuster = '?v=' + Date.now();
-        
+
         // Добавляем /python в sys.path
         await this.pyodide.runPythonAsync(`
             import sys
             if '/python' not in sys.path:
                 sys.path.insert(0, '/python')
         `);
-        
+
+        // Создание директорий для пакетов
+        try { FS.mkdir('/python/data'); } catch (e) { if (e.code !== 'EEXIST') throw e; }
+        try { FS.mkdir('/python/services'); } catch (e) { if (e.code !== 'EEXIST') throw e; }
+
         for (const filePath of APP_CONFIG.PYTHON_MODULES) {
             const fileName = filePath.split('/').pop();
             const response = await fetch(filePath + cacheBuster);
             if (!response.ok) throw new Error(`Failed to fetch ${filePath}`);
             const content = await response.text();
-            FS.writeFile(`/python/${fileName}`, content);
+
+            // Определяем путь для файла
+            let targetPath;
+            if (filePath.includes('/data/')) {
+                targetPath = `/python/data/${fileName}`;
+            } else if (filePath.includes('/services/')) {
+                targetPath = `/python/services/${fileName}`;
+            } else {
+                targetPath = `/python/${fileName}`;
+            }
+
+            FS.writeFile(targetPath, content);
         }
     }
 
