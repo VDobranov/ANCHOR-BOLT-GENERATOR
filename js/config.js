@@ -23,7 +23,8 @@ const APP_CONFIG = {
         'python/geometry_builder.py',
         'python/ifc_generator.py',
         'python/geometry_converter.py',
-        'python/utils.py'
+        'python/utils.py',
+        'python/validate_utils.py'
     ],
 
     // Таймауты
