@@ -16,6 +16,7 @@ const APP_CONFIG = {
     // Python модули для загрузки
     PYTHON_MODULES: [
         'python/main.py',
+        'python/document_manager.py',
         'python/material_manager.py',
         'python/instance_factory.py',
         'python/type_factory.py',
