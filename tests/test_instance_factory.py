@@ -336,23 +336,70 @@ class TestGenerateBoltAssembly:
         try:
             result = generate_bolt_assembly(params)
             ifc_str, mesh_data = result
-            
+
             # Сохраняем в временный файл и проверяем
             import tempfile
             import os
             import ifcopenshell
-            
+
             with tempfile.NamedTemporaryFile(mode='w', suffix='.ifc', delete=False) as tmp:
                 tmp.write(ifc_str)
                 tmp_path = tmp.name
-            
+
             try:
                 ifc_doc = ifcopenshell.open(tmp_path)
+                
+                # 1. Валидация IFC файла
                 errors = validate_ifc_file(ifc_doc)
                 assert errors is None, f"IFC файл не прошёл валидацию: {errors}"
+                
+                # 2. Проверка наличия OwnerHistory с ID #1
+                owner_history = ifc_doc.by_id(1)
+                assert owner_history.is_a() == 'IfcOwnerHistory', "IfcOwnerHistory должен иметь ID #1"
+                
+                # 3. Проверка базовой структуры
+                projects = ifc_doc.by_type('IfcProject')
+                assert len(projects) == 1, "Должен быть один IfcProject"
+                
+                sites = ifc_doc.by_type('IfcSite')
+                assert len(sites) == 1, "Должен быть один IfcSite"
+                
+                buildings = ifc_doc.by_type('IfcBuilding')
+                assert len(buildings) == 1, "Должен быть один IfcBuilding"
+                
+                storeys = ifc_doc.by_type('IfcBuildingStorey')
+                assert len(storeys) == 1, "Должен быть один IfcBuildingStorey"
+                
+                # 4. Проверка болта и компонентов
+                fasteners = ifc_doc.by_type('IfcMechanicalFastener')
+                assert len(fasteners) >= 4, f"Должно быть минимум 4 IfcMechanicalFastener (assembly + stud + nut + washer), найдено: {len(fasteners)}"
+                
+                # 5. Проверка типов
+                fastener_types = ifc_doc.by_type('IfcMechanicalFastenerType')
+                assert len(fastener_types) >= 4, f"Должно быть минимум 4 IfcMechanicalFastenerType, найдено: {len(fastener_types)}"
+                
+                # 6. Проверка материалов
+                materials = ifc_doc.by_type('IfcMaterial')
+                assert len(materials) >= 1, f"Должен быть хотя бы один IfcMaterial, найдено: {len(materials)}"
+                
+                # 7. Проверка отношений
+                rel_aggregates = ifc_doc.by_type('IfcRelAggregates')
+                assert len(rel_aggregates) >= 1, "Должны быть отношения IfcRelAggregates"
+                
+                rel_defines = ifc_doc.by_type('IfcRelDefinesByType')
+                assert len(rel_defines) >= 1, "Должны быть отношения IfcRelDefinesByType"
+                
+                rel_associates = ifc_doc.by_type('IfcRelAssociatesMaterial')
+                assert len(rel_associates) >= 1, "Должны быть отношения IfcRelAssociatesMaterial"
+                
+                # 8. Проверка mesh данных
+                assert mesh_data is not None, "mesh_data не должен быть None"
+                assert 'meshes' in mesh_data, "mesh_data должен содержать 'meshes'"
+                assert len(mesh_data['meshes']) >= 4, f"Должно быть минимум 4 mesh, найдено: {len(mesh_data['meshes'])}"
+                
             finally:
                 os.unlink(tmp_path)
-                
+
         except Exception as e:
             # Если ifcopenshell недоступен, тест пропускается
             pytest.skip(f"ifcopenshell недоступен: {e}")
