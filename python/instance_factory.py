@@ -2,6 +2,9 @@
 instance_factory.py — Создание инстансов болтов и сборок
 """
 
+import io
+from typing import Any, Dict, Tuple
+
 from gost_data import (
     get_material_name,
     get_nut_dimensions,
@@ -325,81 +328,24 @@ class InstanceFactory:
                 print(f"Warning: Could not create representation for {instance.Name}: {e}")
 
     def _duplicate_geometric_items(self, items):
-        """Дублирование геометрических элементов"""
-        duplicated = []
-        for item in items:
-            if item.is_a() == "IfcSweptDiskSolid":
-                directrix = self._duplicate_curve(item.Directrix)
-                duplicated.append(
-                    self.ifc.create_entity(
-                        "IfcSweptDiskSolid", Directrix=directrix, Radius=item.Radius
-                    )
-                )
-            elif item.is_a() == "IfcExtrudedAreaSolid":
-                swept_area = self._duplicate_profile(item.SweptArea)
-                position = self._duplicate_placement(item.Position)
-                direction = self._duplicate_direction(item.ExtrudedDirection)
-                duplicated.append(
-                    self.ifc.create_entity(
-                        "IfcExtrudedAreaSolid",
-                        SweptArea=swept_area,
-                        Position=position,
-                        ExtrudedDirection=direction,
-                        Depth=item.Depth,
-                    )
-                )
-            else:
-                duplicated.append(item)
-        return duplicated
+        """
+        Дублирование геометрических элементов через ShapeBuilder.deep_copy()
 
-    def _duplicate_curve(self, curve):
-        """Дублирование кривой"""
-        if curve.is_a() == "IfcCompositeCurve":
-            segments = [self._duplicate_curve_segment(s) for s in curve.Segments]
-            return self.ifc.create_entity(
-                "IfcCompositeCurve", Segments=segments, SelfIntersect=curve.SelfIntersect
-            )
-        elif curve.is_a() == "IfcPolyline":
-            points = [
-                self.ifc.create_entity("IfcCartesianPoint", Coordinates=p.Coordinates)
-                for p in curve.Points
-            ]
-            return self.ifc.create_entity("IfcPolyline", Points=points)
-        return curve
+        Согласно документации IfcOpenShell:
+        - deep_copy() создаёт полную копию геометрии со всеми зависимостями
+        - Поддерживает все типы сущностей IFC
+        - Значительно проще и надёжнее ручного дублирования
 
-    def _duplicate_curve_segment(self, segment):
-        """Дублирование сегмента кривой"""
-        return self.ifc.create_entity(
-            "IfcCompositeCurveSegment",
-            Transition=segment.Transition,
-            SameSense=segment.SameSense,
-            ParentCurve=self._duplicate_curve(segment.ParentCurve),
-        )
+        Args:
+            items: Список IFC сущностей для дублирования
 
-    def _duplicate_placement(self, placement):
-        """Дублирование размещения"""
-        if placement.is_a() == "IfcAxis2Placement3D":
-            return self.ifc.create_entity(
-                "IfcAxis2Placement3D",
-                Location=self.ifc.create_entity(
-                    "IfcCartesianPoint", Coordinates=placement.Location.Coordinates
-                ),
-                Axis=self._duplicate_direction(placement.Axis) if placement.Axis else None,
-                RefDirection=(
-                    self._duplicate_direction(placement.RefDirection)
-                    if placement.RefDirection
-                    else None
-                ),
-            )
-        return placement
+        Returns:
+            Список скопированных сущностей
+        """
+        from ifcopenshell.util.shape_builder import ShapeBuilder
 
-    def _duplicate_direction(self, direction):
-        """Дублирование направления"""
-        return self.ifc.create_entity("IfcDirection", DirectionRatios=direction.DirectionRatios)
-
-    def _duplicate_profile(self, profile):
-        """Дублирование профиля"""
-        return profile  # Упрощённо возвращаем оригинал
+        builder = ShapeBuilder(self.ifc)
+        return [builder.deep_copy(item) for item in items]
 
     def _generate_mesh_data(self, components, bolt_type, diameter, length, material):
         """Генерация mesh данных через ifcopenshell.geom"""
@@ -417,13 +363,21 @@ class InstanceFactory:
         return mesh_data
 
 
-def generate_bolt_assembly(params):
+def generate_bolt_assembly(params: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
     """
     Главная функция для генерации болта
+
     Args:
-        params: dict с параметрами болта
+        params: dict с параметрами болта:
+            - bolt_type: Тип болта ('1.1', '1.2', '2.1', '5')
+            - diameter: Диаметр (мм)
+            - length: Длина (мм)
+            - material: Материал ('09Г2С', 'ВСт3пс2', '10Г2')
+
     Returns:
-        (ifc_string, mesh_data)
+        Кортеж (ifc_string, mesh_data):
+            - ifc_string: IFC файл в виде строки
+            - mesh_data: Данные для 3D визуализации
     """
     from main import reset_ifc_document
 
@@ -438,19 +392,9 @@ def generate_bolt_assembly(params):
         material=params["material"],
     )
 
-    # Экспорт в строку через временный файл
-    import tempfile
-
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".ifc", delete=False) as f:
-        temp_path = f.name
-
-    ifc_doc.write(temp_path)
-
-    with open(temp_path, "r") as f:
-        ifc_str = f.read()
-
-    import os
-
-    os.unlink(temp_path)
+    # Экспорт в memory buffer (быстрее и надёжнее)
+    buffer = io.StringIO()
+    ifc_doc.write(buffer)
+    ifc_str = buffer.getvalue()
 
     return (ifc_str, result["mesh_data"])

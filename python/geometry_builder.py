@@ -2,31 +2,16 @@
 geometry_builder.py — Построение IFC геометрии
 Использует ifcopenshell.util.shape_builder для стандартного API
 
-Workaround для циклического импорта VectorType (IfcOpenShell #7562):
-Создаём mock VectorType перед импортом shape_builder
+Согласно документации IfcOpenShell:
+- ShapeBuilder предоставляет стандартное API для построения геометрии
+- V — функция для создания векторов координат
 """
 
 import math
-import sys
-import types
-from typing import Any, Sequence
-
-# Workaround: создаём mock VectorType перед импортом shape_builder
-if "ifcopenshell.util.shape_builder" not in sys.modules:
-    _mock_sb = types.ModuleType("ifcopenshell.util.shape_builder")
-    _mock_sb.VectorType = Any
-    _mock_sb.V = lambda *coords: [float(c) for c in coords]
-    sys.modules["ifcopenshell.util.shape_builder"] = _mock_sb
+from typing import Any, List, Optional, Tuple
 
 from ifcopenshell.util.representation import get_context
-from utils import get_ifcopenshell
-
-# Удаляем mock и импортируем реальный модуль
-del sys.modules["ifcopenshell.util.shape_builder"]
-from ifcopenshell.util.shape_builder import ShapeBuilder
-
-# Экспортируем V для использования в других модулях
-V = lambda *coords: [float(c) for c in coords]
+from ifcopenshell.util.shape_builder import ShapeBuilder, V
 
 
 class GeometryBuilder:
