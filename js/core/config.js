@@ -27,7 +27,14 @@ export const APP_CONFIG = Object.freeze({
         'python/ifc_generator.py',
         'python/geometry_converter.py',
         'python/utils.py',
-        'python/validate_utils.py'
+        'python/validate_utils.py',
+        'python/data/__init__.py',
+        'python/data/bolt_dimensions.py',
+        'python/data/fastener_dimensions.py',
+        'python/data/materials.py',
+        'python/data/validation.py',
+        'python/services/__init__.py',
+        'python/services/dimension_service.py'
     ],
 
     // Таймауты
