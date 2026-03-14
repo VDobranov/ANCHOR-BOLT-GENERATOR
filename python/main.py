@@ -119,32 +119,62 @@ class IFCDocument:
         f = self.file
         ifc = get_ifcopenshell()
 
-        # Project
+        # Создание OwnerHistory
+        # Пользователь (сначала создаём персону для application_developer)
+        person = run("owner.add_person", f,
+            identification="abg-user",
+            family_name="Generator",
+            given_name="Anchor Bolt"
+        )
+        # Приложение (используем person как application_developer)
+        application = run("owner.add_application", f,
+            application_full_name="Anchor Bolt Generator",
+            application_identifier="ABG",
+            application_developer=person
+        )
+        # Организация
+        organisation = run("owner.add_organisation", f,
+            identification="ABG-ORG",
+            name="Anchor Bolt Generator Organization"
+        )
+        # Связь пользователь-организация
+        user = run("owner.add_person_and_organisation", f,
+            person=person,
+            organisation=organisation
+        )
+        # OwnerHistory (единый для всех элементов)
+        owner_history = run("owner.create_owner_history", f)
+
+        # Project с OwnerHistory
         project = f.create_entity('IfcProject',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=owner_history,
             Name='Anchor Bolt Generator',
             Description='Generated anchor bolts with IFC4 ADD2 TC1'
         )
 
-        # Site
+        # Site с OwnerHistory
         site = f.create_entity('IfcSite',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=owner_history,
             Name='Default Site'
         )
         # Размещение сайта (мировая СК, единичная матрица)
         run("geometry.edit_object_placement", f, product=site, matrix=np.eye(4))
 
-        # Building
+        # Building с OwnerHistory
         building = f.create_entity('IfcBuilding',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=owner_history,
             Name='Default Building'
         )
         # Размещение здания (относительно сайта, без смещения)
         run("geometry.edit_object_placement", f, product=building, matrix=np.eye(4))
 
-        # BuildingStorey
+        # BuildingStorey с OwnerHistory
         storey = f.create_entity('IfcBuildingStorey',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=owner_history,
             Name='Storey 1',
             Elevation=0.0
         )

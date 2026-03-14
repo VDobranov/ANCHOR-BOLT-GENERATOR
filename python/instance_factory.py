@@ -60,10 +60,15 @@ class InstanceFactory:
         storeys = self.ifc.by_type('IfcBuildingStorey')
         storey = storeys[0] if storeys else None
 
-        # Создание assembly
+        # Получение OwnerHistory (единый для всех элементов)
+        owner_histories = self.ifc.by_type('IfcOwnerHistory')
+        owner_history = owner_histories[0] if owner_histories else None
+
+        # Создание assembly с OwnerHistory
         ifc = get_ifcopenshell()
         assembly = self.ifc.create_entity('IfcMechanicalFastener',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=owner_history,
             Name=f'AnchorBolt_{bolt_type}_M{diameter}x{length}',
             ObjectType='ANCHORBOLT',
             PredefinedType='ANCHORBOLT'
@@ -95,6 +100,7 @@ class InstanceFactory:
         stud_placement = self._create_placement((0, 0, stud_offset))
         stud = self.ifc.create_entity('IfcMechanicalFastener',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=owner_history,
             Name=f'Stud_M{diameter}x{length}',
             ObjectType='STUD',
             ObjectPlacement=stud_placement
@@ -108,7 +114,7 @@ class InstanceFactory:
             washer_top = self._create_component(
                 'Washer', f'Washer_Top_M{diameter}', 'WASHER',
                 (0, 0, washer_thickness / 2),
-                washer_type, washer_instances
+                washer_type, washer_instances, owner_history
             )
             components.append(washer_top)
 
@@ -118,7 +124,7 @@ class InstanceFactory:
             nut_top1 = self._create_component(
                 'Nut', f'Nut_Top1_M{diameter}', 'NUT',
                 (0, 0, z_pos + nut_height / 2),
-                nut_type, nut_instances
+                nut_type, nut_instances, owner_history
             )
             components.append(nut_top1)
 
@@ -128,7 +134,7 @@ class InstanceFactory:
             nut_top2 = self._create_component(
                 'Nut', f'Nut_Top2_M{diameter}', 'NUT',
                 (0, 0, z_pos + nut_height / 2),
-                nut_type, nut_instances
+                nut_type, nut_instances, owner_history
             )
             components.append(nut_top2)
 
@@ -138,7 +144,7 @@ class InstanceFactory:
             nut_bottom = self._create_component(
                 'Nut', f'Nut_Bottom1_M{diameter}', 'NUT',
                 (0, 0, z_pos),
-                nut_type, nut_instances
+                nut_type, nut_instances, owner_history
             )
             components.append(nut_bottom)
 
@@ -148,7 +154,7 @@ class InstanceFactory:
             nut_bottom2 = self._create_component(
                 'Nut', f'Nut_Bottom2_M{diameter}', 'NUT',
                 (0, 0, z_pos),
-                nut_type, nut_instances
+                nut_type, nut_instances, owner_history
             )
             components.append(nut_bottom2)
 
@@ -224,12 +230,13 @@ class InstanceFactory:
             )
         )
 
-    def _create_component(self, comp_type, name, object_type, location, type_obj, instances_list):
+    def _create_component(self, comp_type, name, object_type, location, type_obj, instances_list, owner_history=None):
         """Создание компонента (гайка/шайба)"""
         ifc = get_ifcopenshell()
         placement = self._create_placement(location)
         component = self.ifc.create_entity('IfcMechanicalFastener',
             GlobalId=ifc.guid.new(),
+            OwnerHistory=owner_history,
             Name=name,
             ObjectType=object_type,
             ObjectPlacement=placement
