@@ -3,43 +3,7 @@
 """
 
 import pytest
-
-
-class MockIfcEntity:
-    """Mock для IFC сущности"""
-
-    def __init__(self, entity_type, **kwargs):
-        self._entity_type = entity_type
-        self._kwargs = kwargs
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-    def is_a(self):
-        return self._entity_type
-
-    def __getattr__(self, name):
-        return self._kwargs.get(name)
-
-
-class MockIfcDoc:
-    """Mock для IFC документа"""
-
-    def __init__(self):
-        self.entities = []
-        self._by_type = {}
-
-    def create_entity(self, entity_type, *args, **kwargs):
-        entity = MockIfcEntity(entity_type, **kwargs)
-        self.entities.append(entity)
-
-        if entity_type not in self._by_type:
-            self._by_type[entity_type] = []
-        self._by_type[entity_type].append(entity)
-
-        return entity
-
-    def by_type(self, entity_type):
-        return self._by_type.get(entity_type, [])
+from conftest import MockIfcDoc
 
 
 class TestMaterialManager:
