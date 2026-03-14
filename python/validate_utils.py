@@ -89,7 +89,7 @@ def validate_ifc_file(ifc_doc, express_rules: bool = True) -> Optional[List[str]
     return errors
 
 
-def assert_valid_ifc(ifc_doc, msg: str = None):
+def assert_valid_ifc(ifc_doc, msg: Optional[str] = None):
     """
     Assert для проверки валидности IFC документа в тестах
 

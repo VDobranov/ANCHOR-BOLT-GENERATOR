@@ -8,7 +8,7 @@ type_factory.py — Фабрика для создания и кэширован
 - Уменьшает размер IFC файла и улучшает производительность
 """
 
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from geometry_builder import GeometryBuilder
 from gost_data import get_material_name, get_nut_dimensions, get_washer_dimensions
@@ -29,8 +29,8 @@ class TypeFactory:
 
     def __init__(self, ifc_doc: IfcDocumentProtocol):
         self.ifc: IfcDocumentProtocol = ifc_doc
-        self.types_cache = {}
-        self.representation_maps = {}  # Кэш RepresentationMap по ключу
+        self.types_cache: Dict[str, Any] = {}
+        self.representation_maps: Dict[tuple, Any] = {}  # Кэш RepresentationMap по ключу
         self.builder = GeometryBuilder(ifc_doc)
         self.material_manager = MaterialManager(ifc_doc)
         # Получаем OwnerHistory из документа
@@ -225,7 +225,11 @@ class TypeFactory:
         return self.material_manager.get_cached_materials_count()
 
     def get_representation_map(
-        self, component_type: str, diameter: int, length: int = None, bolt_type: str = None
+        self,
+        component_type: str,
+        diameter: int,
+        length: Optional[int] = None,
+        bolt_type: Optional[str] = None,
     ):
         """
         Получение RepresentationMap для компонента
@@ -239,8 +243,6 @@ class TypeFactory:
         Returns:
             IfcRepresentationMap или None
         """
-        from typing import Any
-
         geom_key: Any
         if component_type == "stud":
             geom_key = ("stud", bolt_type, diameter, length)

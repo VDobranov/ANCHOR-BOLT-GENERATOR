@@ -51,7 +51,7 @@ class IfcDocumentProtocol(Protocol):
         """Получение обратных ссылок"""
         ...
 
-    def traverse(self, entity: Any, max_levels: int = None) -> List[Any]:
+    def traverse(self, entity: Any, max_levels: Optional[int] = None) -> List[Any]:
         """Обход графа сущности"""
         ...
 

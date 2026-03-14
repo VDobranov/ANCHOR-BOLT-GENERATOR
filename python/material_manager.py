@@ -9,7 +9,7 @@ IfcMaterialProperties и ассоциаций через IfcRelAssociatesMateria
 - Pset_MaterialSteel: YieldStress, UltimateStress, StructuralGrade
 """
 
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from protocols import IfcDocumentProtocol
 from utils import get_ifcopenshell
@@ -20,8 +20,8 @@ class MaterialManager:
 
     def __init__(self, ifc_doc: IfcDocumentProtocol):
         self.ifc: IfcDocumentProtocol = ifc_doc
-        self.materials_cache = {}
-        self.material_properties_cache = {}
+        self.materials_cache: Dict[str, Any] = {}
+        self.material_properties_cache: Dict[str, Any] = {}
         # Получаем OwnerHistory из документа
         owner_histories = self.ifc.by_type("IfcOwnerHistory")
         self.owner_history = owner_histories[0] if owner_histories else None
