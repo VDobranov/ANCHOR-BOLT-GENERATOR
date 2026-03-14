@@ -1,6 +1,11 @@
 """
 type_factory.py — Фабрика для создания и кэширования типов IFC
-Вся геометрия делегирована в geometry_builder.py
+Использует RepresentationMaps для переиспользования геометрии
+
+Согласно IFC4 спецификации:
+- RepresentationMaps позволяет переиспользовать геометрию типа
+- Экземпляры ссылаются на RepresentationMap типа через IfcMappedItem
+- Уменьшает размер IFC файла и улучшает производительность
 """
 
 from geometry_builder import GeometryBuilder
@@ -10,11 +15,19 @@ from utils import get_ifcopenshell
 
 
 class TypeFactory:
-    """Фабрика типов IFC MechanicalFastenerType"""
+    """
+    Фабрика типов IFC MechanicalFastenerType
+
+    Использует RepresentationMaps для переиспользования геометрии:
+    - Каждый тип имеет RepresentationMap с геометрией
+    - Экземпляры создаются через IfcMappedItem
+    - Геометрия кэшируется по ключу (тип, диаметр, длина)
+    """
 
     def __init__(self, ifc_doc):
         self.ifc = ifc_doc
         self.types_cache = {}
+        self.representation_maps = {}  # Кэш RepresentationMap по ключу
         self.builder = GeometryBuilder(ifc_doc)
         self.material_manager = MaterialManager(ifc_doc)
         # Получаем OwnerHistory из документа
@@ -22,7 +35,18 @@ class TypeFactory:
         self.owner_history = owner_histories[0] if owner_histories else None
 
     def get_or_create_stud_type(self, bolt_type, diameter, length, material):
-        """Создание/получение типа шпильки"""
+        """
+        Создание/получение типа шпильки с RepresentationMap
+
+        Args:
+            bolt_type: Тип болта ('1.1', '1.2', '2.1', '5')
+            diameter: Диаметр (мм)
+            length: Длина (мм)
+            material: Материал
+
+        Returns:
+            IfcMechanicalFastenerType для шпильки
+        """
         key = ("stud", bolt_type, diameter, length, material)
         if key in self.types_cache:
             return self.types_cache[key]
@@ -44,7 +68,15 @@ class TypeFactory:
         else:
             shape_rep = self.builder.create_straight_stud_solid(diameter, length)
 
+        # Ассоциируем RepresentationMap с типом
         self.builder.associate_representation(stud_type, shape_rep)
+
+        # Кэшируем RepresentationMap для последующего использования
+        geom_key = ("stud", bolt_type, diameter, length)
+        if geom_key not in self.representation_maps:
+            rep_maps = stud_type.RepresentationMaps
+            if rep_maps:
+                self.representation_maps[geom_key] = rep_maps[0]
 
         # Создаём материал и ассоциируем с типом
         mat_name = get_material_name(material)
@@ -57,7 +89,16 @@ class TypeFactory:
         return stud_type
 
     def get_or_create_nut_type(self, diameter, material):
-        """Создание/получение типа гайки"""
+        """
+        Создание/получение типа гайки с RepresentationMap
+
+        Args:
+            diameter: Диаметр (мм)
+            material: Материал
+
+        Returns:
+            IfcMechanicalFastenerType для гайки
+        """
         key = ("nut", diameter, material)
         if key in self.types_cache:
             return self.types_cache[key]
@@ -80,6 +121,13 @@ class TypeFactory:
         shape_rep = self.builder.create_nut_solid(diameter, height)
         self.builder.associate_representation(nut_type, shape_rep)
 
+        # Кэшируем RepresentationMap
+        geom_key = ("nut", diameter)
+        if geom_key not in self.representation_maps:
+            rep_maps = nut_type.RepresentationMaps
+            if rep_maps:
+                self.representation_maps[geom_key] = rep_maps[0]
+
         # Создаём материал и ассоциируем с типом
         mat_name = get_material_name(material)
         mat = self.material_manager.create_material(
@@ -91,7 +139,16 @@ class TypeFactory:
         return nut_type
 
     def get_or_create_washer_type(self, diameter, material):
-        """Создание/получение типа шайбы"""
+        """
+        Создание/получение типа шайбы с RepresentationMap
+
+        Args:
+            diameter: Диаметр (мм)
+            material: Материал
+
+        Returns:
+            IfcMechanicalFastenerType для шайбы
+        """
         key = ("washer", diameter, material)
         if key in self.types_cache:
             return self.types_cache[key]
@@ -163,3 +220,28 @@ class TypeFactory:
     def get_cached_materials_count(self):
         """Количество закэшированных материалов"""
         return self.material_manager.get_cached_materials_count()
+
+    def get_representation_map(
+        self, component_type: str, diameter: int, length: int = None, bolt_type: str = None
+    ):
+        """
+        Получение RepresentationMap для компонента
+
+        Args:
+            component_type: Тип компонента ('stud', 'nut', 'washer')
+            diameter: Диаметр (мм)
+            length: Длина (мм) - только для stud
+            bolt_type: Тип болта - только для stud
+
+        Returns:
+            IfcRepresentationMap или None
+        """
+        from typing import Any
+
+        geom_key: Any
+        if component_type == "stud":
+            geom_key = ("stud", bolt_type, diameter, length)
+        else:
+            geom_key = (component_type, diameter)
+
+        return self.representation_maps.get(geom_key)

@@ -293,7 +293,18 @@ class InstanceFactory:
         return component
 
     def _add_instance_representation(self, instance, type_obj):
-        """Добавление представления к инстансу через RepresentationMap типа"""
+        """
+        Добавление представления к инстансу через IfcMappedItem
+
+        Согласно IFC4 спецификации:
+        - IfcMappedItem ссылается на RepresentationMap типа
+        - Геометрия не дублируется, а переиспользуется
+        - Уменьшает размер IFC файла
+
+        Args:
+            instance: Экземпляр IfcMechanicalFastener
+            type_obj: Тип IfcMechanicalFastenerType с RepresentationMaps
+        """
         if not hasattr(type_obj, "RepresentationMaps") or not type_obj.RepresentationMaps:
             return
 
@@ -301,31 +312,56 @@ class InstanceFactory:
         if not isinstance(rep_maps, (list, tuple)):
             rep_maps = [rep_maps]
 
+        # Создаём IfcMappedItem для каждой RepresentationMap
+        mapped_items = []
         for rep_map in rep_maps:
-            if not hasattr(rep_map, "MappedRepresentation"):
+            if not hasattr(rep_map, "MappingOrigin"):
                 continue
 
-            mapped_rep = rep_map.MappedRepresentation
-            context = mapped_rep.ContextOfItems
-            identifier = mapped_rep.RepresentationIdentifier
-            rep_type = mapped_rep.RepresentationType
-            items = mapped_rep.Items
+            mapped_item = self.ifc.create_entity(
+                "IfcMappedItem",
+                MappingSource=rep_map,
+                MappingTarget=self.ifc.create_entity(
+                    "IfcCartesianTransformationOperator3D",
+                    Axis1=self.ifc.create_entity("IfcDirection", DirectionRatios=[1.0, 0.0, 0.0]),
+                    Axis2=self.ifc.create_entity("IfcDirection", DirectionRatios=[0.0, 1.0, 0.0]),
+                    LocalOrigin=self.ifc.create_entity(
+                        "IfcCartesianPoint", Coordinates=[0.0, 0.0, 0.0]
+                    ),
+                    Scale=1.0,
+                ),
+            )
+            mapped_items.append(mapped_item)
 
-            try:
-                duplicated_items = self._duplicate_geometric_items(items)
-                instance_shape_rep = self.ifc.create_entity(
-                    "IfcShapeRepresentation",
-                    ContextOfItems=context,
-                    RepresentationIdentifier=identifier,
-                    RepresentationType=rep_type,
-                    Items=duplicated_items,
-                )
-                prod_def_shape = self.ifc.create_entity(
-                    "IfcProductDefinitionShape", Representations=[instance_shape_rep]
-                )
-                instance.Representation = prod_def_shape
-            except Exception as e:
-                print(f"Warning: Could not create representation for {instance.Name}: {e}")
+        if not mapped_items:
+            return
+
+        # Создаём представление с IfcMappedItem
+        try:
+            # Получаем контекст из первой RepresentationMap
+            first_map = rep_maps[0]
+            if hasattr(first_map, "MappedRepresentation"):
+                context = first_map.MappedRepresentation.ContextOfItems
+                identifier = first_map.MappedRepresentation.RepresentationIdentifier
+                rep_type = first_map.MappedRepresentation.RepresentationType
+            else:
+                context = None
+                identifier = "Body"
+                rep_type = "SweptSolid"
+
+            instance_shape_rep = self.ifc.create_entity(
+                "IfcShapeRepresentation",
+                ContextOfItems=context,
+                RepresentationIdentifier=identifier,
+                RepresentationType=rep_type,
+                Items=mapped_items,
+            )
+            prod_def_shape = self.ifc.create_entity(
+                "IfcProductDefinitionShape", Representations=[instance_shape_rep]
+            )
+            instance.Representation = prod_def_shape
+        except Exception as e:
+            print(f"Warning: Could not create representation for {instance.Name}: {e}")
 
     def _duplicate_geometric_items(self, items):
         """
