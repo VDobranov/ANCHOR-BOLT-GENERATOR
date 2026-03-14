@@ -29,37 +29,49 @@ class IFCDocument:
 
     def initialize(self, schema='IFC4'):
         """Инициализация нового документа"""
+        import time
+        import tempfile
+        import os
+        import ifcopenshell
+        
         ifc = get_ifcopenshell()
         if ifc is None:
             raise RuntimeError("ifcopenshell не доступен. Убедитесь, что он установлен через micropip.")
 
-        try:
-            self.file = ifc.file(schema=schema)
-        except Exception:
-            self.file = ifc.file(schema='IFC4X3')
-
-        # Создание OwnerHistory первым элементом (ID #1)
-        self._create_owner_history()
+        # Создаём базовый файл с IfcOwnerHistory на ID #1 через SPF
+        timestamp = int(time.time())
+        
+        spf_content = f"""ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('ViewDefinition [CoordinationView]'),'2;1');
+FILE_NAME('','{time.strftime('%Y-%m-%dT%H:%M:%S')}',(''),(''),'IfcOpenShell 0.8.4','IfcOpenShell 0.8.4','');
+FILE_SCHEMA(('{schema}'));
+ENDSEC;
+DATA;
+#1=IFCOWNERHISTORY(#4,#5,$,$,$,$,$,{timestamp});
+#2=IFCPERSON('abg-user',$,$,$,$,$,$,$);
+#3=IFCORGANIZATION('ABG',$,$,$,$);
+#4=IFCPERSONANDORGANIZATION(#2,#3,$);
+#5=IFCAPPLICATION(#2,$,'ABG','ABG');
+ENDSEC;
+END-ISO-10303-21;
+"""
+        
+        # Сохраняем во временный файл и открываем
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.ifc', delete=False) as tmp:
+            tmp.write(spf_content)
+            tmp_path = tmp.name
+        
+        self.file = ifcopenshell.open(tmp_path)
+        os.unlink(tmp_path)
+        
+        # Сохраняем ссылку на OwnerHistory
+        self.owner_history = self.file.by_id(1)
 
         self._create_base_structure()
         self.material_manager = MaterialManager(self.file)
         return self.file
 
-    def _create_owner_history(self):
-        """Создание IfcOwnerHistory как первого элемента (ID #1)"""
-        f = self.file
-
-        # Создаём OwnerHistory с минимальными зависимостями
-        # Сначала создаём простейшие сущности
-        person = f.create_entity('IfcPerson', Identification='abg-user')
-        org = f.create_entity('IfcOrganization', Identification='ABG')
-        person_org = f.create_entity('IfcPersonAndOrganization', ThePerson=person, TheOrganization=org)
-        app = f.create_entity('IfcApplication', ApplicationDeveloper=person, ApplicationFullName='ABG', ApplicationIdentifier='ABG')
-        
-        import time
-        # OwnerHistory будет ID #5 (после 4 зависимостей)
-        self.owner_history = f.create_entity('IfcOwnerHistory', OwningUser=person_org, OwningApplication=app, CreationDate=int(time.time()))
-    
     def reset(self):
         """Сброс документа: удаление всех болтов и создание нового"""
         ifc = get_ifcopenshell()
@@ -116,15 +128,36 @@ class IFCDocument:
             except Exception:
                 pass
 
-        # Пересоздаём базовую структуру
-        self.file = None
-        try:
-            self.file = ifc.file(schema='IFC4')
-        except Exception:
-            self.file = ifc.file(schema='IFC4X3')
-
-        # Пересоздаём OwnerHistory первым элементом (ID #1)
-        self._create_owner_history()
+        # Пересоздаём базовую структуру с IfcOwnerHistory на ID #1
+        import time
+        timestamp = int(time.time())
+        
+        spf_content = f"""ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('ViewDefinition [CoordinationView]'),'2;1');
+FILE_NAME('','{time.strftime('%Y-%m-%dT%H:%M:%S')}',(''),(''),'IfcOpenShell 0.8.4','IfcOpenShell 0.8.4','');
+FILE_SCHEMA(('IFC4'));
+ENDSEC;
+DATA;
+#1=IFCOWNERHISTORY(#4,#5,$,$,$,$,$,{timestamp});
+#2=IFCPERSON('abg-user',$,$,$,$,$,$,$);
+#3=IFCORGANIZATION('ABG',$,$,$,$);
+#4=IFCPERSONANDORGANIZATION(#2,#3,$);
+#5=IFCAPPLICATION(#2,$,'ABG','ABG');
+ENDSEC;
+END-ISO-10303-21;
+"""
+        
+        # Сохраняем во временный файл и открываем
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.ifc', delete=False) as tmp:
+            tmp.write(spf_content)
+            tmp_path = tmp.name
+        
+        self.file = ifcopenshell.open(tmp_path)
+        os.unlink(tmp_path)
+        
+        # Сохраняем ссылку на OwnerHistory
+        self.owner_history = self.file.by_id(1)
 
         self._create_base_structure()
 

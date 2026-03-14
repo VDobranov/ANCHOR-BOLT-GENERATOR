@@ -126,3 +126,12 @@ class TestOwnerHistory:
         assert owner_history.OwningUser is not None
         assert owner_history.OwningApplication is not None
         assert owner_history.CreationDate is not None
+
+    def test_owner_history_has_id_1(self):
+        """IfcOwnerHistory должен иметь ID #1"""
+        from main import initialize_base_document, get_ifc_document
+
+        ifc_doc = initialize_base_document()
+        owner_history = ifc_doc.by_id(1)
+
+        assert owner_history.is_a() == 'IfcOwnerHistory'
