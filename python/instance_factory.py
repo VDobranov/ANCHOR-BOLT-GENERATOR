@@ -3,7 +3,7 @@ instance_factory.py — Создание инстансов болтов и сб
 """
 
 import io
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from gost_data import (
     get_material_name,
@@ -12,6 +12,7 @@ from gost_data import (
     validate_parameters,
 )
 from material_manager import MaterialManager
+from protocols import IfcDocumentProtocol, TypeFactoryProtocol
 from type_factory import TypeFactory
 from utils import get_ifcopenshell
 
@@ -19,9 +20,11 @@ from utils import get_ifcopenshell
 class InstanceFactory:
     """Фабрика инстансов болтов"""
 
-    def __init__(self, ifc_doc, type_factory=None):
-        self.ifc = ifc_doc
-        self.type_factory = type_factory or TypeFactory(ifc_doc)
+    def __init__(
+        self, ifc_doc: IfcDocumentProtocol, type_factory: Optional[TypeFactoryProtocol] = None
+    ):
+        self.ifc: IfcDocumentProtocol = ifc_doc
+        self.type_factory: TypeFactoryProtocol = type_factory or TypeFactory(ifc_doc)
         self.material_manager = MaterialManager(ifc_doc)
 
     def create_bolt_assembly(self, bolt_type, diameter, length, material):

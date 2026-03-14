@@ -8,9 +8,12 @@ type_factory.py — Фабрика для создания и кэширован
 - Уменьшает размер IFC файла и улучшает производительность
 """
 
+from typing import Any, Optional
+
 from geometry_builder import GeometryBuilder
 from gost_data import get_material_name, get_nut_dimensions, get_washer_dimensions
 from material_manager import MaterialManager
+from protocols import IfcDocumentProtocol
 from utils import get_ifcopenshell
 
 
@@ -24,8 +27,8 @@ class TypeFactory:
     - Геометрия кэшируется по ключу (тип, диаметр, длина)
     """
 
-    def __init__(self, ifc_doc):
-        self.ifc = ifc_doc
+    def __init__(self, ifc_doc: IfcDocumentProtocol):
+        self.ifc: IfcDocumentProtocol = ifc_doc
         self.types_cache = {}
         self.representation_maps = {}  # Кэш RepresentationMap по ключу
         self.builder = GeometryBuilder(ifc_doc)

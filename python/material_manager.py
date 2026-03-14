@@ -9,14 +9,17 @@ IfcMaterialProperties и ассоциаций через IfcRelAssociatesMateria
 - Pset_MaterialSteel: YieldStress, UltimateStress, StructuralGrade
 """
 
+from typing import Any, Optional
+
+from protocols import IfcDocumentProtocol
 from utils import get_ifcopenshell
 
 
 class MaterialManager:
     """Менеджер материалов IFC"""
 
-    def __init__(self, ifc_doc):
-        self.ifc = ifc_doc
+    def __init__(self, ifc_doc: IfcDocumentProtocol):
+        self.ifc: IfcDocumentProtocol = ifc_doc
         self.materials_cache = {}
         self.material_properties_cache = {}
         # Получаем OwnerHistory из документа
