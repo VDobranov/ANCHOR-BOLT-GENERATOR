@@ -11,6 +11,16 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
 
 
+@pytest.fixture(autouse=True)
+def reset_document_manager():
+    """Сброс менеджера документов между тестами"""
+    from main import reset_doc_manager
+
+    reset_doc_manager()
+    yield
+    reset_doc_manager()
+
+
 class TestSpatialElementsPlacement:
     """Тесты ObjectPlacement для пространственных элементов"""
 
