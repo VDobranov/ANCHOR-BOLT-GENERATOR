@@ -130,6 +130,10 @@ END-ISO-10303-21;
 
         # Пересоздаём базовую структуру с IfcOwnerHistory на ID #1
         import time
+        import tempfile
+        import os
+        import ifcopenshell
+        
         timestamp = int(time.time())
         
         spf_content = f"""ISO-10303-21;
