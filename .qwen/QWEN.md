@@ -38,10 +38,10 @@ ANCHOR-BOLT-GENERATOR/
 ├── index.html              # Главная HTML-страница (русский UI)
 ├── style.css               # Стили приложения
 ├── README.md               # Пользовательская документация (русский)
-├── QWEN.md                 # Контекст для AI-ассистентов (этот файл)
+├── .qwen/QWEN.md           # Контекст для AI-ассистентов (этот файл)
 ├── LICENSE                 # Лицензия MIT
 │
-├── js/                     # JavaScript модули (5 файлов)
+├── js/                     # JavaScript модули (7 файлов)
 │   ├── config.js           # Константы приложения, URL, значения по умолчанию
 │   ├── ui.js               # UI-утилиты (статусы, переключение, скачивание)
 │   ├── form.js             # Класс BoltForm: обработка формы, валидация
@@ -50,7 +50,7 @@ ANCHOR-BOLT-GENERATOR/
 │   ├── main.js             # Оркестрация приложения, инициализация
 │   └── init.js             # Точка входа
 │
-├── python/                 # Python модули (8 файлов, среда Pyodide)
+├── python/                 # Python модули (10 файлов, среда Pyodide)
 │   ├── main.py             # Singleton IFCDocument, базовая структура
 │   ├── utils.py            # Централизованный импорт ifcopenshell
 │   ├── gost_data.py        # Справочники ГОСТ, валидация, таблицы размеров
@@ -59,7 +59,18 @@ ANCHOR-BOLT-GENERATOR/
 │   ├── instance_factory.py # InstanceFactory: создание инстансов, сборок
 │   ├── geometry_builder.py # Геометрия IFC через shape_builder: кривые, профили, выдавливание
 │   ├── geometry_converter.py # Конвертация IFC → mesh Three.js через ifcopenshell.geom
-│   └── ifc_generator.py    # Экспорт IFC, валидация документа
+│   ├── ifc_generator.py    # Экспорт IFC, валидация документа
+│   └── validate_utils.py   # Утилиты валидации IFC (для Pyodide)
+│
+├── tests/                  # Автотесты (pytest)
+│   ├── test_main.py
+│   ├── test_gost_data.py
+│   ├── test_material_manager.py
+│   ├── test_type_factory.py
+│   ├── test_instance_factory.py
+│   ├── test_geometry_builder.py
+│   ├── test_utils.py
+│   └── validate_utils.py   # Утилиты валидации для тестов
 │
 ├── data/
 │   └── dim.csv             # Исходные данные размеров болтов
@@ -79,6 +90,9 @@ ANCHOR-BOLT-GENERATOR/
 │   ├── PLAN_qwen.md
 │   ├── entry_prompt.md
 │   └── Qwen_session_*.md   # Резюме сессий
+│
+├── .vscode/
+│   └── settings.json       # Настройки линтера и автодополнения
 │
 └── .gitignore
 ```
@@ -176,6 +190,7 @@ IfcProject
 | `geometry_builder.py` | Построение IFC-геометрии через ifcopenshell.util.shape_builder: `IfcSweptDiskSolid`, `IfcExtrudedAreaSolid`, кривые, профили |
 | `geometry_converter.py` | Конвертация IFC → mesh Three.js через `ifcopenshell.geom.create_shape()` |
 | `ifc_generator.py` | Экспорт IFC-файла, валидация документа |
+| `validate_utils.py` | Утилиты валидации IFC: `validate_ifc_file()`, `assert_valid_ifc()` |
 
 ### Подход к геометрии
 Геометрия строится **один раз** в IFC-модели через `type_factory.py` с использованием `IfcSweptDiskSolid` и `IfcExtrudedAreaSolid`, затем конвертируется в меши Three.js через `geometry_converter.py` с помощью `ifcopenshell.geom.create_shape()`. Это обеспечивает:
@@ -459,7 +474,84 @@ ifc_str, mesh_data = generate_bolt_assembly({
 | 13. Материалы IFC | ✅ Готово | `IfcMaterial`, `IfcRelAssociatesMaterial`, `IfcMaterialList` |
 | 14. PropertySets материалов | ✅ Готово | `Pset_MaterialCommon`, `Pset_MaterialSteel` |
 | 15. Точный алгоритм типа 1.2 | ✅ Готово | `IfcIndexedPolyCurve` с 6 точками, точная дуга |
-| 16. Тестирование | ⏳ Планируется | Валидация IFC, примеры |
+| 16. Валидация IFC | ✅ Готово | `ifcopenshell.validate` с `express_rules=True`, автотесты |
+| 17. Тестирование | ✅ Готово | 107 тестов, валидация структуры и геометрии |
+
+---
+
+## Валидация IFC
+
+### Автоматическая валидация в тестах
+
+Валидация проводится в автотестах (`tests/test_instance_factory.py`) после генерации болта:
+
+```python
+from instance_factory import generate_bolt_assembly
+from validate_utils import validate_ifc_file
+
+params = {'bolt_type': '1.1', 'diameter': 20, 'length': 800, 'material': '09Г2С'}
+ifc_str, mesh_data = generate_bolt_assembly(params)
+
+# Сохранение и валидация
+import ifcopenshell
+ifc_doc = ifcopenshell.open('/tmp/test.ifc')
+errors = validate_ifc_file(ifc_doc)  # express_rules=True по умолчанию
+assert errors is None, f"IFC не валиден: {errors}"
+```
+
+### Проверяемые правила
+
+** EXPRESS правила:**
+- ✅ `IfcShapeRepresentation.HasRepresentationIdentifier` — наличие обязательного атрибута
+- ✅ `IfcShapeRepresentation.CorrectItemsForType` — совместимость типа представления с элементами
+- ✅ `IfcProductDefinitionShape.ShapeOfProduct` — связь представления с продуктом
+
+**Структура документа:**
+- ✅ `IfcOwnerHistory` с ID #1 (ручной SPF с forward-ссылками)
+- ✅ `IfcProject`, `IfcSite`, `IfcBuilding`, `IfcBuildingStorey` (по 1 каждого)
+- ✅ `IfcMechanicalFastener` (4+: assembly, stud, nut, washer)
+- ✅ `IfcMechanicalFastenerType` (4+)
+- ✅ `IfcMaterial` (1+)
+- ✅ `IfcRelAggregates`, `IfcRelDefinesByType`, `IfcRelAssociatesMaterial`
+
+**Геометрия:**
+- ✅ `IfcSweptDiskSolid` с типом `'AdvancedSweptSolid'`
+- ✅ `RepresentationIdentifier='Body'` для всех представлений
+- ✅ Mesh данные (4+ mesh в `mesh_data['meshes']`)
+
+### Утилиты валидации
+
+**python/validate_utils.py:**
+```python
+# Валидация с полным набором правил
+errors = validate_ifc_file(ifc_doc, express_rules=True)
+
+# Assert в тестах
+assert_valid_ifc(ifc_doc, "Опциональное сообщение")
+```
+
+**tests/validate_utils.py** — копия для тестов (требования Pyodide).
+
+### Исправленные ошибки валидации
+
+1. **IfcOrganization требует Name** — добавлено в SPF шаблон `main.py`
+2. **IfcApplication требует Version** — добавлено в SPF шаблон `main.py`
+3. **IfcApplication.ApplicationDeveloper** — теперь ссылается на `IfcOrganization`, а не `IfcPerson`
+4. **IfcShapeRepresentation без RepresentationIdentifier** — добавлено `'Body'` в `geometry_builder.py`
+5. **IfcSweptDiskSolid не совместим с 'SweptSolid'** — изменено на `'AdvancedSweptSolid'`
+6. **IfcOwnerHistory для не-root сущностей** — добавлен для `IfcMechanicalFastenerType`, `IfcRelAssociatesMaterial`
+
+### Запуск тестов
+
+```bash
+# Все тесты с валидацией
+pytest tests/
+
+# Один тест на валидацию
+pytest tests/test_instance_factory.py::TestGenerateBoltAssembly::test_generate_bolt_assembly_validates_ifc -v
+```
+
+**Результат:** 107 тестов проходят
 
 ---
 

@@ -1,7 +1,5 @@
 # ANCHOR-BOLT-GENERATOR
 
-❗ В СТАДИИ РАЗРАБОТКИ ❗
-
 Генератор анкерных болтов (фундаментных болтов) по ГОСТ 24379.1-2012 с экспортом в IFC и 3D визуализацией в браузере.
 
 ## Быстрый старт
@@ -53,12 +51,29 @@ python3 -m http.server 8000
 - **IfcOpenShell 0.8.4** — создание IFC файлов
 - **IFC4 ADD2 TC1** — стандарт BIM-моделей
 
+## Валидация IFC
+
+Проект включает автоматическую валидацию сгенерированных IFC файлов:
+
+```bash
+# Запуск тестов с валидацией
+pytest tests/
+```
+
+**Проверки:**
+- ✅ EXPRESS правила (IfcShapeRepresentation.HasRepresentationIdentifier)
+- ✅ Типы представлений (IfcShapeRepresentation.CorrectItemsForType)
+- ✅ Структура документа (Project, Site, Building, Storey)
+- ✅ Наличие OwnerHistory с ID #1
+- ✅ Материалы и отношения (IfcRelAssociatesMaterial)
+- ✅ Геометрия компонентов (4+ mesh)
+
 ## Планы развития
 
-- [ ] Валидация IFC в Revit, ArchiCAD, BonsaiBIM
 - [ ] Новые диаметры (М56–М100)
 - [ ] Пакетная генерация болтов
 - [ ] Экспорт в STEP, STL
+- [ ] Настройки представления (LOD, детализация)
 
 ## Лицензия
 
