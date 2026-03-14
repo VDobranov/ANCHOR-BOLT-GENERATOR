@@ -345,11 +345,13 @@ class InstanceFactory:
             if hasattr(first_map, "MappedRepresentation"):
                 context = first_map.MappedRepresentation.ContextOfItems
                 identifier = first_map.MappedRepresentation.RepresentationIdentifier
-                rep_type = first_map.MappedRepresentation.RepresentationType
             else:
                 context = None
                 identifier = "Body"
-                rep_type = "SweptSolid"
+
+            # Для IfcMappedItem RepresentationType должен быть 'MappedRepresentation'
+            # Согласно IFC спецификации: Items типа IfcMappedItem требуют RepresentationType='MappedRepresentation'
+            rep_type = "MappedRepresentation"
 
             instance_shape_rep = self.ifc.create_entity(
                 "IfcShapeRepresentation",
