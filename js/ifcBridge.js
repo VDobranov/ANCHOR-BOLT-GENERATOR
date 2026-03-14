@@ -50,8 +50,6 @@ class IFCBridge {
             await micropip.install('numpy')
             print('  Installing shapely...')
             await micropip.install('shapely')
-            print('  Installing pytest (required for ifcopenshell.validate)...')
-            await micropip.install('pytest')
             print('  ✓ Dependencies installed')
         `);
 

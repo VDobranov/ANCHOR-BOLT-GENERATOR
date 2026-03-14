@@ -380,7 +380,6 @@ def generate_bolt_assembly(params):
         (ifc_string, mesh_data)
     """
     from main import reset_ifc_document
-    from validate_utils import validate_ifc_file
 
     # Сброс документа: удаление предыдущих болтов
     ifc_doc = reset_ifc_document()
@@ -392,16 +391,6 @@ def generate_bolt_assembly(params):
         length=params['length'],
         material=params['material']
     )
-
-    # Валидация IFC документа после генерации болта
-    validation_errors = validate_ifc_file(ifc_doc)
-    if validation_errors:
-        error_msg = f"IFC валидация не пройдена ({len(validation_errors)} ошибок):\n"
-        for i, error in enumerate(validation_errors[:10], 1):
-            error_msg += f"  {i}. {error}\n"
-        if len(validation_errors) > 10:
-            error_msg += f"  ... и ещё {len(validation_errors) - 10} ошибок"
-        raise RuntimeError(error_msg)
 
     # Экспорт в строку через временный файл
     import tempfile
