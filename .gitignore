@@ -209,3 +209,7 @@ __marimo__/
 .DS_Store
 
 .qwen/
+
+# Node.js
+node_modules/
+package-lock.json
