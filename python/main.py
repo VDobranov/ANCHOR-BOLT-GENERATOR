@@ -38,9 +38,50 @@ class IFCDocument:
         except Exception:
             self.file = ifc.file(schema='IFC4X3')
 
+        # Создание OwnerHistory первым элементом (ID #1)
+        self._create_owner_history()
+
         self._create_base_structure()
         self.material_manager = MaterialManager(self.file)
         return self.file
+
+    def _create_owner_history(self):
+        """Создание IfcOwnerHistory как первого элемента (ID #1)"""
+        f = self.file
+        ifc = get_ifcopenshell()
+
+        # Создаём OwnerHistory напрямую, чтобы он был первым (ID #1)
+        # Сначала создаём зависимые сущности
+        person = f.create_entity('IfcPerson',
+            Identification='abg-user',
+            FamilyName='Generator',
+            GivenName='Anchor Bolt'
+        )
+        organization = f.create_entity('IfcOrganization',
+            Identification='ABG-ORG',
+            Name='Anchor Bolt Generator Organization'
+        )
+        person_and_org = f.create_entity('IfcPersonAndOrganization',
+            ThePerson=person,
+            TheOrganization=organization
+        )
+        application = f.create_entity('IfcApplication',
+            ApplicationDeveloper=person,
+            Version='1.0',
+            ApplicationFullName='Anchor Bolt Generator',
+            ApplicationIdentifier='ABG'
+        )
+        import time
+        timestamp = int(time.time())
+        
+        # OwnerHistory будет иметь ID #1
+        self.owner_history = f.create_entity('IfcOwnerHistory',
+            OwningUser=person_and_org,
+            OwningApplication=application,
+            State='READWRITE',
+            ChangeAction='ADDED',
+            CreationDate=timestamp
+        )
     
     def reset(self):
         """Сброс документа: удаление всех болтов и создание нового"""
@@ -105,6 +146,9 @@ class IFCDocument:
         except Exception:
             self.file = ifc.file(schema='IFC4X3')
 
+        # Пересоздаём OwnerHistory первым элементом (ID #1)
+        self._create_owner_history()
+
         self._create_base_structure()
 
         # Восстанавливаем material_manager
@@ -119,36 +163,10 @@ class IFCDocument:
         f = self.file
         ifc = get_ifcopenshell()
 
-        # Создание OwnerHistory
-        # Пользователь (сначала создаём персону для application_developer)
-        person = run("owner.add_person", f,
-            identification="abg-user",
-            family_name="Generator",
-            given_name="Anchor Bolt"
-        )
-        # Приложение (используем person как application_developer)
-        application = run("owner.add_application", f,
-            application_full_name="Anchor Bolt Generator",
-            application_identifier="ABG",
-            application_developer=person
-        )
-        # Организация
-        organisation = run("owner.add_organisation", f,
-            identification="ABG-ORG",
-            name="Anchor Bolt Generator Organization"
-        )
-        # Связь пользователь-организация
-        user = run("owner.add_person_and_organisation", f,
-            person=person,
-            organisation=organisation
-        )
-        # OwnerHistory (единый для всех элементов)
-        owner_history = run("owner.create_owner_history", f)
-
         # Project с OwnerHistory
         project = f.create_entity('IfcProject',
             GlobalId=ifc.guid.new(),
-            OwnerHistory=owner_history,
+            OwnerHistory=self.owner_history,
             Name='Anchor Bolt Generator',
             Description='Generated anchor bolts with IFC4 ADD2 TC1'
         )
@@ -156,7 +174,7 @@ class IFCDocument:
         # Site с OwnerHistory
         site = f.create_entity('IfcSite',
             GlobalId=ifc.guid.new(),
-            OwnerHistory=owner_history,
+            OwnerHistory=self.owner_history,
             Name='Default Site'
         )
         # Размещение сайта (мировая СК, единичная матрица)
@@ -165,7 +183,7 @@ class IFCDocument:
         # Building с OwnerHistory
         building = f.create_entity('IfcBuilding',
             GlobalId=ifc.guid.new(),
-            OwnerHistory=owner_history,
+            OwnerHistory=self.owner_history,
             Name='Default Building'
         )
         # Размещение здания (относительно сайта, без смещения)
@@ -174,7 +192,7 @@ class IFCDocument:
         # BuildingStorey с OwnerHistory
         storey = f.create_entity('IfcBuildingStorey',
             GlobalId=ifc.guid.new(),
-            OwnerHistory=owner_history,
+            OwnerHistory=self.owner_history,
             Name='Storey 1',
             Elevation=0.0
         )
