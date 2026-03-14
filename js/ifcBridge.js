@@ -48,6 +48,8 @@ class IFCBridge {
             await micropip.install('typing_extensions')
             print('  Installing numpy...')
             await micropip.install('numpy')
+            print('  Installing shapely...')
+            await micropip.install('shapely')
             print('  ✓ Dependencies installed')
         `);
 
@@ -107,6 +109,13 @@ class IFCBridge {
                 print('✓ ifcopenshell.geom доступен')
             except ImportError as e:
                 print(f'⚠ ifcopenshell.geom не доступен: {e}')
+
+            # Проверяем shapely
+            try:
+                import shapely
+                print(f'✓ shapely доступен: {shapely.__version__ if hasattr(shapely, "__version__") else "unknown"}')
+            except ImportError as e:
+                print(f'⚠ shapely не доступен: {e}')
         `);
     }
 

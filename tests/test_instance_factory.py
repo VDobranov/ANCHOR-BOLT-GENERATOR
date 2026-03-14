@@ -7,22 +7,42 @@ from unittest.mock import patch, MagicMock
 
 class MockIfcEntity:
     """Mock для IFC сущности"""
-    def __init__(self, entity_type, **kwargs):
+    def __init__(self, entity_type, *args, **kwargs):
         self._entity_type = entity_type
         self._kwargs = kwargs
+        # Обработка positional аргументов
+        if args:
+            for i, arg in enumerate(args):
+                setattr(self, f'arg{i}', arg)
         for key, value in kwargs.items():
             setattr(self, key, value)
-        
+
         # Установим RepresentationMaps по умолчанию для типов
         if entity_type == 'IfcMechanicalFastenerType':
             if not hasattr(self, 'RepresentationMaps'):
                 self.RepresentationMaps = None
-    
+
     def is_a(self):
         return self._entity_type
-    
+
     def __getattr__(self, name):
         return self._kwargs.get(name)
+
+    @property
+    def dim(self):
+        """Определение размерности для кривых и точек"""
+        if '3D' in self._entity_type:
+            return 3
+        if '2D' in self._entity_type:
+            return 2
+        if self._entity_type == 'IfcIndexedPolyCurve':
+            points = self._kwargs.get('Points')
+            if points and hasattr(points, 'dim'):
+                return points.dim
+            return 3
+        if self._entity_type in ['IfcCircle', 'IfcPolyline']:
+            return 2
+        return None
 
 
 class MockIfcDoc:
@@ -30,14 +50,13 @@ class MockIfcDoc:
     def __init__(self):
         self.entities = []
         self._by_type = {}
+        self.schema = "IFC4"  # Для совместимости с shape_builder
 
     def create_entity(self, entity_type, *args, **kwargs):
-        # Поддержка как positional, так и keyword аргументов
-        # Для IfcLineIndex и IfcArcIndex первый аргумент - список индексов
         if entity_type in ['IfcLineIndex', 'IfcArcIndex'] and args:
             entity = MockIfcEntity(entity_type, Indices=args[0])
         else:
-            entity = MockIfcEntity(entity_type, **kwargs)
+            entity = MockIfcEntity(entity_type, *args, **kwargs)
         self.entities.append(entity)
 
         if entity_type not in self._by_type:
@@ -45,6 +64,15 @@ class MockIfcDoc:
         self._by_type[entity_type].append(entity)
 
         return entity
+
+    def __getattr__(self, name):
+        # Динамическая поддержка методов типа createIfcIndexedPolyCurve
+        if name.startswith('create'):
+            entity_type = name[6:]
+            def create_method(*args, **kwargs):
+                return self.create_entity(entity_type, *args, **kwargs)
+            return create_method
+        raise AttributeError(f"'MockIfcDoc' object has no attribute '{name}'")
 
     def by_type(self, entity_type):
         return self._by_type.get(entity_type, [])
@@ -78,7 +106,22 @@ class TestInstanceFactoryInit:
 class TestCreateBoltAssembly:
     """Тесты create_bolt_assembly"""
 
-    def test_create_bolt_assembly_returns_dict(self):
+    @pytest.fixture
+    def mock_builder_methods(self):
+        """Фикстура для мокирования методов builder"""
+        from unittest.mock import patch, MagicMock
+        mock_shape_rep = MockIfcEntity('IfcShapeRepresentation')
+
+        # Мокаем на уровне класса ShapeBuilder
+        with patch('ifcopenshell.util.shape_builder.ShapeBuilder.polyline', return_value=MockIfcEntity('IfcIndexedPolyCurve')), \
+             patch('ifcopenshell.util.shape_builder.ShapeBuilder.create_swept_disk_solid', return_value=MockIfcEntity('IfcSweptDiskSolid')), \
+             patch('ifcopenshell.util.shape_builder.ShapeBuilder.circle', return_value=MockIfcEntity('IfcCircle')), \
+             patch('ifcopenshell.util.shape_builder.ShapeBuilder.profile', return_value=MockIfcEntity('IfcArbitraryProfileDefWithVoids')), \
+             patch('ifcopenshell.util.shape_builder.ShapeBuilder.extrude', return_value=MockIfcEntity('IfcExtrudedAreaSolid')), \
+             patch('ifcopenshell.util.shape_builder.ShapeBuilder.get_representation', return_value=mock_shape_rep):
+            yield
+
+    def test_create_bolt_assembly_returns_dict(self, mock_builder_methods):
         """create_bolt_assembly должен возвращать dict"""
         from instance_factory import InstanceFactory
 
@@ -95,7 +138,7 @@ class TestCreateBoltAssembly:
         assert 'components' in result
         assert 'mesh_data' in result
 
-    def test_create_bolt_assembly_creates_assembly(self):
+    def test_create_bolt_assembly_creates_assembly(self, mock_builder_methods):
         """create_bolt_assembly должен создавать сборку"""
         from instance_factory import InstanceFactory
 
@@ -110,7 +153,7 @@ class TestCreateBoltAssembly:
         assert assembly.is_a() == 'IfcMechanicalFastener'
         assert assembly.ObjectType == 'ANCHORBOLT'
 
-    def test_create_bolt_assembly_name_format(self):
+    def test_create_bolt_assembly_name_format(self, mock_builder_methods):
         """Имя сборки должно следовать формату"""
         from instance_factory import InstanceFactory
 
@@ -123,7 +166,7 @@ class TestCreateBoltAssembly:
         assembly = result['assembly']
         assert 'AnchorBolt_1.1_M20x800' in assembly.Name
 
-    def test_create_bolt_assembly_components_count_type_1_1(self):
+    def test_create_bolt_assembly_components_count_type_1_1(self, mock_builder_methods):
         """Для типа 1.1 должно быть 4 компонента: шпилька + шайба + 2 гайки"""
         from instance_factory import InstanceFactory
 
@@ -136,7 +179,7 @@ class TestCreateBoltAssembly:
         components = result['components']
         assert len(components) == 4  # stud + washer + 2 nuts
 
-    def test_create_bolt_assembly_components_count_type_2_1(self):
+    def test_create_bolt_assembly_components_count_type_2_1(self, mock_builder_methods):
         """Для типа 2.1 должно быть 6 компонентов: шпилька + шайба + 4 гайки"""
         from instance_factory import InstanceFactory
 
@@ -149,7 +192,7 @@ class TestCreateBoltAssembly:
         components = result['components']
         assert len(components) == 6  # stud + washer + 4 nuts
 
-    def test_create_bolt_assembly_stud_type(self):
+    def test_create_bolt_assembly_stud_type(self, mock_builder_methods):
         """Шпилька должна иметь ObjectType = STUD"""
         from instance_factory import InstanceFactory
 
@@ -163,7 +206,7 @@ class TestCreateBoltAssembly:
         assert stud is not None
         assert stud.ObjectType == 'STUD'
 
-    def test_create_bolt_assembly_creates_relations(self):
+    def test_create_bolt_assembly_creates_relations(self, mock_builder_methods):
         """create_bolt_assembly должен создавать отношения"""
         from instance_factory import InstanceFactory
 
@@ -215,25 +258,39 @@ class TestCreatePlacement:
 class TestCreateComponent:
     """Тесты _create_component"""
 
-    def test_create_component_creates_fastener(self):
+    @pytest.fixture
+    def mock_builder_methods(self):
+        """Фикстура для мокирования методов builder"""
+        from unittest.mock import patch
+        mock_shape_rep = MockIfcEntity('IfcShapeRepresentation')
+
+        with patch('ifcopenshell.util.shape_builder.ShapeBuilder.polyline', return_value=MockIfcEntity('IfcIndexedPolyCurve')), \
+             patch('ifcopenshell.util.shape_builder.ShapeBuilder.create_swept_disk_solid', return_value=MockIfcEntity('IfcSweptDiskSolid')), \
+             patch('ifcopenshell.util.shape_builder.ShapeBuilder.circle', return_value=MockIfcEntity('IfcCircle')), \
+             patch('ifcopenshell.util.shape_builder.ShapeBuilder.profile', return_value=MockIfcEntity('IfcArbitraryProfileDefWithVoids')), \
+             patch('ifcopenshell.util.shape_builder.ShapeBuilder.extrude', return_value=MockIfcEntity('IfcExtrudedAreaSolid')), \
+             patch('ifcopenshell.util.shape_builder.ShapeBuilder.get_representation', return_value=mock_shape_rep):
+            yield
+
+    def test_create_component_creates_fastener(self, mock_builder_methods):
         """_create_component должен создавать IfcMechanicalFastener"""
         from instance_factory import InstanceFactory
         from type_factory import TypeFactory
-        
+
         mock_ifc = MockIfcDoc()
         factory = InstanceFactory(mock_ifc)
-        
+
         # Создадим тип гайки
         type_factory = factory.type_factory
         nut_type = type_factory.get_or_create_nut_type(20, '09Г2С')
-        
+
         instances_list = []
         result = factory._create_component(
             'Nut', 'Nut_Test', 'NUT',
             (0, 0, 10),
             nut_type, instances_list
         )
-        
+
         assert result is not None
         assert result.is_a() == 'IfcMechanicalFastener'
         assert result.ObjectType == 'NUT'

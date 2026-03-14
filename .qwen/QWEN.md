@@ -57,7 +57,7 @@ ANCHOR-BOLT-GENERATOR/
 │   ├── material_manager.py # Менеджер материалов IFC (IfcMaterial, IfcRelAssociatesMaterial)
 │   ├── type_factory.py     # TypeFactory: кэширование IfcMechanicalFastenerType
 │   ├── instance_factory.py # InstanceFactory: создание инстансов, сборок
-│   ├── geometry_builder.py # Геометрия IFC: кривые, профили, выдавливание
+│   ├── geometry_builder.py # Геометрия IFC через shape_builder: кривые, профили, выдавливание
 │   ├── geometry_converter.py # Конвертация IFC → mesh Three.js через ifcopenshell.geom
 │   └── ifc_generator.py    # Экспорт IFC, валидация документа
 │
@@ -121,7 +121,7 @@ python3 -m http.server 8000
 
 **Этап 1: Загрузка приложения (один раз)**
 1. Загрузка Pyodide (~80 МБ)
-2. Установка зависимостей: `typing_extensions` → `numpy` → `ifcopenshell`
+2. Установка зависимостей: `typing_extensions` → `numpy` → `shapely` → `ifcopenshell`
 3. Проверка доступности `ifcopenshell.geom`
 4. Загрузка Python-модулей в виртуальную файловую систему
 5. Создание базовой IFC-структуры (Проект → Участок → Здание → Этаж)
@@ -173,7 +173,7 @@ IfcProject
 | `gost_data.py` | Словари ГОСТ, валидация параметров, таблицы размеров |
 | `type_factory.py` | `TypeFactory`: кэширование `IfcMechanicalFastenerType` по ключу `(тип, диаметр, длина, исполнение, материал)` |
 | `instance_factory.py` | `InstanceFactory`: создание инстансов, размещений, агрегаций, данных mesh через `ifcopenshell.geom` |
-| `geometry_builder.py` | Построение IFC-геометрии: `IfcSweptDiskSolid`, `IfcExtrudedAreaSolid`, кривые, профили |
+| `geometry_builder.py` | Построение IFC-геометрии через ifcopenshell.util.shape_builder: `IfcSweptDiskSolid`, `IfcExtrudedAreaSolid`, кривые, профили |
 | `geometry_converter.py` | Конвертация IFC → mesh Three.js через `ifcopenshell.geom.create_shape()` |
 | `ifc_generator.py` | Экспорт IFC-файла, валидация документа |
 
@@ -321,6 +321,31 @@ ifc_str, mesh_data = generate_bolt_assembly({
 ---
 
 ## История недавнего рефакторинга
+
+### Переход на ifcopenshell.util.shape_builder (14.03.2026)
+- Обновлён `geometry_builder.py`:
+  - **Workaround для циклического импорта VectorType** (IfcOpenShell #7562)
+  - Используется `ShapeBuilder` для создания геометрии:
+    - `polyline()` — кривые с поддержкой дуг через `arc_points`
+    - `circle()` — круглые профили
+    - `profile()` — профили с отверстиями
+    - `extrude()` — выдавливание профилей
+    - `create_swept_disk_solid()` — заметание по кривой
+    - `get_representation()` — создание представления
+  - Сохранена точная математика для типов 1.1 и 1.2:
+    - `_calculate_tangent_point()` — точка касания окружности
+    - `_get_arc_vertex()` — вершина дуги по двум точкам и радиусу
+    - `_calculate_stud_points_type_1_2()` — 6 точек для типа 1.2
+  - Улучшен `_get_context()` — fallback для создания контекста вручную
+- Обновлён `js/ifcBridge.js`:
+  - Добавлена установка `shapely` через micropip
+  - Добавлена проверка импорта `shapely`
+- Обновлены тесты:
+  - `tests/test_geometry_builder.py`: 13 тестов (mock ShapeBuilder)
+  - `tests/test_type_factory.py`: 36 тестов (mock ShapeBuilder)
+  - `tests/test_instance_factory.py`: 16 тестов (mock ShapeBuilder)
+- **Итого:** удалено ~100 строк самописного кода, переведено на стандартный API
+- **Тесты:** 93 passed, 1 skipped
 
 ### Точный алгоритм для типа 1.2 (11.03.2026)
 - Обновлён `geometry_builder.py`:
