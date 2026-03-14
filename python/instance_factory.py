@@ -2,7 +2,6 @@
 instance_factory.py — Создание инстансов болтов и сборок
 """
 
-import io
 from typing import Any, Dict, Optional, Tuple
 
 from gost_data import (
@@ -418,6 +417,8 @@ def generate_bolt_assembly(params: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]
             - ifc_string: IFC файл в виде строки
             - mesh_data: Данные для 3D визуализации
     """
+    import tempfile
+
     from main import reset_ifc_document
 
     # Сброс документа: удаление предыдущих болтов
@@ -431,9 +432,19 @@ def generate_bolt_assembly(params: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]
         material=params["material"],
     )
 
-    # Экспорт в memory buffer (быстрее и надёжнее)
-    buffer = io.StringIO()
-    ifc_doc.write(buffer)
-    ifc_str = buffer.getvalue()
+    # Экспорт во временный файл (для совместимости с ifcopenshell.write)
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".ifc", delete=False) as tmp:
+        tmp_path = tmp.name
+
+    ifc_doc.write(tmp_path)
+
+    # Чтение файла и возврат строки
+    with open(tmp_path, "r") as f:
+        ifc_str = f.read()
+
+    # Очистка временного файла
+    import os
+
+    os.unlink(tmp_path)
 
     return (ifc_str, result["mesh_data"])
