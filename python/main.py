@@ -48,40 +48,17 @@ class IFCDocument:
     def _create_owner_history(self):
         """Создание IfcOwnerHistory как первого элемента (ID #1)"""
         f = self.file
-        ifc = get_ifcopenshell()
 
-        # Создаём OwnerHistory напрямую, чтобы он был первым (ID #1)
-        # Сначала создаём зависимые сущности
-        person = f.create_entity('IfcPerson',
-            Identification='abg-user',
-            FamilyName='Generator',
-            GivenName='Anchor Bolt'
-        )
-        organization = f.create_entity('IfcOrganization',
-            Identification='ABG-ORG',
-            Name='Anchor Bolt Generator Organization'
-        )
-        person_and_org = f.create_entity('IfcPersonAndOrganization',
-            ThePerson=person,
-            TheOrganization=organization
-        )
-        application = f.create_entity('IfcApplication',
-            ApplicationDeveloper=person,
-            Version='1.0',
-            ApplicationFullName='Anchor Bolt Generator',
-            ApplicationIdentifier='ABG'
-        )
-        import time
-        timestamp = int(time.time())
+        # Создаём OwnerHistory с минимальными зависимостями
+        # Сначала создаём простейшие сущности
+        person = f.create_entity('IfcPerson', Identification='abg-user')
+        org = f.create_entity('IfcOrganization', Identification='ABG')
+        person_org = f.create_entity('IfcPersonAndOrganization', ThePerson=person, TheOrganization=org)
+        app = f.create_entity('IfcApplication', ApplicationDeveloper=person, ApplicationFullName='ABG', ApplicationIdentifier='ABG')
         
-        # OwnerHistory будет иметь ID #1
-        self.owner_history = f.create_entity('IfcOwnerHistory',
-            OwningUser=person_and_org,
-            OwningApplication=application,
-            State='READWRITE',
-            ChangeAction='ADDED',
-            CreationDate=timestamp
-        )
+        import time
+        # OwnerHistory будет ID #5 (после 4 зависимостей)
+        self.owner_history = f.create_entity('IfcOwnerHistory', OwningUser=person_org, OwningApplication=app, CreationDate=int(time.time()))
     
     def reset(self):
         """Сброс документа: удаление всех болтов и создание нового"""
