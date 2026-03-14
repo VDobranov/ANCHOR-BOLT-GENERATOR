@@ -3,7 +3,9 @@ main.py — Entry point для Pyodide
 Управление IFC документом и ifcopenshell
 """
 
+import numpy as np
 from utils import get_ifcopenshell
+from ifcopenshell.api import run
 from material_manager import MaterialManager
 
 
@@ -129,12 +131,16 @@ class IFCDocument:
             GlobalId=ifc.guid.new(),
             Name='Default Site'
         )
+        # Размещение сайта (мировая СК, единичная матрица)
+        run("geometry.edit_object_placement", f, product=site, matrix=np.eye(4))
 
         # Building
         building = f.create_entity('IfcBuilding',
             GlobalId=ifc.guid.new(),
             Name='Default Building'
         )
+        # Размещение здания (относительно сайта, без смещения)
+        run("geometry.edit_object_placement", f, product=building, matrix=np.eye(4))
 
         # BuildingStorey
         storey = f.create_entity('IfcBuildingStorey',
@@ -142,6 +148,8 @@ class IFCDocument:
             Name='Storey 1',
             Elevation=0.0
         )
+        # Размещение этажа (относительно здания, без смещения)
+        run("geometry.edit_object_placement", f, product=storey, matrix=np.eye(4))
 
         # Иерархия: Project -> Site -> Building -> Storey
         f.create_entity('IfcRelAggregates',
