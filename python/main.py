@@ -48,11 +48,12 @@ FILE_NAME('','{time.strftime('%Y-%m-%dT%H:%M:%S')}',(''),(''),'IfcOpenShell 0.8.
 FILE_SCHEMA(('{schema}'));
 ENDSEC;
 DATA;
-#1=IFCOWNERHISTORY(#4,#5,$,$,$,$,$,{timestamp});
+#1=IFCOWNERHISTORY(#4,#6,$,$,$,$,$,{timestamp});
 #2=IFCPERSON('abg-user',$,$,$,$,$,$,$);
 #3=IFCORGANIZATION('ABG','ABG',$,$,$);
 #4=IFCPERSONANDORGANIZATION(#2,#3,$);
-#5=IFCAPPLICATION(#2,'1.0','Anchor Bolt Generator','ABG');
+#5=IFCORGANIZATION('ABG','ABG',$,$,$);
+#6=IFCAPPLICATION(#5,'1.0','Anchor Bolt Generator','ABG');
 ENDSEC;
 END-ISO-10303-21;
 """
@@ -143,11 +144,12 @@ FILE_NAME('','{time.strftime('%Y-%m-%dT%H:%M:%S')}',(''),(''),'IfcOpenShell 0.8.
 FILE_SCHEMA(('IFC4'));
 ENDSEC;
 DATA;
-#1=IFCOWNERHISTORY(#4,#5,$,$,$,$,$,{timestamp});
+#1=IFCOWNERHISTORY(#4,#6,$,$,$,$,$,{timestamp});
 #2=IFCPERSON('abg-user',$,$,$,$,$,$,$);
 #3=IFCORGANIZATION('ABG','ABG',$,$,$);
 #4=IFCPERSONANDORGANIZATION(#2,#3,$);
-#5=IFCAPPLICATION(#2,'1.0','Anchor Bolt Generator','ABG');
+#5=IFCORGANIZATION('ABG','ABG',$,$,$);
+#6=IFCAPPLICATION(#5,'1.0','Anchor Bolt Generator','ABG');
 ENDSEC;
 END-ISO-10303-21;
 """
