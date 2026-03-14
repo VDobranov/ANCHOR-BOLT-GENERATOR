@@ -380,6 +380,14 @@ def generate_bolt_assembly(params):
         (ifc_string, mesh_data)
     """
     from main import reset_ifc_document
+    import sys
+    import os
+    
+    # Добавляем python директорию в path для импорта validate_utils
+    current_dir = os.path.dirname(__file__)
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+    
     from validate_utils import validate_ifc_file
     import io
 
