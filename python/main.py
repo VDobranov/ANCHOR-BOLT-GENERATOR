@@ -40,7 +40,7 @@ class IFCDocument:
 
         # Создаём базовый файл с IfcOwnerHistory на ID #1 через SPF
         timestamp = int(time.time())
-        
+
         spf_content = f"""ISO-10303-21;
 HEADER;
 FILE_DESCRIPTION(('ViewDefinition [CoordinationView]'),'2;1');
@@ -50,9 +50,9 @@ ENDSEC;
 DATA;
 #1=IFCOWNERHISTORY(#4,#5,$,$,$,$,$,{timestamp});
 #2=IFCPERSON('abg-user',$,$,$,$,$,$,$);
-#3=IFCORGANIZATION('ABG',$,$,$,$);
+#3=IFCORGANIZATION('ABG','ABG',$,$,$);
 #4=IFCPERSONANDORGANIZATION(#2,#3,$);
-#5=IFCAPPLICATION(#2,$,'ABG','ABG');
+#5=IFCAPPLICATION(#2,'1.0','Anchor Bolt Generator','ABG');
 ENDSEC;
 END-ISO-10303-21;
 """
@@ -145,9 +145,9 @@ ENDSEC;
 DATA;
 #1=IFCOWNERHISTORY(#4,#5,$,$,$,$,$,{timestamp});
 #2=IFCPERSON('abg-user',$,$,$,$,$,$,$);
-#3=IFCORGANIZATION('ABG',$,$,$,$);
+#3=IFCORGANIZATION('ABG','ABG',$,$,$);
 #4=IFCPERSONANDORGANIZATION(#2,#3,$);
-#5=IFCAPPLICATION(#2,$,'ABG','ABG');
+#5=IFCAPPLICATION(#2,'1.0','Anchor Bolt Generator','ABG');
 ENDSEC;
 END-ISO-10303-21;
 """

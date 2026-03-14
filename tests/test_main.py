@@ -135,3 +135,13 @@ class TestOwnerHistory:
         owner_history = ifc_doc.by_id(1)
 
         assert owner_history.is_a() == 'IfcOwnerHistory'
+
+    def test_ifc_document_validation(self):
+        """IFC документ должен проходить валидацию"""
+        from main import initialize_base_document
+        from validate_utils import assert_valid_ifc
+
+        ifc_doc = initialize_base_document()
+        
+        # Проверяем валидацию документа
+        assert_valid_ifc(ifc_doc, "Базовый IFC документ не прошёл валидацию")

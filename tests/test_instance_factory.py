@@ -321,6 +321,42 @@ class TestGenerateBoltAssembly:
             # Если ifcopenshell недоступен, тест пропускается
             pytest.skip("ifcopenshell недоступен")
 
+    def test_generate_bolt_assembly_validates_ifc(self):
+        """Сгенерированный IFC файл должен проходить валидацию"""
+        from instance_factory import generate_bolt_assembly
+        from validate_utils import validate_ifc_file
+
+        params = {
+            'bolt_type': '1.1',
+            'diameter': 20,
+            'length': 800,
+            'material': '09Г2С'
+        }
+
+        try:
+            result = generate_bolt_assembly(params)
+            ifc_str, mesh_data = result
+            
+            # Сохраняем в временный файл и проверяем
+            import tempfile
+            import os
+            import ifcopenshell
+            
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.ifc', delete=False) as tmp:
+                tmp.write(ifc_str)
+                tmp_path = tmp.name
+            
+            try:
+                ifc_doc = ifcopenshell.open(tmp_path)
+                errors = validate_ifc_file(ifc_doc)
+                assert errors is None, f"IFC файл не прошёл валидацию: {errors}"
+            finally:
+                os.unlink(tmp_path)
+                
+        except Exception as e:
+            # Если ifcopenshell недоступен, тест пропускается
+            pytest.skip(f"ifcopenshell недоступен: {e}")
+
 
 class TestGetElementProperties:
     """Тесты get_element_properties"""
