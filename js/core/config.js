@@ -17,6 +17,8 @@ export const APP_CONFIG = Object.freeze({
     PYTHON_MODULES: [
         'python/main.py',
         'python/document_manager.py',
+        'python/protocols.py',
+        'python/container.py',
         'python/material_manager.py',
         'python/instance_factory.py',
         'python/type_factory.py',
