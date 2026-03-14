@@ -86,10 +86,21 @@ class IFCBridge {
         try { FS.mkdir('/python/data'); } catch (e) { if (e.code !== 'EEXIST') throw e; }
         try { FS.mkdir('/python/services'); } catch (e) { if (e.code !== 'EEXIST') throw e; }
 
+        // Получаем базовый URL (для GitHub Pages)
+        const baseUrl = window.location.pathname;
+        const baseDir = baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1);
+
         for (const filePath of APP_CONFIG.PYTHON_MODULES) {
             const fileName = filePath.split('/').pop();
-            const response = await fetch(filePath + cacheBuster);
-            if (!response.ok) throw new Error(`Failed to fetch ${filePath}`);
+            // Используем абсолютный путь от корня сайта
+            const fullPath = baseDir + filePath + cacheBuster;
+            
+            console.log(`Loading: ${fullPath}`);
+            const response = await fetch(fullPath);
+            if (!response.ok) {
+                console.error(`Failed to fetch ${fullPath}: ${response.status} ${response.statusText}`);
+                throw new Error(`Failed to fetch ${filePath}`);
+            }
             const content = await response.text();
 
             // Определяем путь для файла
