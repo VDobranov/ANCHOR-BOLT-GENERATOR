@@ -191,6 +191,57 @@ class TypeFactory:
         self.types_cache[key] = washer_type
         return washer_type
 
+    def get_or_create_plate_type(self, diameter: int, material: str) -> Any:
+        """
+        Создание/получение типа анкерной плиты с RepresentationMap.
+
+        Args:
+            diameter: Диаметр болта (мм)
+            material: Материал
+
+        Returns:
+            IfcMechanicalFastenerType для плиты
+        """
+        key = ("plate", diameter, material)
+        if key in self.types_cache:
+            return self.types_cache[key]
+
+        from python.data import get_plate_dimensions
+
+        plate_dim = get_plate_dimensions(diameter)
+        if not plate_dim:
+            raise ValueError(f"Анкерная плита для диаметра М{diameter} не найдена")
+
+        width = plate_dim["width"]
+        thickness = plate_dim["thickness"]
+        hole_d = plate_dim["hole_d"]
+
+        type_name = f"Plate_M{diameter}_B{width}_S{thickness}"
+        ifc = get_ifcopenshell()
+
+        plate_type = self.ifc.create_entity(
+            "IfcMechanicalFastenerType",
+            GlobalId=ifc.guid.new(),
+            OwnerHistory=self.owner_history,
+            Name=type_name,
+            PredefinedType="USERDEFINED",
+            ElementType="ANCHORPLATE",
+        )
+
+        # Создание геометрии
+        shape_rep = self.builder.create_plate_solid(diameter, width, thickness, hole_d)
+        self.builder.associate_representation(plate_type, shape_rep)
+
+        # Создание материала и ассоциация
+        mat_name = get_material_name(material)
+        mat = self.material_manager.create_material(
+            mat_name, category="Steel", material_key=material
+        )
+        self.material_manager.associate_material(plate_type, mat)
+
+        self.types_cache[key] = plate_type
+        return plate_type
+
     def get_or_create_assembly_type(self, bolt_type, diameter, material):
         """Создание/получение типа сборки"""
         key = ("assembly", bolt_type, diameter, material)
