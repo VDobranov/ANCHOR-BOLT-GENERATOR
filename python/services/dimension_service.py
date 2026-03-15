@@ -50,6 +50,8 @@ class DimensionService:
 
         return {
             **dims,
+            "diameter": diameter,
+            "length": length,
             "bolt_type": bolt_type,
             "mass": get_bolt_mass(diameter, length, bolt_type),
         }

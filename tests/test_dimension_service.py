@@ -88,9 +88,10 @@ class TestDimensionService:
         """Получение массы болта"""
         from services.dimension_service import DimensionService
 
+        # Масса из dim.csv для M12x300 тип 5 = 0.27
         mass = DimensionService.get_mass(12, 300, "5")
 
-        assert mass == 0.32
+        assert mass == 0.27
 
     def test_get_mass_not_found(self):
         """Получение массы для несуществующего болта"""
