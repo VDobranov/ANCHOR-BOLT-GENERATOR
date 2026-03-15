@@ -1,4 +1,4 @@
-# 📋 Phase: Добавление анкерной плиты для типа 2.1
+# 📋 Phase: Добавление анкерной плиты для типа 2.1 (ИСПРАВЛЕННЫЙ ПЛАН)
 
 **Длительность:** 1-2 дня
 **Приоритет:** 🟠 Высокий
@@ -11,12 +11,9 @@
 
 Добавление нового компонента — анкерной плиты (base plate) для болтов типа 2.1.
 
-Согласно ГОСТ 24379.1-2012, тип 2.1 (фундаментный болт с анкерной плитой) включает:
-- Шпилька
-- Анкерная плита
-- Верхняя шайба
-- 2 верхних гайки
-- 2 нижних гайки
+**Ключевое изменение:** Положение шпильки типа 2.1 должно быть аналогично другим типам:
+- **Z=0 на отметке низа резьбы** (начало резьбы)
+- Геометрия шпильки: от Z=+l0 (верх) до Z=-(L-l0) (низ)
 
 ---
 
@@ -35,6 +32,46 @@
 ---
 
 ## 📝 Задачи
+
+### 0. Исправление геометрии шпильки типа 2.1
+
+**Файл:** `python/geometry_builder.py`
+**Длительность:** 30 минут
+**Приоритет:** 🔴 Критичный (должно быть выполнено перед остальными задачами)
+
+#### Проблема:
+Текущая геометрия типа 2.1 строится от (0, 0, length) до (0, 0, 0), что означает:
+- Верх шпильки: Z = length
+- Низ шпильки: Z = 0
+
+Это **не соответствует** позиционированию типов 1.1, 1.2 и 5, где Z=0 — это начало резьбы.
+
+#### Решение:
+
+```python
+# Тип 2.1: прямая шпилька с резьбой по всей длине
+# Низ резьбы в Z=0 (аналогично типам 1.1, 1.2 и 5)
+if bolt_type == "2.1":
+    # Получаем длину резьбы
+    l0 = get_thread_length(diameter, length) or length
+    
+    # Тип 2.1: прямая шпилька длиной L с резьбой l0
+    # Низ резьбы в Z=0, значит:
+    # - Верх шпильки (конец резьбы): Z = +l0
+    # - Низ шпильки: Z = -(L - l0)
+    # Общая длина: l0 + (L - l0) = L
+    p1 = V(0.0, 0.0, float(l0))
+    p2 = V(0.0, 0.0, float(-(length - l0)))
+    
+    return self.builder.polyline([p1, p2])
+```
+
+#### После изменения:
+- **Z=0**: начало резьбы (реперная точка)
+- **Z=+l0**: верх шпильки (конец резьбы)
+- **Z=-(L-l0)**: низ шпильки
+
+---
 
 ### 1. Добавление данных плит в `python/data/fastener_dimensions.py`
 
@@ -62,39 +99,12 @@ def get_plate_dimensions(diameter: int) -> Optional[Dict[str, Any]]:
     return PLATE_DIM_DATA[diameter]
 ```
 
-**Экспорт из `python/data/__init__.py`:**
-```python
-from .fastener_dimensions import (
-    NUT_DIM_DATA,
-    WASHER_DIM_DATA,
-    PLATE_DIM_DATA,  # Новый экспорт
-    get_nut_dimensions,
-    get_washer_dimensions,
-    get_plate_dimensions,  # Новая функция
-)
-```
-
 ---
 
-### 2. Добавление функции валидации
-
-**Файл:** `python/data/validation.py`
-**Длительность:** 30 минут
-
-```python
-def validate_plate_diameter(diameter: int) -> bool:
-    """Проверка допустимости диаметра для анкерной плиты"""
-    from .fastener_dimensions import PLATE_DIM_DATA
-    return diameter in PLATE_DIM_DATA
-```
-
----
-
-### 3. Создание геометрии плиты в `geometry_builder.py`
+### 2. Создание геометрии плиты в `geometry_builder.py`
 
 **Файл:** `python/geometry_builder.py`
 **Длительность:** 2 часа
-**Сложность:** Средняя
 
 ```python
 def create_plate_solid(self, diameter: int, width: int, thickness: int, hole_diameter: int):
@@ -102,6 +112,7 @@ def create_plate_solid(self, diameter: int, width: int, thickness: int, hole_dia
     Создание 3D геометрии анкерной плиты
     
     Анкерная плита — квадратная пластина с круглым отверстием
+    Центр отверстия в (0, 0), плита в плоскости XY
     
     Args:
         diameter: Номинальный диаметр болта
@@ -115,7 +126,6 @@ def create_plate_solid(self, diameter: int, width: int, thickness: int, hole_dia
     context = self._get_context()
     
     # Создаём квадратный профиль с отверстием
-    # Квадрат от (-width/2, -width/2) до (width/2, width/2)
     half = width / 2.0
     
     # Внешний контур (квадрат)
@@ -134,7 +144,7 @@ def create_plate_solid(self, diameter: int, width: int, thickness: int, hole_dia
     # Профиль с отверстием
     profile = self.builder.profile(square_curve, inner_curves=[hole_circle])
     
-    # Экструзия
+    # Экструзия вдоль оси Z
     swept_area = self.builder.extrude(profile, magnitude=thickness)
     
     return self._create_shape_representation(context, swept_area)
@@ -142,23 +152,14 @@ def create_plate_solid(self, diameter: int, width: int, thickness: int, hole_dia
 
 ---
 
-### 4. Создание типа плиты в `type_factory.py`
+### 3. Создание типа плиты в `type_factory.py`
 
 **Файл:** `python/type_factory.py`
 **Длительность:** 1 час
 
 ```python
 def get_or_create_plate_type(self, diameter, material):
-    """
-    Создание/получение типа анкерной плиты с RepresentationMap
-    
-    Args:
-        diameter: Диаметр болта (мм)
-        material: Материал
-    
-    Returns:
-        IfcMechanicalFastenerType для плиты
-    """
+    """Создание/получение типа анкерной плиты с RepresentationMap"""
     key = ("plate", diameter, material)
     if key in self.types_cache:
         return self.types_cache[key]
@@ -187,12 +188,6 @@ def get_or_create_plate_type(self, diameter, material):
     shape_rep = self.builder.create_plate_solid(diameter, width, thickness, hole_d)
     self.builder.associate_representation(plate_type, shape_rep)
     
-    # Кэширование RepresentationMap
-    geom_key = ("plate", diameter)
-    rep_maps = plate_type.RepresentationMaps
-    if rep_maps:
-        self.representation_maps[geom_key] = rep_maps[0]
-    
     # Создание материала
     mat_name = get_material_name(material)
     mat = self.material_manager.create_material(
@@ -206,70 +201,99 @@ def get_or_create_plate_type(self, diameter, material):
 
 ---
 
-### 5. Обновление состава сборки для типа 2.1 в `instance_factory.py`
+### 4. Обновление состава сборки для типа 2.1
 
 **Файл:** `python/instance_factory.py`
 **Длительность:** 2 часа
-**Сложность:** Высокая
 
-#### 5.1. Обновление флага наличия плиты
+#### 4.1. Позиционирование компонентов (ИСПРАВЛЕННОЕ)
 
-```python
-# Автоматическое определение состава сборки по типу болта
-has_top_washer = True
-has_top_nut1 = True
-has_top_nut2 = True
-has_bottom_nut = bolt_type == "2.1"
-has_bottom_nut2 = bolt_type == "2.1"
-has_plate = bolt_type == "2.1"  # Новый флаг
+**Важно:** Z=0 — это начало резьбы (реперная точка для всех типов).
+
+Порядок компонентов типа 2.1 **снизу вверх**:
+
+```
+  ↑ Z
+  │
+  │    ┌─────────────────┐
+l0│    │═════════════════│ ← Верх шпильки (конец резьбы)
+  │    │                 │
+0 │    ├─────────────────┤ ← Z=0: Начало резьбы (реперная точка)
+  │    │                 │
+  │    │    Шпилька      │
+  │    │                 │
+  │    ├─────────────────┤ ← Z = -L + l0: Низ шпильки
+  │    ├─────────────────┤ ← Z = -L + H + S + H/2: Центр нижней гайки 1
+  │    │  Нижняя гайка 1  │
+  │    ├═════════════════┤ ← Z = -L + H + S: Верх плиты
+  │    │  Анкерная плита  │ ← Толщина S
+  │    ├═════════════════┤ ← Z = -L + H: Низ плиты / Верх нижней гайки 2
+  │    │  Нижняя гайка 2  │
+  │    └─────────────────┘ ← Z = -L + H/2: Центр нижней гайки 2
+-L│                         ← Z = -L: Низ болта (условно)
 ```
 
-#### 5.2. Получение типа плиты
+**Обозначения:**
+- L — полная длина болта
+- l0 — длина резьбы
+- H — высота гайки
+- S — толщина плиты
+
+#### 4.2. Код позиционирования
 
 ```python
-stud_type = self.type_factory.get_or_create_stud_type(bolt_type, diameter, length, material)
-nut_type = self.type_factory.get_or_create_nut_type(diameter, material)
-washer_type = self.type_factory.get_or_create_washer_type(diameter, material)
-assembly_type = self.type_factory.get_or_create_assembly_type(bolt_type, diameter, material)
-
-# Получение типа плиты (только для типа 2.1)
-plate_type = None
-if has_plate:
-    plate_type = self.type_factory.get_or_create_plate_type(diameter, material)
-```
-
-#### 5.3. Позиционирование компонентов для типа 2.1
-
-**Важно:** Анкерная плита размещается **между двумя нижними гайками**.
-
-Порядок компонентов снизу вверх:
-1. Нижняя гайка 2 (самая нижняя, Z = 0)
-2. **Анкерная плита** (Z = толщина нижней гайки)
-3. Нижняя гайка 1 (Z = толщина нижней гайки + толщина плиты)
-4. ... далее шпилька и верхние компоненты
-
-```python
-# Получение размеров нижней гайки для расчёта позиций
+# Получение размеров компонентов
 nut_dim = get_nut_dimensions(diameter)
 nut_height = nut_dim["height"] if nut_dim else 10
-plate_thickness = plate_dim["thickness"] if has_plate else 0
+washer_thickness = washer_dim["thickness"] if washer_dim else 3
+
+# Получаем длину резьбы для позиционирования шпильки
+from gost_data import get_thread_length
+l0 = get_thread_length(diameter, length) or length
+
+# Для типа 2.1: позиции отсчитываются от начала резьбы (Z=0)
+# L — полная длина болта
 
 # Позиции для типа 2.1 (снизу вверх):
-# Z=0: Нижняя гайка 2
-# Z=nut_height: Анкерная плита
-# Z=nut_height + plate_thickness: Нижняя гайка 1
-# Z=nut_height + plate_thickness + nut_height: Шпилька (начало)
+bottom_z = -length + l0  # Низ шпильки (Z = -L + l0)
+
+# Нижняя гайка 2: центр на Z = bottom_z - nut_height/2
+# Но для типа 2.1 нижние гайки и плита размещаются ПОД шпилькой
+
+# Правильный расчёт:
+# Шпилька занимает: от Z = -L + l0 до Z = +l0
+# Нижние гайки и плита: под шпилькой
+
+# Позиция начала нижней гайки 2 (её верх)
+nut2_top_z = -length + l0  # На уровне низа шпильки
+
+# Позиции:
+nut2_center_z = nut2_top_z - nut_height / 2  # Центр нижней гайки 2
+plate_bottom_z = nut2_top_z - nut_height  # Низ плиты (верх нижней гайки 2)
+plate_center_z = plate_bottom_z + plate_thickness / 2  # Центр плиты
+nut1_bottom_z = plate_bottom_z + plate_thickness  # Низ нижней гайки 1
+nut1_center_z = nut1_bottom_z + nut_height / 2  # Центр нижней гайки 1
 ```
 
-#### 5.4. Создание экземпляра плиты
+#### 4.3. Создание компонентов
 
 ```python
-# Анкерная плита (только для типа 2.1)
-# Размещается между двумя нижними гайками
+# Нижняя гайка 2 (самая нижняя)
+if has_bottom_nut2:
+    nut_bottom2 = self._create_component(
+        "Nut",
+        f"Nut_Bottom2_M{diameter}",
+        "NUT",
+        (0, 0, nut2_center_z),
+        nut_type,
+        nut_instances,
+        owner_history,
+    )
+    components.append(nut_bottom2)
+
+# Анкерная плита (между нижними гайками)
 if has_plate and plate_type:
-    # Позиция плиты: над нижней гайкой 2
-    plate_z = nut_height  # Начинается сразу над нижней гайкой
-    plate_placement = self._create_placement((0, 0, plate_z))
+    plate_placement = self._create_placement((0, 0, plate_center_z))
     plate = self.ifc.create_entity(
         "IfcMechanicalFastener",
         GlobalId=ifc.guid.new(),
@@ -280,233 +304,98 @@ if has_plate and plate_type:
     )
     self._add_instance_representation(plate, plate_type)
     components.append(plate)
-```
-
-#### 5.5. Обновление позиций нижних гаек
-
-```python
-# Нижняя гайка 2 (самая нижняя, Z=0)
-if has_bottom_nut:
-    nut_bottom2 = self._create_component(
-        "Nut",
-        f"Nut_Bottom2_M{diameter}",
-        "NUT",
-        (0, 0, nut_height / 2),  # Центр гайки на Z = nut_height/2
-        nut_type,
-        nut_instances,
-        owner_history,
-    )
-    components.append(nut_bottom2)
 
 # Нижняя гайка 1 (над плитой)
 if has_bottom_nut:
-    z_pos = nut_height + plate_thickness + nut_height / 2
     nut_bottom1 = self._create_component(
         "Nut",
         f"Nut_Bottom1_M{diameter}",
         "NUT",
-        (0, 0, z_pos),
+        (0, 0, nut1_center_z),
         nut_type,
         nut_instances,
         owner_history,
     )
     components.append(nut_bottom1)
-```
 
-#### 5.6. Обновление смещения шпильки
-
-```python
-# Шпилька
-stud_offset = 0.0
-if has_plate:
-    # Для типа 2.1 шпилька начинается над плитой и нижней гайкой 1
-    # Z = толщина нижней гайки + толщина плиты + толщина нижней гайки
-    stud_offset = nut_height + plate_thickness + nut_height
-elif bolt_type == "1.1":
-    from gost_data import get_thread_length
-    stud_offset = get_thread_length(diameter, length) or 0
-elif bolt_type == "1.2":
-    from gost_data import get_thread_length
-    stud_offset = get_thread_length(diameter, length) or 0
-```
-
-#### 5.5. Обновление отношений
-
-```python
-# IfcRelDefinesByType для плиты
-if plate_type and 'plate' in locals():
-    self.ifc.create_entity(
-        "IfcRelDefinesByType",
-        GlobalId=ifc.guid.new(),
-        OwnerHistory=owner_history,
-        RelatingType=plate_type,
-        RelatedObjects=[plate],
-    )
+# Шпилька (без дополнительного смещения, т.к. геометрия уже с Z=0 на начале резьбы)
+stud_placement = self._create_placement((0, 0, 0))
+stud = self.ifc.create_entity(
+    "IfcMechanicalFastener",
+    GlobalId=ifc.guid.new(),
+    OwnerHistory=owner_history,
+    Name=f"Stud_M{diameter}x{length}",
+    ObjectType="STUD",
+    ObjectPlacement=stud_placement,
+)
+self._add_instance_representation(stud, stud_type)
+stud_instances.append(stud)
+components.append(stud)
 ```
 
 ---
 
-### 6. Обновление mesh данных
+### 5. Тесты
 
-**Файл:** `python/instance_factory.py`
-**Длительность:** 30 минут
-
-```python
-color_map = {
-    "STUD": 0x8B8B8B,
-    "WASHER": 0xA9A9A9,
-    "NUT": 0x696969,
-    "ANCHORBOLT": 0x4F4F4F,
-    "ANCHORPLATE": 0x5A5A5A,  # Новый цвет для плиты
-}
-```
-
----
-
-### 7. Обновление документации
-
-**Файлы:** `README.md`, `FULL_PROJECT_ANALYSIS.md`
-**Длительность:** 30 минут
-
-#### README.md
-
-```markdown
-### Типы и размеры
-
-| Тип и исполнение | Диаметры | Длины | Состав сборки |
-|-----------------|----------|-------|---------------|
-| 2.1 | М16–М48 | 200–2800 | Шпилька + **анкерная плита** + шайба + 4 гайки |
-```
-
-#### FULL_PROJECT_ANALYSIS.md
-
-Добавить описание анкерной плиты в раздел "Поддерживаемые типы болтов".
-
----
-
-### 8. Тесты
-
-**Файл:** `tests/test_type_factory.py`
-**Длительность:** 1 час
-
-```python
-class TestGetOrCreatePlateType:
-    """Тесты для get_or_create_plate_type"""
-    
-    def test_get_or_create_plate_type_creates_entity(self, mock_ifc_doc):
-        """Создание типа плиты"""
-        from type_factory import TypeFactory
-        
-        factory = TypeFactory(mock_ifc_doc)
-        plate_type = factory.get_or_create_plate_type(20, "09Г2С")
-        
-        assert plate_type is not None
-        assert plate_type.Name == "Plate_M20_B80_S16"
-        assert plate_type.ElementType == "ANCHORPLATE"
-    
-    def test_get_or_create_plate_type_caching(self, mock_ifc_doc):
-        """Кэширование типа плиты"""
-        from type_factory import TypeFactory
-        
-        factory = TypeFactory(mock_ifc_doc)
-        plate1 = factory.get_or_create_plate_type(20, "09Г2С")
-        plate2 = factory.get_or_create_plate_type(20, "09Г2С")
-        
-        assert plate1 is plate2
-    
-    def test_get_or_create_plate_type_invalid_diameter(self, mock_ifc_doc):
-        """Ошибка для недопустимого диаметра"""
-        from type_factory import TypeFactory
-        
-        factory = TypeFactory(mock_ifc_doc)
-        
-        with pytest.raises(ValueError, match="Анкерная плита для диаметра М12 не найдена"):
-            factory.get_or_create_plate_type(12, "09Г2С")
-```
-
-**Файл:** `tests/test_instance_factory.py`
-**Длительность:** 1 час
-
-```python
-class TestCreateBoltAssemblyType21:
-    """Тесты для сборки типа 2.1"""
-    
-    def test_create_bolt_assembly_type_2_1_has_plate(self, mock_ifc_doc):
-        """Тип 2.1 включает анкерную плиту"""
-        from instance_factory import InstanceFactory
-        
-        factory = InstanceFactory(mock_ifc_doc)
-        result = factory.create_bolt_assembly("2.1", 20, 500, "09Г2С")
-        
-        # Проверка наличия плиты в компонентах
-        plate_components = [
-            c for c in result["components"] 
-            if hasattr(c, "ObjectType") and c.ObjectType == "ANCHORPLATE"
-        ]
-        assert len(plate_components) == 1
-    
-    def test_create_bolt_assembly_type_2_1_plate_position(self, mock_ifc_doc):
-        """Плита размещается между двумя нижними гайками"""
-        from instance_factory import InstanceFactory
-        from data.fastener_dimensions import get_nut_dimensions
-
-        factory = InstanceFactory(mock_ifc_doc)
-        result = factory.create_bolt_assembly("2.1", 20, 500, "09Г2С")
-
-        # Получить размеры гайки для расчёта ожидаемой позиции
-        nut_dim = get_nut_dimensions(20)
-        nut_height = nut_dim["height"]
-
-        # Найти плиту и нижние гайки
-        plate = next(
-            c for c in result["components"]
-            if hasattr(c, "ObjectType") and c.ObjectType == "ANCHORPLATE"
-        )
-        nut_bottom2 = next(
-            c for c in result["components"]
-            if hasattr(c, "Name") and c.Name == "Nut_Bottom2_M20"
-        )
-        nut_bottom1 = next(
-            c for c in result["components"]
-            if hasattr(c, "Name") and c.Name == "Nut_Bottom1_M20"
-        )
-
-        # Проверка позиций через ObjectPlacement
-        # Нижняя гайка 2: Z = nut_height / 2 (центр)
-        # Плита: Z = nut_height (начало над нижней гайкой 2)
-        # Нижняя гайка 1: Z = nut_height + plate_thickness + nut_height / 2
-        plate_placement = plate.ObjectPlacement
-        assert plate_placement is not None
-        
-        # Проверка порядка компонентов
-        # Плита должна быть между двумя нижними гайками
-```
+#### 5.1. Тест геометрии шпильки типа 2.1
 
 **Файл:** `tests/test_geometry_builder.py`
-**Длительность:** 30 минут
 
 ```python
-class TestCreatePlateSolid:
-    """Тесты для create_plate_solid"""
+class TestType21StudGeometry:
+    """Тесты для геометрии шпильки типа 2.1"""
     
-    def test_create_plate_solid_creates_geometry(self, mock_ifc_doc):
-        """Создание геометрии плиты"""
+    def test_type_2_1_stud_starts_at_thread_beginning(self, mock_ifc_doc):
+        """Шпилька типа 2.1 начинается на отметке низа резьбы (Z=0)"""
         from geometry_builder import GeometryBuilder
         
         builder = GeometryBuilder(mock_ifc_doc)
-        shape_rep = builder.create_plate_solid(20, 80, 16, 26)
+        axis_curve = builder.create_composite_curve_stud("2.1", 20, 500)
         
-        assert shape_rep is not None
-        assert hasattr(shape_rep, "Items")
-        assert len(shape_rep.Items) > 0
+        # Проверка, что кривая проходит через Z=0 (начало резьбы)
+        # и имеет правильные конечные точки
+        points = axis_curve.Points
+        assert points is not None
+        
+        # Для типа 2.1: p1 = (0, 0, l0), p2 = (0, 0, -(L-l0))
+        # l0 для М20x500 ≈ 100 (длина резьбы)
+        # p1.z ≈ 100, p2.z ≈ -400
+```
+
+#### 5.2. Тест позиции плиты
+
+**Файл:** `tests/test_instance_factory.py`
+
+```python
+class TestType21PlatePosition:
+    """Тесты для позиции анкерной плиты в типе 2.1"""
+    
+    def test_plate_between_bottom_nuts(self, mock_ifc_doc):
+        """Плита размещена между двумя нижними гайками"""
+        from instance_factory import InstanceFactory
+        
+        factory = InstanceFactory(mock_ifc_doc)
+        result = factory.create_bolt_assembly("2.1", 20, 500, "09Г2С")
+        
+        # Найти плиту и нижние гайки
+        plate = next(c for c in result["components"] 
+                     if hasattr(c, "ObjectType") and c.ObjectType == "ANCHORPLATE")
+        nut_bottom1 = next(c for c in result["components"] 
+                          if hasattr(c, "Name") and c.Name == "Nut_Bottom1_M20")
+        nut_bottom2 = next(c for c in result["components"] 
+                          if hasattr(c, "Name") and c.Name == "Nut_Bottom2_M20")
+        
+        # Проверка позиций через ObjectPlacement
+        # Плита должна быть между гайками по Z
 ```
 
 ---
 
 ## ✅ Чек-лист завершения
 
+- [ ] **Шаг 0:** Исправлена геометрия шпильки типа 2.1 (Z=0 на начале резьбы)
 - [ ] Данные плит добавлены в `python/data/fastener_dimensions.py`
-- [ ] Функция `get_plate_dimensions()` экспортируется из `python/data/__init__.py`
+- [ ] Функция `get_plate_dimensions()` экспортируется
 - [ ] Геометрия плиты реализована в `geometry_builder.py`
 - [ ] Тип плиты создан в `type_factory.py`
 - [ ] Сборка типа 2.1 обновлена в `instance_factory.py`
@@ -514,42 +403,18 @@ class TestCreatePlateSolid:
 - [ ] Документация обновлена (README, FULL_PROJECT_ANALYSIS)
 - [ ] Тесты написаны и проходят
 - [ ] Pre-commit хуки проходят
-- [ ] Все тесты проходят
 
 ---
 
-## 📊 Ожидаемые изменения
+## 📊 Итоговая схема сборки типа 2.1
 
-### Состав сборки типа 2.1 (ОБНОВЛЁННЫЙ):
+| Компонент | Позиция Z (для М20x500) | Описание |
+|-----------|------------------------|----------|
+| Верх шпильки | +100 | Конец резьбы |
+| **Z=0** | **0** | **Начало резьбы (репер)** |
+| Низ шпильки | -400 | Начало нижних компонентов |
+| Нижняя гайка 1 | -408 | Над плитой (H=16) |
+| Анкерная плита | -424 | Между гайками (S=16) |
+| Нижняя гайка 2 | -440 | Самая нижняя |
 
-**Порядок компонентов снизу вверх:**
-1. Нижняя гайка 2 (Z=0, самая нижняя)
-2. **Анкерная плита** (между нижними гайками)
-3. Нижняя гайка 1 (над плитой)
-4. Шпилька (начинается над нижней гайкой 1)
-5. Верхняя шайба
-6. Верхняя гайка 1
-7. Верхняя гайка 2
-
-### Итого компонентов: **7** (было 6)
-
-### Позиции компонентов (для М20):
-| Компонент | Позиция Z (мм) | Описание |
-|-----------|---------------|----------|
-| Нижняя гайка 2 | 0 | Основание |
-| Анкерная плита | 16 | Над нижней гайкой 2 (S=16) |
-| Нижняя гайка 1 | 32 | Над плитой (H=16) |
-| Шпилька | 48 | Начинается над нижней гайкой 1 |
-| Верхняя шайба | L-3 | У верха шпильки |
-| Верхняя гайка 1 | L+13 | Над шайбой |
-| Верхняя гайка 2 | L+29 | На вершине |
-
-*Примечание: L — длина болта, H — высота гайки, S — толщина плиты*
-
----
-
-## 🔗 Ссылки
-
-- ГОСТ 24379.1-2012 "Болты фундаментные. Общие технические условия"
-- [REFACTORING_PLAN_FINAL.md](../REFACTORING_PLAN_FINAL.md)
-- [PHASE_2_TODO.md](./PHASE_2_TODO.md)
+*Примечание: l0=100 для М20, L=500*
