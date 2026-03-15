@@ -249,7 +249,7 @@ BOLT_DIM_DATA: Dict[str, BoltDimension] = {
         "mass_1_1": None,
         "mass_1_2": None,
         "mass_2_1": None,
-        "mass_5": 0.27,
+        "mass_5": 0.32,
         "l1": 100,
         "l2": 50,
         "l3": 25,
