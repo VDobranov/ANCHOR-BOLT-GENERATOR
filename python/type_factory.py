@@ -67,8 +67,14 @@ class TypeFactory:
 
         # Делегируем построение геометрии в GeometryBuilder
         if bolt_type in ["1.1", "1.2"]:
+            # Изогнутые шпильки: используем IfcSweptDiskSolid с составной кривой
             shape_rep = self.builder.create_bent_stud_solid(bolt_type, diameter, length)
+        elif bolt_type == "5":
+            # Тип 5 (футорка): прямая шпилька с правильной геометрией
+            # Начало: верх резьбы (Z=l0), Конец: низ шпильки (Z=-L)
+            shape_rep = self.builder.create_type5_stud_solid(diameter, length)
         else:
+            # Тип 2.1: прямая шпилька через экструзию
             shape_rep = self.builder.create_straight_stud_solid(diameter, length)
 
         # Ассоциируем RepresentationMap с типом

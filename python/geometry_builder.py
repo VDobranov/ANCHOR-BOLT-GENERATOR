@@ -205,7 +205,12 @@ class GeometryBuilder:
         - 6 точек с точным расчётом касательной и вершины дуги
         - IfcLineIndex((1,2,3)), IfcArcIndex((3,4,5)), IfcLineIndex((5,6))
 
-        Для типа 2.1, 5: прямая линия
+        Для типа 2.1: прямая линия от (0, 0, length) до (0, 0, 0)
+
+        Для типа 5 (футорка): прямая линия от верха резьбы (Z=l0) до низа шпильки (Z=-L)
+        - Низ резьбы в Z=0 (аналогично типам 1.1 и 1.2)
+        - Верх шпильки: Z = l0 (длина резьбы)
+        - Низ шпильки: Z = -L (общая длина болта)
         """
         from gost_data import (
             get_bolt_bend_radius,
@@ -251,7 +256,23 @@ class GeometryBuilder:
             return self.builder.polyline(points_v, arc_points=[3])
 
         # Для типов 2.1, 5 - прямая шпилька
-        # Простая линия от (0, 0, length) до (0, 0, 0)
+        # Тип 5 (футорка): шпилька начинается сверху (отметка верха резьбы)
+        # и заканчивается на отметке -L. Низ резьбы — в нуле (Z=0).
+        # Аналогично типам 1.1 и 1.2 — отсчёт от низа резьбы (Z=0)
+        if bolt_type == "5":
+            # Получаем длину резьбы для определения верха шпильки
+            l0 = get_thread_length(diameter, length) or length
+
+            # Точка 1: верх шпильки (отметка верха резьбы, Z = l0)
+            p1 = V(0.0, 0.0, float(l0))
+
+            # Точка 2: низ шпильки (отметка -L)
+            # Общая длина болта = L, низ резьбы в Z=0, значит конец шпильки в Z=-L
+            p2 = V(0.0, 0.0, float(-length))
+
+            return self.builder.polyline([p1, p2])
+
+        # Тип 2.1: прямая шпилька от (0, 0, length) до (0, 0, 0)
         points = [V(0.0, 0.0, float(length)), V(0.0, 0.0, 0.0)]
         return self.builder.polyline(points)
 
@@ -267,6 +288,32 @@ class GeometryBuilder:
         circle = self.builder.circle((0.0, 0.0), diameter / 2.0)
         profile = self.builder.profile(circle)
         swept_area = self.builder.extrude(profile, magnitude=length)
+
+        return self._create_shape_representation(context, swept_area)
+
+    def create_type5_stud_solid(self, diameter, length):
+        """
+        Создание геометрии шпильки типа 5 (футорка) через IfcSweptDiskSolid
+
+        Геометрия типа 5:
+        - Начало: верх шпильки (Z = l0, где l0 — длина резьбы)
+        - Конец: низ шпильки (Z = -L, где L — общая длина болта)
+        - Низ резьбы: в Z=0 (аналогично типам 1.1 и 1.2)
+
+        Args:
+            diameter: Диаметр болта (мм)
+            length: Длина болта (мм)
+
+        Returns:
+            IfcShapeRepresentation с геометрией шпильки
+        """
+        context = self._get_context()
+
+        # Создаём кривую для типа 5
+        axis_curve = self.create_composite_curve_stud("5", diameter, length)
+
+        # Создаём SweptDiskSolid вдоль кривой
+        swept_area = self.create_swept_disk_solid(axis_curve, diameter / 2.0)
 
         return self._create_shape_representation(context, swept_area)
 

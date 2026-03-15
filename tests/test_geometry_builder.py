@@ -73,7 +73,13 @@ class TestCreateCompositeCurveStud:
         assert result.is_a() == "IfcIndexedPolyCurve"
 
     def test_create_curve_type_5_indexed_polycurve(self):
-        """Для типа 5 должен создаваться IfcIndexedPolyCurve (прямая линия)"""
+        """Для типа 5 должен создаваться IfcIndexedPolyCurve (прямая линия)
+
+        Геометрия типа 5 (футорка):
+        - Начало: верх шпильки (Z = l0, где l0 — длина резьбы)
+        - Конец: низ шпильки (Z = -L, где L — общая длина болта)
+        - Низ резьбы: в Z=0 (аналогично типам 1.1 и 1.2)
+        """
         from geometry_builder import GeometryBuilder
 
         mock_ifc = MockIfcDoc()
@@ -84,6 +90,11 @@ class TestCreateCompositeCurveStud:
         assert result is not None
         # Теперь используется IfcIndexedPolyCurve вместо IfcCompositeCurve
         assert result.is_a() == "IfcIndexedPolyCurve"
+
+        # Проверяем, что кривая имеет 2 точки (начало и конец)
+        # Для типа 5: прямая линия от верха резьбы до низа шпильки
+        points_attr = getattr(result, "Points", None)
+        assert points_attr is not None, "У кривой должны быть точки"
 
 
 class TestCreateSweptDiskSolid:
