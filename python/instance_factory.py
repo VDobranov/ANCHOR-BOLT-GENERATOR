@@ -112,16 +112,18 @@ class InstanceFactory:
         # Шпилька
         # Для типа 1.1: смещение вверх на длину резьбы, чтобы начало резьбы было в (0,0,0)
         # Для типа 1.2: смещение на l0 (длина резьбы), чтобы низ резьбы был в (0,0,0)
-        # Для типа 2.1: без смещения, т.к. геометрия уже с Z=0 на начале резьбы
+        # Для типа 2.1: смещение на (L - l0), чтобы низ резьбы был в (0,0,0)
+        # Для типа 5: смещение на (L - l0), чтобы низ резьбы был в (0,0,0)
         stud_offset = 0.0
-        if bolt_type == "1.1":
+        if bolt_type in ("1.1", "1.2"):
             from gost_data import get_thread_length
 
             stud_offset = get_thread_length(diameter, length) or 0
-        elif bolt_type == "1.2":
+        elif bolt_type in ("2.1", "5"):
             from gost_data import get_thread_length
 
-            stud_offset = get_thread_length(diameter, length) or 0
+            l0 = get_thread_length(diameter, length) or length
+            stud_offset = length - l0  # Поднимаем, чтобы низ резьбы был в Z=0
         stud_placement = self._create_placement((0, 0, stud_offset))
         stud = self.ifc.create_entity(
             "IfcMechanicalFastener",
@@ -178,13 +180,10 @@ class InstanceFactory:
 
         # Нижняя гайка 2 (только для типа 2.1, самая нижняя)
         if has_bottom_nut2:
-            # Позиция: под шпилькой, центр на Z = -L + l0 - H/2
-            # где L — длина болта, l0 — длина резьбы, H — высота гайки
-            from gost_data import get_thread_length
-
-            l0 = get_thread_length(diameter, length) or length
-            bottom_z = -length + l0  # Низ шпильки
-            z_pos = bottom_z - nut_height / 2  # Центр нижней гайки 2
+            # Позиция: под шпилькой, центр на Z = -H/2
+            # где H — высота гайки
+            # Низ шпильки (конец резьбы) теперь в Z=0
+            z_pos = -nut_height / 2  # Центр нижней гайки 2
             nut_bottom2 = self._create_component(
                 "Nut",
                 f"Nut_Bottom2_M{diameter}",
@@ -198,12 +197,8 @@ class InstanceFactory:
 
         # Анкерная плита (только для типа 2.1, между нижними гайками)
         if has_plate and plate_type:
-            from gost_data import get_thread_length
-
-            l0 = get_thread_length(diameter, length) or length
-            bottom_z = -length + l0  # Низ шпильки
             # Плита начинается над нижней гайкой 2
-            plate_bottom = bottom_z - nut_height  # Низ плиты
+            plate_bottom = -nut_height  # Низ плиты (над гайкой 2)
             plate_center_z = plate_bottom + plate_thickness / 2  # Центр плиты
             plate_placement = self._create_placement((0, 0, plate_center_z))
             plate = self.ifc.create_entity(
@@ -220,12 +215,8 @@ class InstanceFactory:
 
         # Нижняя гайка 1 (только для типа 2.1, над плитой)
         if has_bottom_nut:
-            from gost_data import get_thread_length
-
-            l0 = get_thread_length(diameter, length) or length
-            bottom_z = -length + l0  # Низ шпильки
             # Гайка начинается над плитой
-            nut1_bottom = bottom_z - nut_height  # Низ гайки 1 (над плитой)
+            nut1_bottom = plate_bottom + plate_thickness  # Низ гайки 1 (над плитой)
             z_pos = nut1_bottom + nut_height / 2  # Центр гайки 1
             nut_bottom = self._create_component(
                 "Nut",
