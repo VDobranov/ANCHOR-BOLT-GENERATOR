@@ -112,15 +112,12 @@ class InstanceFactory:
         # Шпилька
         # Для типа 1.1: смещение вверх на длину резьбы, чтобы начало резьбы было в (0,0,0)
         # Для типа 1.2: смещение на l0 (длина резьбы), чтобы низ резьбы был в (0,0,0)
-        # Для типа 2.1: геометрия от Z=0 до Z=+length, размещаем на Z=-length, чтобы верх был в Z=0
-        # Для типа 5: геометрия от Z=0 до Z=+length, размещаем на Z=-length, чтобы верх был в Z=0
+        # Для типа 2.1 и 5: без смещения, геометрия от Z=0 до Z=+length, низ резьбы в Z=0
         stud_offset = 0.0
         if bolt_type in ("1.1", "1.2"):
             from gost_data import get_thread_length
 
             stud_offset = get_thread_length(diameter, length) or 0
-        elif bolt_type in ("2.1", "5"):
-            stud_offset = -length  # Размещаем шпильку так, чтобы её верх был в Z=0
         stud_placement = self._create_placement((0, 0, stud_offset))
         stud = self.ifc.create_entity(
             "IfcMechanicalFastener",
@@ -177,10 +174,10 @@ class InstanceFactory:
 
         # Нижняя гайка 2 (только для типа 2.1, самая нижняя)
         if has_bottom_nut2:
-            # Позиция: под шпилькой, центр на Z = -L - H/2
-            # где L — длина болта, H — высота гайки
-            # Низ шпильки: Z = -length
-            z_pos = -length - nut_height / 2  # Центр нижней гайки 2
+            # Позиция: самая нижняя, под плитой
+            # Порядок снизу вверх: гайка 2 -> плита -> гайка 1 -> Z=0
+            # Центр гайки 2: Z = -S - 3H/2, где S — толщина плиты, H — высота гайки
+            z_pos = -plate_thickness - 1.5 * nut_height  # Центр нижней гайки 2
             nut_bottom2 = self._create_component(
                 "Nut",
                 f"Nut_Bottom2_M{diameter}",
@@ -194,8 +191,8 @@ class InstanceFactory:
 
         # Анкерная плита (только для типа 2.1, между нижними гайками)
         if has_plate and plate_type:
-            # Плита начинается над нижней гайкой 2
-            plate_bottom = -length - nut_height  # Низ плиты (над гайкой 2)
+            # Плита между гайками: низ на Z = -S - H, верх на Z = -H
+            plate_bottom = -plate_thickness - nut_height  # Низ плиты
             plate_center_z = plate_bottom + plate_thickness / 2  # Центр плиты
             plate_placement = self._create_placement((0, 0, plate_center_z))
             plate = self.ifc.create_entity(
@@ -212,9 +209,8 @@ class InstanceFactory:
 
         # Нижняя гайка 1 (только для типа 2.1, над плитой)
         if has_bottom_nut:
-            # Гайка начинается над плитой
-            nut1_bottom = plate_bottom + plate_thickness  # Низ гайки 1 (над плитой)
-            z_pos = nut1_bottom + nut_height / 2  # Центр гайки 1
+            # Гайка над плитой: низ на Z = -H, верх на Z = 0 (низ резьбы)
+            z_pos = -nut_height / 2  # Центр гайки 1
             nut_bottom = self._create_component(
                 "Nut",
                 f"Nut_Bottom1_M{diameter}",
