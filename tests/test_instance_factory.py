@@ -124,7 +124,7 @@ class TestCreateBoltAssembly:
         assert len(components) == 4  # stud + washer + 2 nuts
 
     def test_create_bolt_assembly_components_count_type_2_1(self, mock_builder_methods):
-        """Для типа 2.1 должно быть 6 компонентов: шпилька + шайба + 4 гайки"""
+        """Для типа 2.1 должно быть 7 компонентов: шпилька + шайба + 4 гайки + анкерная плита"""
         from instance_factory import InstanceFactory
 
         mock_ifc = MockIfcDoc()
@@ -134,7 +134,7 @@ class TestCreateBoltAssembly:
             result = factory.create_bolt_assembly("2.1", 20, 800, "09Г2С")
 
         components = result["components"]
-        assert len(components) == 6  # stud + washer + 4 nuts
+        assert len(components) == 7  # stud + washer + 4 nuts + plate
 
     def test_create_bolt_assembly_stud_type(self, mock_builder_methods):
         """Шпилька должна иметь ObjectType = STUD"""

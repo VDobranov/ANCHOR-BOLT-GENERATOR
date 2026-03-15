@@ -55,12 +55,26 @@ class InstanceFactory:
         has_top_nut2 = True
         has_bottom_nut = bolt_type == "2.1"
         has_bottom_nut2 = bolt_type == "2.1"
+        has_plate = bolt_type == "2.1"  # Анкерная плита только для типа 2.1
+
+        # Получение размеров плиты (только для типа 2.1)
+        plate_thickness = 0
+        if has_plate:
+            from python.data import get_plate_dimensions
+
+            plate_dim_data = get_plate_dimensions(diameter)
+            plate_thickness = plate_dim_data["thickness"] if plate_dim_data else 0
 
         # Получение типов
         stud_type = self.type_factory.get_or_create_stud_type(bolt_type, diameter, length, material)
         nut_type = self.type_factory.get_or_create_nut_type(diameter, material)
         washer_type = self.type_factory.get_or_create_washer_type(diameter, material)
         assembly_type = self.type_factory.get_or_create_assembly_type(bolt_type, diameter, material)
+
+        # Получение типа плиты (только для типа 2.1)
+        plate_type = None
+        if has_plate:
+            plate_type = self.type_factory.get_or_create_plate_type(diameter, material)
 
         # Получение storey для размещения
         storeys = self.ifc.by_type("IfcBuildingStorey")
@@ -93,10 +107,12 @@ class InstanceFactory:
         stud_instances = []
         nut_instances = []
         washer_instances = []
+        plate_instances = []  # Для типа 2.1
 
         # Шпилька
         # Для типа 1.1: смещение вверх на длину резьбы, чтобы начало резьбы было в (0,0,0)
         # Для типа 1.2: смещение на l0 (длина резьбы), чтобы низ резьбы был в (0,0,0)
+        # Для типа 2.1: без смещения, т.к. геометрия уже с Z=0 на начале резьбы
         stud_offset = 0.0
         if bolt_type == "1.1":
             from gost_data import get_thread_length
@@ -160,23 +176,15 @@ class InstanceFactory:
             )
             components.append(nut_top2)
 
-        # Нижняя гайка 1 (только для типа 2.1)
-        if has_bottom_nut:
-            z_pos = length - washer_thickness / 2 - nut_height / 2
-            nut_bottom = self._create_component(
-                "Nut",
-                f"Nut_Bottom1_M{diameter}",
-                "NUT",
-                (0, 0, z_pos),
-                nut_type,
-                nut_instances,
-                owner_history,
-            )
-            components.append(nut_bottom)
-
-        # Нижняя гайка 2 (только для типа 2.1)
+        # Нижняя гайка 2 (только для типа 2.1, самая нижняя)
         if has_bottom_nut2:
-            z_pos = length - washer_thickness / 2 - nut_height * 1.5
+            # Позиция: под шпилькой, центр на Z = -L + l0 - H/2
+            # где L — длина болта, l0 — длина резьбы, H — высота гайки
+            from gost_data import get_thread_length
+
+            l0 = get_thread_length(diameter, length) or length
+            bottom_z = -length + l0  # Низ шпильки
+            z_pos = bottom_z - nut_height / 2  # Центр нижней гайки 2
             nut_bottom2 = self._create_component(
                 "Nut",
                 f"Nut_Bottom2_M{diameter}",
@@ -187,6 +195,48 @@ class InstanceFactory:
                 owner_history,
             )
             components.append(nut_bottom2)
+
+        # Анкерная плита (только для типа 2.1, между нижними гайками)
+        if has_plate and plate_type:
+            from gost_data import get_thread_length
+
+            l0 = get_thread_length(diameter, length) or length
+            bottom_z = -length + l0  # Низ шпильки
+            # Плита начинается над нижней гайкой 2
+            plate_bottom = bottom_z - nut_height  # Низ плиты
+            plate_center_z = plate_bottom + plate_thickness / 2  # Центр плиты
+            plate_placement = self._create_placement((0, 0, plate_center_z))
+            plate = self.ifc.create_entity(
+                "IfcMechanicalFastener",
+                GlobalId=ifc.guid.new(),
+                OwnerHistory=owner_history,
+                Name=f"Plate_M{diameter}",
+                ObjectType="ANCHORPLATE",
+                ObjectPlacement=plate_placement,
+            )
+            self._add_instance_representation(plate, plate_type)
+            plate_instances.append(plate)
+            components.append(plate)
+
+        # Нижняя гайка 1 (только для типа 2.1, над плитой)
+        if has_bottom_nut:
+            from gost_data import get_thread_length
+
+            l0 = get_thread_length(diameter, length) or length
+            bottom_z = -length + l0  # Низ шпильки
+            # Гайка начинается над плитой
+            nut1_bottom = bottom_z - nut_height  # Низ гайки 1 (над плитой)
+            z_pos = nut1_bottom + nut_height / 2  # Центр гайки 1
+            nut_bottom = self._create_component(
+                "Nut",
+                f"Nut_Bottom1_M{diameter}",
+                "NUT",
+                (0, 0, z_pos),
+                nut_type,
+                nut_instances,
+                owner_history,
+            )
+            components.append(nut_bottom)
 
         # IfcRelDefinesByType для каждого типа
         self.ifc.create_entity(
@@ -219,6 +269,14 @@ class InstanceFactory:
                 OwnerHistory=owner_history,
                 RelatingType=washer_type,
                 RelatedObjects=washer_instances,
+            )
+        if plate_instances:
+            self.ifc.create_entity(
+                "IfcRelDefinesByType",
+                GlobalId=ifc.guid.new(),
+                OwnerHistory=owner_history,
+                RelatingType=plate_type,
+                RelatedObjects=plate_instances,
             )
 
         # IfcRelContainedInSpatialStructure
