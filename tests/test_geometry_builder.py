@@ -75,7 +75,7 @@ class TestCreateCompositeCurveStud:
     def test_create_curve_type_5_indexed_polycurve(self):
         """Для типа 5 должен создаваться IfcIndexedPolyCurve (прямая линия)
 
-        Геометрия типа 5 (футорка):
+        Геометрия типа 5 (прямой болт с резьбой на всю длину):
         - Верх шпильки (конец резьбы): Z = +l0
         - Низ шпильки: Z = -(L - l0)
         - Низ резьбы: в Z=0 (аналогично типам 1.1 и 1.2)
