@@ -70,7 +70,7 @@ class TypeFactory:
             # Изогнутые шпильки: используем IfcSweptDiskSolid с составной кривой
             shape_rep = self.builder.create_bent_stud_solid(bolt_type, diameter, length)
         elif bolt_type == "5":
-            # Тип 5 (прямой болт с резьбой на всю длину): прямая шпилька с правильной геометрией
+            # Тип 5 (прямой болт): прямая шпилька с правильной геометрией
             # Начало: верх резьбы (Z=l0), Конец: низ шпильки (Z=-(L-l0))
             shape_rep = self.builder.create_type5_stud_solid(diameter, length)
         else:
