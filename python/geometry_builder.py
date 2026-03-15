@@ -257,7 +257,23 @@ class GeometryBuilder:
             return self.builder.polyline(points_v, arc_points=[3])
 
         # Для типов 2.1, 5 - прямая шпилька
-        # Тип 5 (прямой болт): шпилька с резьбой по всей длине
+        # Тип 2.1: прямая шпилька с резьбой по всей длине
+        # Низ резьбы в Z=0 (аналогично типам 1.1, 1.2 и 5)
+        if bolt_type == "2.1":
+            # Получаем длину резьбы
+            l0 = get_thread_length(diameter, length) or length
+
+            # Тип 2.1: прямая шпилька длиной L с резьбой l0
+            # Низ резьбы в Z=0, значит:
+            # - Верх шпильки (конец резьбы): Z = +l0
+            # - Низ шпильки: Z = -(L - l0)
+            # Общая длина: l0 + (L - l0) = L
+            p1 = V(0.0, 0.0, float(l0))
+            p2 = V(0.0, 0.0, float(-(length - l0)))
+
+            return self.builder.polyline([p1, p2])
+
+        # Тип 5: прямая шпилька с резьбой по всей длине
         # Низ резьбы — в нуле (Z=0), аналогично типам 1.1 и 1.2
         if bolt_type == "5":
             # Получаем длину резьбы
@@ -272,10 +288,6 @@ class GeometryBuilder:
             p2 = V(0.0, 0.0, float(-(length - l0)))
 
             return self.builder.polyline([p1, p2])
-
-        # Тип 2.1: прямая шпилька от (0, 0, length) до (0, 0, 0)
-        points = [V(0.0, 0.0, float(length)), V(0.0, 0.0, 0.0)]
-        return self.builder.polyline(points)
 
     def create_swept_disk_solid(self, axis_curve, radius):
         """Создание IfcSweptDiskSolid через shape_builder"""
