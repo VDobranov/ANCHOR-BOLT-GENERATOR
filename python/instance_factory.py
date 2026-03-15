@@ -175,14 +175,15 @@ class InstanceFactory:
         # Нижняя гайка 2 (только для типа 2.1, самая нижняя)
         if has_bottom_nut2:
             # Позиция: под шпилькой
-            # Порядок снизу вверх: гайка 2 -> плита -> гайка 1 -> низ шпильки -> Z=0
+            # Порядок снизу вверх: гайка 2 -> плита -> гайка 1 -> низ шпильки
             # Низ шпильки: Z = -(length - l0)
-            # Гайка 2: под низом шпильки, центр на Z = -(length - l0) - S - 2H - H/2
+            # Гайка 2: под плитой, центр на Z = -(length - l0) - S - 2H - H/2
             from gost_data import get_thread_length
 
             l0 = get_thread_length(diameter, length) or length
             stud_bottom = -(length - l0)  # Низ шпильки
-            z_pos = stud_bottom - plate_thickness - 1.5 * nut_height  # Центр гайки 2
+            # Гайка 2: самая нижняя, центр на Z = stud_bottom - S - 2H - H/2
+            z_pos = stud_bottom - plate_thickness - 2 * nut_height - nut_height / 2
             nut_bottom2 = self._create_component(
                 "Nut",
                 f"Nut_Bottom2_M{diameter}",
