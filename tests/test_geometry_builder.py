@@ -76,23 +76,25 @@ class TestCreateCompositeCurveStud:
         """Для типа 5 должен создаваться IfcIndexedPolyCurve (прямая линия)
 
         Геометрия типа 5 (футорка):
-        - Начало: верх шпильки (Z = l0, где l0 — длина резьбы)
-        - Конец: низ шпильки (Z = -L, где L — общая длина болта)
+        - Верх шпильки (конец резьбы): Z = +l0
+        - Низ шпильки: Z = -(L - l0)
         - Низ резьбы: в Z=0 (аналогично типам 1.1 и 1.2)
+        - Общая длина: l0 + (L - l0) = L
         """
         from geometry_builder import GeometryBuilder
 
         mock_ifc = MockIfcDoc()
         builder = GeometryBuilder(mock_ifc)
 
+        # M20x800: l0 = 125 (длина резьбы), L = 800
+        # Верх: Z = +125, Низ: Z = -(800-125) = -675
+        # Общая длина: 125 + 675 = 800
         result = builder.create_composite_curve_stud("5", 20, 800)
 
         assert result is not None
-        # Теперь используется IfcIndexedPolyCurve вместо IfcCompositeCurve
         assert result.is_a() == "IfcIndexedPolyCurve"
 
         # Проверяем, что кривая имеет 2 точки (начало и конец)
-        # Для типа 5: прямая линия от верха резьбы до низа шпильки
         points_attr = getattr(result, "Points", None)
         assert points_attr is not None, "У кривой должны быть точки"
 
