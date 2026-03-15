@@ -33,6 +33,18 @@ WASHER_DIM_DATA: Dict[str, list] = {
     "48": [48, 50, 105, 14],
 }
 
+# Данные анкерных плит по ГОСТ 24379.1-2012
+# Формат: диаметр: {отверстие, ширина, толщина, масса}
+PLATE_DIM_DATA: Dict[int, Dict[str, Any]] = {
+    16: {"hole_d": 22, "width": 65, "thickness": 14, "mass": 0.42},
+    20: {"hole_d": 26, "width": 80, "thickness": 16, "mass": 0.74},
+    24: {"hole_d": 32, "width": 100, "thickness": 18, "mass": 1.30},
+    30: {"hole_d": 38, "width": 120, "thickness": 20, "mass": 2.08},
+    36: {"hole_d": 45, "width": 150, "thickness": 20, "mass": 3.28},
+    42: {"hole_d": 50, "width": 170, "thickness": 25, "mass": 5.29},
+    48: {"hole_d": 60, "width": 190, "thickness": 28, "mass": 7.31},
+}
+
 
 def get_nut_dimensions(diameter: int) -> Optional[Dict[str, Any]]:
     """
@@ -77,3 +89,24 @@ def get_washer_dimensions(diameter: int) -> Optional[Dict[str, Any]]:
         "outer_diameter": data[2],
         "thickness": data[3],
     }
+
+
+def get_plate_dimensions(diameter: int) -> Optional[Dict[str, Any]]:
+    """
+    Получить размеры анкерной плиты для данного диаметра.
+
+    Args:
+        diameter: Диаметр болта (мм)
+
+    Returns:
+        Dict с размерами плиты или None
+
+    Returns dict с ключами:
+        - hole_d: диаметр отверстия
+        - width: длина/ширина плиты (квадратная)
+        - thickness: толщина плиты
+        - mass: масса плиты (кг)
+    """
+    if diameter not in PLATE_DIM_DATA:
+        return None
+    return PLATE_DIM_DATA[diameter]

@@ -17,8 +17,10 @@ from .bolt_dimensions import (
 )
 from .fastener_dimensions import (
     NUT_DIM_DATA,
+    PLATE_DIM_DATA,
     WASHER_DIM_DATA,
     get_nut_dimensions,
+    get_plate_dimensions,
     get_washer_dimensions,
 )
 from .materials import MATERIALS, get_material_name, get_material_properties
@@ -45,10 +47,12 @@ __all__ = [
     "BOLT_DIM_DATA",
     "NUT_DIM_DATA",
     "WASHER_DIM_DATA",
+    "PLATE_DIM_DATA",
     # Functions
     "get_bolt_dimensions",
     "get_nut_dimensions",
     "get_washer_dimensions",
+    "get_plate_dimensions",
     "get_material_name",
     "get_material_properties",
     "validate_parameters",
