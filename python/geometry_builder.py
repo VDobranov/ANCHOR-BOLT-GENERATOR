@@ -330,6 +330,54 @@ class GeometryBuilder:
 
         return self._create_shape_representation(context, swept_area)
 
+    def create_plate_solid(
+        self,
+        diameter: int,
+        width: int,
+        thickness: int,
+        hole_diameter: int,
+    ) -> Any:
+        """
+        Создание 3D геометрии анкерной плиты.
+
+        Анкерная плита — квадратная пластина с круглым отверстием в центре.
+        Центр отверстия в (0, 0), плита в плоскости XY, экструзия вдоль Z.
+
+        Args:
+            diameter: Номинальный диаметр болта (мм)
+            width: Длина/ширина плиты (B) (мм)
+            thickness: Толщина плиты (S) (мм)
+            hole_diameter: Диаметр отверстия (D) (мм)
+
+        Returns:
+            IfcShapeRepresentation с геометрией плиты
+        """
+        context = self._get_context()
+
+        # Создаём квадратный профиль с отверстием
+        half = width / 2.0
+
+        # Внешний контур (квадрат)
+        square_points = [
+            V(-half, -half),
+            V(half, -half),
+            V(half, half),
+            V(-half, half),
+        ]
+        square_curve = self.builder.polyline(square_points, closed=True)
+
+        # Внутреннее отверстие (круг)
+        hole_radius = hole_diameter / 2.0
+        hole_circle = self.builder.circle((0.0, 0.0), hole_radius)
+
+        # Профиль с отверстием
+        profile = self.builder.profile(square_curve, inner_curves=[hole_circle])
+
+        # Экструзия вдоль оси Z
+        swept_area = self.builder.extrude(profile, magnitude=thickness)
+
+        return self._create_shape_representation(context, swept_area)
+
     def create_bent_stud_solid(self, bolt_type, diameter, length):
         """Создание геометрии изогнутой шпильки через IfcSweptDiskSolid"""
         context = self._get_context()
