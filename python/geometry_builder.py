@@ -284,13 +284,16 @@ class GeometryBuilder:
         return self.builder.create_swept_disk_solid(axis_curve, float(radius))
 
     def create_straight_stud_solid(self, diameter, length):
-        """Создание цилиндра для прямой шпильки через shape_builder.extrude()"""
+        """Создание цилиндра для прямой шпильки через shape_builder.extrude()
+
+        Для типа 2.1: шпилька идёт от Z=0 (верх) до Z=-length (низ)
+        """
         context = self._get_context()
 
-        # Создаём круглый профиль и экструзию
+        # Создаём круглый профиль и экструзию вниз (отрицательная magnitude)
         circle = self.builder.circle((0.0, 0.0), diameter / 2.0)
         profile = self.builder.profile(circle)
-        swept_area = self.builder.extrude(profile, magnitude=length)
+        swept_area = self.builder.extrude(profile, magnitude=-length)
 
         return self._create_shape_representation(context, swept_area)
 
