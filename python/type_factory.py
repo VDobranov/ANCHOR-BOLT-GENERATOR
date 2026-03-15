@@ -29,7 +29,7 @@ class TypeFactory:
 
     def __init__(self, ifc_doc: IfcDocumentProtocol):
         self.ifc: IfcDocumentProtocol = ifc_doc
-        self.types_cache: Dict[str, Any] = {}
+        self.types_cache: Dict[Any, Any] = {}
         self.representation_maps: Dict[tuple, Any] = {}  # Кэш RepresentationMap по ключу
         self.builder = GeometryBuilder(ifc_doc)
         self.material_manager = MaterialManager(ifc_doc)
@@ -206,7 +206,7 @@ class TypeFactory:
         if key in self.types_cache:
             return self.types_cache[key]
 
-        from python.data import get_plate_dimensions
+        from data import get_plate_dimensions
 
         plate_dim = get_plate_dimensions(diameter)
         if not plate_dim:

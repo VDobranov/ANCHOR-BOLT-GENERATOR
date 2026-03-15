@@ -60,7 +60,7 @@ class InstanceFactory:
         # Получение размеров плиты (только для типа 2.1)
         plate_thickness = 0
         if has_plate:
-            from python.data import get_plate_dimensions
+            from data import get_plate_dimensions
 
             plate_dim_data = get_plate_dimensions(diameter)
             plate_thickness = plate_dim_data["thickness"] if plate_dim_data else 0
