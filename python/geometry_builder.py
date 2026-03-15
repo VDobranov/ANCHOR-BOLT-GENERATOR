@@ -290,10 +290,11 @@ class GeometryBuilder:
         """
         context = self._get_context()
 
-        # Создаём круглый профиль и экструзию вниз (отрицательная magnitude)
-        circle = self.builder.circle((0.0, 0.0), diameter / 2.0)
+        # Создаём круглый профиль со смещением вниз на length
+        # Затем экструзия вверх на length даст цилиндр от Z=-length до Z=0
+        circle = self.builder.circle((0.0, 0.0, -length), diameter / 2.0)
         profile = self.builder.profile(circle)
-        swept_area = self.builder.extrude(profile, magnitude=-length)
+        swept_area = self.builder.extrude(profile, magnitude=length)
 
         return self._create_shape_representation(context, swept_area)
 
