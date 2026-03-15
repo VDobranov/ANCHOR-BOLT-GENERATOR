@@ -286,14 +286,15 @@ class GeometryBuilder:
     def create_straight_stud_solid(self, diameter, length):
         """Создание цилиндра для прямой шпильки через shape_builder.extrude()
 
-        Для типа 2.1: шпилька идёт от Z=0 (верх) до Z=-length (низ)
+        Геометрия создаётся от Z=0 до Z=+length.
+        Позиционирование выполняется в instance_factory через ObjectPlacement.
         """
         context = self._get_context()
 
-        # Создаём круглый профиль со смещением вниз на length
-        # Затем экструзия вверх на length даст цилиндр от Z=-length до Z=0
-        circle = self.builder.circle((0.0, 0.0, -length), diameter / 2.0)
+        # Создаём круглый профиль в 2D (XY плоскость)
+        circle = self.builder.circle((0.0, 0.0), diameter / 2.0)
         profile = self.builder.profile(circle)
+        # Экструзия вверх на +length
         swept_area = self.builder.extrude(profile, magnitude=length)
 
         return self._create_shape_representation(context, swept_area)

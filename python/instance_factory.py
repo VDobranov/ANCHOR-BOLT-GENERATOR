@@ -112,12 +112,15 @@ class InstanceFactory:
         # Шпилька
         # Для типа 1.1: смещение вверх на длину резьбы, чтобы начало резьбы было в (0,0,0)
         # Для типа 1.2: смещение на l0 (длина резьбы), чтобы низ резьбы был в (0,0,0)
-        # Для типа 2.1 и 5: без смещения, т.к. геометрия строится от Z=0 до Z=-length
+        # Для типа 2.1: геометрия от Z=0 до Z=+length, размещаем на Z=-length, чтобы верх был в Z=0
+        # Для типа 5: геометрия от Z=0 до Z=+length, размещаем на Z=-length, чтобы верх был в Z=0
         stud_offset = 0.0
         if bolt_type in ("1.1", "1.2"):
             from gost_data import get_thread_length
 
             stud_offset = get_thread_length(diameter, length) or 0
+        elif bolt_type in ("2.1", "5"):
+            stud_offset = -length  # Размещаем шпильку так, чтобы её верх был в Z=0
         stud_placement = self._create_placement((0, 0, stud_offset))
         stud = self.ifc.create_entity(
             "IfcMechanicalFastener",
