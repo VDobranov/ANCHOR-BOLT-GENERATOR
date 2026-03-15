@@ -3,7 +3,7 @@
 **Файл:** `python/data/fastener_dimensions.py`  
 **Длительность:** 1 час  
 **Приоритет:** 🟠 Высокий  
-**Статус:** ⏳ Ожидает
+**Статус:** ✅ Выполнено
 
 ---
 
@@ -15,14 +15,14 @@
 
 ## ✅ Чек-лист
 
-- [ ] 1.1. Открыть `python/data/fastener_dimensions.py`
-- [ ] 1.2. Добавить словарь `PLATE_DIM_DATA` с данными плит
-- [ ] 1.3. Добавить функцию `get_plate_dimensions(diameter)`
-- [ ] 1.4. Открыть `python/data/__init__.py`
-- [ ] 1.5. Добавить экспорт `PLATE_DIM_DATA` и `get_plate_dimensions`
-- [ ] 1.6. Запустить тесты данных (`tests/test_data/`)
-- [ ] 1.7. Запустить все тесты проекта
-- [ ] 1.8. Закоммитить изменения
+- [x] 1.1. Открыть `python/data/fastener_dimensions.py`
+- [x] 1.2. Добавить словарь `PLATE_DIM_DATA` с данными плит
+- [x] 1.3. Добавить функцию `get_plate_dimensions(diameter)`
+- [x] 1.4. Открыть `python/data/__init__.py`
+- [x] 1.5. Добавить экспорт `PLATE_DIM_DATA` и `get_plate_dimensions`
+- [x] 1.6. Запустить тесты данных
+- [x] 1.7. Запустить все тесты проекта (152 passed, 2 skipped)
+- [x] 1.8. Закоммитить изменения (коммит fdf2b1a)
 
 ---
 
