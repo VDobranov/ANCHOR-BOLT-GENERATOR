@@ -112,13 +112,21 @@ class InstanceFactory:
         # Шпилька
         # Для типа 1.1: смещение вверх на длину резьбы, чтобы начало резьбы было в (0,0,0)
         # Для типа 1.2: смещение на l0 (длина резьбы), чтобы низ резьбы был в (0,0,0)
-        # Для типа 2.1 и 5: без смещения, геометрия от Z=0 до Z=+length, низ резьбы в Z=0
+        # Для типа 2.1: геометрия от Z=0 до Z=+length, размещаем на Z=l0 с осью вниз
+        # Для типа 5: геометрия от Z=0 до Z=+length, размещаем на Z=l0 с осью вниз
         stud_offset = 0.0
+        stud_axis_down = False
         if bolt_type in ("1.1", "1.2"):
             from gost_data import get_thread_length
 
             stud_offset = get_thread_length(diameter, length) or 0
-        stud_placement = self._create_placement((0, 0, stud_offset))
+        elif bolt_type in ("2.1", "5"):
+            from gost_data import get_thread_length
+
+            l0 = get_thread_length(diameter, length) or length
+            stud_offset = l0  # Размещаем на Z=l0
+            stud_axis_down = True  # Ось направлена вниз
+        stud_placement = self._create_placement((0, 0, stud_offset), axis_down=stud_axis_down)
         stud = self.ifc.create_entity(
             "IfcMechanicalFastener",
             GlobalId=ifc.guid.new(),
@@ -311,16 +319,19 @@ class InstanceFactory:
             "mesh_data": mesh_data,
         }
 
-    def _create_placement(self, location):
+    def _create_placement(self, location, axis_down=False):
         """Создание 3D размещения"""
         coords = [float(x) for x in location]
+        # Для типа 2.1 и 5: ось направлена вниз, чтобы шпилька шла от Z=0 до Z=+length
+        # но размещалась от Z=l0 вниз до Z=-(L-l0)
+        axis_z = -1.0 if axis_down else 1.0
         return self.ifc.create_entity(
             "IfcLocalPlacement",
             PlacementRelTo=None,
             RelativePlacement=self.ifc.create_entity(
                 "IfcAxis2Placement3D",
                 Location=self.ifc.create_entity("IfcCartesianPoint", Coordinates=coords),
-                Axis=self.ifc.create_entity("IfcDirection", DirectionRatios=[0.0, 0.0, 1.0]),
+                Axis=self.ifc.create_entity("IfcDirection", DirectionRatios=[0.0, 0.0, axis_z]),
                 RefDirection=self.ifc.create_entity(
                     "IfcDirection", DirectionRatios=[1.0, 0.0, 0.0]
                 ),
