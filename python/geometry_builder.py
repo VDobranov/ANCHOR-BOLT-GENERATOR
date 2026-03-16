@@ -299,32 +299,6 @@ class GeometryBuilder:
 
         return self._create_shape_representation(context, swept_area)
 
-    def create_type5_stud_solid(self, diameter, length):
-        """
-        Создание геометрии шпильки типа 5 (прямой болт с резьбой на всю длину) через IfcSweptDiskSolid
-
-        Геометрия типа 5:
-        - Начало: верх шпильки (Z = l0, где l0 — длина резьбы)
-        - Конец: низ шпильки (Z = -(L - l0), где L — общая длина болта)
-        - Низ резьбы: в Z=0 (аналогично типам 1.1 и 1.2)
-
-        Args:
-            diameter: Диаметр болта (мм)
-            length: Длина болта (мм)
-
-        Returns:
-            IfcShapeRepresentation с геометрией шпильки
-        """
-        context = self._get_context()
-
-        # Создаём кривую для типа 5
-        axis_curve = self.create_composite_curve_stud("5", diameter, length)
-
-        # Создаём SweptDiskSolid вдоль кривой
-        swept_area = self.create_swept_disk_solid(axis_curve, diameter / 2.0)
-
-        return self._create_shape_representation(context, swept_area)
-
     def create_plate_solid(
         self,
         diameter: int,
