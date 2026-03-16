@@ -174,16 +174,12 @@ class InstanceFactory:
 
         # Нижняя гайка 2 (только для типа 2.1, самая нижняя)
         if has_bottom_nut2:
-            # Позиция: под шпилькой
-            # Порядок снизу вверх: гайка 2 -> плита -> гайка 1 -> низ шпильки
-            # Низ шпильки: Z = -(length - l0)
-            # Гайка 2: под плитой, центр на Z = -(length - l0) - S - 2H - H/2
+            # Позиция: центр на 18 мм выше низа шпильки
             from gost_data import get_thread_length
 
             l0 = get_thread_length(diameter, length) or length
             stud_bottom = -(length - l0)  # Низ шпильки
-            # Гайка 2: самая нижняя, центр на Z = stud_bottom - S - 2H - H/2
-            z_pos = stud_bottom - plate_thickness - 2 * nut_height - nut_height / 2
+            z_pos = stud_bottom + 18  # Центр нижней гайки 2
             nut_bottom2 = self._create_component(
                 "Nut",
                 f"Nut_Bottom2_M{diameter}",
@@ -201,9 +197,8 @@ class InstanceFactory:
 
             l0 = get_thread_length(diameter, length) or length
             stud_bottom = -(length - l0)  # Низ шпильки
-            # Плита между гайками: низ на Z = stud_bottom - S - H, верх на Z = stud_bottom - H
-            plate_bottom = stud_bottom - plate_thickness - nut_height  # Низ плиты
-            plate_center_z = plate_bottom + plate_thickness / 2  # Центр плиты
+            # Плита над гайкой 2: центр на Z = stud_bottom + 18 + H + S/2 = stud_bottom + 34
+            plate_center_z = stud_bottom + 34  # Центр плиты
             plate_placement = self._create_placement((0, 0, plate_center_z))
             plate = self.ifc.create_entity(
                 "IfcMechanicalFastener",
@@ -219,12 +214,12 @@ class InstanceFactory:
 
         # Нижняя гайка 1 (только для типа 2.1, над плитой)
         if has_bottom_nut:
-            # Гайка над плитой: низ на Z = stud_bottom - H, верх на Z = stud_bottom
+            # Гайка над плитой: центр на Z = stud_bottom + 18 + H + S + H/2 = stud_bottom + 50
             from gost_data import get_thread_length
 
             l0 = get_thread_length(diameter, length) or length
             stud_bottom = -(length - l0)  # Низ шпильки
-            z_pos = stud_bottom - nut_height / 2  # Центр гайки 1
+            z_pos = stud_bottom + 50  # Центр гайки 1
             nut_bottom = self._create_component(
                 "Nut",
                 f"Nut_Bottom1_M{diameter}",
