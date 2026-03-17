@@ -83,7 +83,11 @@ class TestCreateBoltAssembly:
         assert "mesh_data" in result
 
     def test_create_bolt_assembly_creates_assembly(self, mock_builder_methods):
-        """create_bolt_assembly должен создавать сборку"""
+        """create_bolt_assembly должен создавать сборку
+
+        Assembly имеет PredefinedType=ANCHORBOLT (из типа),
+        поэтому ObjectType не указывается ($).
+        """
         from instance_factory import InstanceFactory
 
         mock_ifc = MockIfcDoc()
@@ -95,7 +99,8 @@ class TestCreateBoltAssembly:
         assembly = result["assembly"]
         assert assembly is not None
         assert assembly.is_a() == "IfcMechanicalFastener"
-        assert assembly.ObjectType == "ANCHORBOLT"
+        # ObjectType не указан, т.к. PredefinedType=ANCHORBOLT (не USERDEFINED)
+        assert assembly.ObjectType is None
 
     def test_create_bolt_assembly_name_format(self, mock_builder_methods):
         """Имя сборки должно следовать формату"""
