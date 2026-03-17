@@ -157,7 +157,7 @@ class InstanceFactory:
             z_pos = washer_thickness / 2
             nut_top1 = self._create_component(
                 "Nut",
-                f"Nut_Top1_M{diameter}",
+                f"Гайка М{diameter} ГОСТ 5915-70",
                 "NUT",
                 (0, 0, z_pos + nut_height / 2),
                 nut_type,
@@ -171,7 +171,7 @@ class InstanceFactory:
             z_pos = washer_thickness + nut_height
             nut_top2 = self._create_component(
                 "Nut",
-                f"Nut_Top2_M{diameter}",
+                f"Гайка М{diameter} ГОСТ 5915-70",
                 "NUT",
                 (0, 0, z_pos + nut_height / 2),
                 nut_type,
@@ -190,7 +190,7 @@ class InstanceFactory:
             z_pos = stud_bottom + 18  # Центр нижней гайки 2
             nut_bottom2 = self._create_component(
                 "Nut",
-                f"Nut_Bottom2_M{diameter}",
+                f"Гайка М{diameter} ГОСТ 5915-70",
                 "NUT",
                 (0, 0, z_pos),
                 nut_type,
@@ -231,7 +231,7 @@ class InstanceFactory:
             z_pos = stud_bottom + 50  # Центр гайки 1
             nut_bottom = self._create_component(
                 "Nut",
-                f"Nut_Bottom1_M{diameter}",
+                f"Гайка М{diameter} ГОСТ 5915-70",
                 "NUT",
                 (0, 0, z_pos),
                 nut_type,
