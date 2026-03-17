@@ -192,7 +192,7 @@ class TestGetOrCreateNutType:
         assert result.is_a() == "IfcMechanicalFastenerType"
 
     def test_get_or_create_nut_type_name_format(self):
-        """Имя типа должно следовать формату Nut_M{diameter}_H{height}"""
+        """Имя типа должно следовать формату \"Гайка М{d} ГОСТ 5915-70\" """
         from unittest.mock import patch
 
         from type_factory import TypeFactory
@@ -217,8 +217,7 @@ class TestGetOrCreateNutType:
 
             result = factory.get_or_create_nut_type(20, "09Г2С")
 
-        assert "Nut_M20" in result.Name
-        assert "H" in result.Name
+        assert result.Name == "Гайка М20 ГОСТ 5915-70"
 
     def test_get_or_create_nut_type_caching(self):
         """get_or_create_nut_type должен кэшировать результаты"""

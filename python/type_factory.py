@@ -115,7 +115,7 @@ class TypeFactory:
 
         nut_dim = get_nut_dimensions(diameter)
         height = nut_dim["height"] if nut_dim else 10
-        type_name = f"Nut_M{diameter}_H{height}"
+        type_name = f"Гайка М{diameter} ГОСТ 5915-70"
         ifc = get_ifcopenshell()
 
         nut_type = self.ifc.create_entity(
