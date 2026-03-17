@@ -85,14 +85,13 @@ class InstanceFactory:
         owner_history = owner_histories[0] if owner_histories else None
 
         # Создание assembly с OwnerHistory
+        # PredefinedType=ANCHORBOLT (из типа), поэтому ObjectType не указываем ($)
         ifc = get_ifcopenshell()
         assembly = self.ifc.create_entity(
             "IfcMechanicalFastener",
             GlobalId=ifc.guid.new(),
             OwnerHistory=owner_history,
             Name=f"AnchorBolt_{bolt_type}_M{diameter}x{length}",
-            ObjectType="ANCHORBOLT",
-            PredefinedType="ANCHORBOLT",
         )
         self._add_instance_representation(assembly, assembly_type)
 
