@@ -58,7 +58,7 @@ class TestGetOrCreateStudType:
         assert result.is_a() == "IfcMechanicalFastenerType"
 
     def test_get_or_create_stud_type_name_format(self):
-        """Имя типа должно следовать формату Stud_M{diameter}x{length}_{type}"""
+        """Имя типа должно следовать формату \"Шпилька {t}.М{d}×{L} ГОСТ 24379.1-2012\" """
         from unittest.mock import patch
 
         from type_factory import TypeFactory
@@ -87,8 +87,7 @@ class TestGetOrCreateStudType:
 
             result = factory.get_or_create_stud_type("1.1", 20, 800, "09Г2С")
 
-        assert "Stud_M20x800" in result.Name
-        assert "1.1" in result.Name
+        assert result.Name == "Шпилька 1.М20×800 ГОСТ 24379.1-2012"
 
     def test_get_or_create_stud_type_caching(self):
         """get_or_create_stud_type должен кэшировать результаты"""

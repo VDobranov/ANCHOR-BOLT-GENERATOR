@@ -126,11 +126,14 @@ class InstanceFactory:
             stud_offset = l0  # Размещаем на Z=l0
             stud_axis_down = True  # Ось направлена вниз
         stud_placement = self._create_placement((0, 0, stud_offset), axis_down=stud_axis_down)
+        # Маппинг типа болта в позицию {t}
+        type_map = {"1.1": "1", "1.2": "2", "2.1": "3", "5": "7"}
+        t = type_map.get(bolt_type, bolt_type)
         stud = self.ifc.create_entity(
             "IfcMechanicalFastener",
             GlobalId=ifc.guid.new(),
             OwnerHistory=owner_history,
-            Name=f"Stud_M{diameter}x{length}",
+            Name=f"Шпилька {t}.М{diameter}×{length} ГОСТ 24379.1-2012",
             ObjectType="STUD",
             PredefinedType="USERDEFINED",
             ObjectPlacement=stud_placement,

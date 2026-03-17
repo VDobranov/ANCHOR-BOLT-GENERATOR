@@ -54,7 +54,10 @@ class TypeFactory:
         if key in self.types_cache:
             return self.types_cache[key]
 
-        type_name = f"Stud_M{diameter}x{length}_{bolt_type}"
+        # Маппинг типа болта в позицию {t}
+        type_map = {"1.1": "1", "1.2": "2", "2.1": "3", "5": "7"}
+        t = type_map.get(bolt_type, bolt_type)
+        type_name = f"Шпилька {t}.М{diameter}×{length} ГОСТ 24379.1-2012"
         ifc = get_ifcopenshell()
         stud_type = self.ifc.create_entity(
             "IfcMechanicalFastenerType",
