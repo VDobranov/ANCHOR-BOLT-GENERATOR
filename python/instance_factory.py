@@ -126,14 +126,12 @@ class InstanceFactory:
             stud_offset = l0  # Размещаем на Z=l0
             stud_axis_down = True  # Ось направлена вниз
         stud_placement = self._create_placement((0, 0, stud_offset), axis_down=stud_axis_down)
-        # Маппинг типа болта в позицию {t}
-        type_map = {"1.1": "1", "1.2": "2", "2.1": "3", "5": "7"}
-        t = type_map.get(bolt_type, bolt_type)
+        # Имя наследуется из типа
         stud = self.ifc.create_entity(
             "IfcMechanicalFastener",
             GlobalId=ifc.guid.new(),
             OwnerHistory=owner_history,
-            Name=f"Шпилька {t}.М{diameter}×{length} ГОСТ 24379.1-2012",
+            Name=stud_type.Name,
             ObjectPlacement=stud_placement,
         )
         self._add_instance_representation(stud, stud_type)
@@ -144,7 +142,6 @@ class InstanceFactory:
         if has_top_washer:
             washer_top = self._create_component(
                 "Washer",
-                f"Шайба М{diameter} ГОСТ 24379.1-2012",
                 (0, 0, washer_thickness / 2),
                 washer_type,
                 washer_instances,
@@ -157,7 +154,6 @@ class InstanceFactory:
             z_pos = washer_thickness / 2
             nut_top1 = self._create_component(
                 "Nut",
-                f"Гайка М{diameter} ГОСТ 5915-70",
                 (0, 0, z_pos + nut_height / 2),
                 nut_type,
                 nut_instances,
@@ -170,7 +166,6 @@ class InstanceFactory:
             z_pos = washer_thickness + nut_height
             nut_top2 = self._create_component(
                 "Nut",
-                f"Гайка М{diameter} ГОСТ 5915-70",
                 (0, 0, z_pos + nut_height / 2),
                 nut_type,
                 nut_instances,
@@ -188,7 +183,6 @@ class InstanceFactory:
             z_pos = stud_bottom + 18  # Центр нижней гайки 2
             nut_bottom2 = self._create_component(
                 "Nut",
-                f"Гайка М{diameter} ГОСТ 5915-70",
                 (0, 0, z_pos),
                 nut_type,
                 nut_instances,
@@ -200,21 +194,16 @@ class InstanceFactory:
         if has_plate and plate_type:
             from gost_data import get_thread_length
 
-            from data import get_plate_dimensions
-
             l0 = get_thread_length(diameter, length) or length
             stud_bottom = -(length - l0)  # Низ шпильки
             # Плита над гайкой 2: центр на Z = stud_bottom + 18 + H + S/2 = stud_bottom + 34
             plate_center_z = stud_bottom + 34  # Центр плиты
             plate_placement = self._create_placement((0, 0, plate_center_z))
-            # Получаем размеры плиты для имени
-            plate_dim = get_plate_dimensions(diameter)
-            width = plate_dim["width"] if plate_dim else 0
             plate = self.ifc.create_entity(
                 "IfcMechanicalFastener",
                 GlobalId=ifc.guid.new(),
                 OwnerHistory=owner_history,
-                Name=f"Плита {width} ГОСТ 24379.1-2012",
+                Name=plate_type.Name,
                 ObjectPlacement=plate_placement,
             )
             self._add_instance_representation(plate, plate_type)
@@ -231,7 +220,6 @@ class InstanceFactory:
             z_pos = stud_bottom + 50  # Центр гайки 1
             nut_bottom = self._create_component(
                 "Nut",
-                f"Гайка М{diameter} ГОСТ 5915-70",
                 (0, 0, z_pos),
                 nut_type,
                 nut_instances,
@@ -338,12 +326,10 @@ class InstanceFactory:
             ),
         )
 
-    def _create_component(
-        self, comp_type, name, location, type_obj, instances_list, owner_history=None
-    ):
+    def _create_component(self, comp_type, location, type_obj, instances_list, owner_history=None):
         """Создание компонента (гайка/шайба/плита)
 
-        PredefinedType и ObjectType наследуются из типа.
+        Имя, PredefinedType и ObjectType наследуются из типа.
         """
         ifc = get_ifcopenshell()
         placement = self._create_placement(location)
@@ -351,7 +337,7 @@ class InstanceFactory:
             "IfcMechanicalFastener",
             GlobalId=ifc.guid.new(),
             OwnerHistory=owner_history,
-            Name=name,
+            Name=type_obj.Name,
             ObjectPlacement=placement,
         )
         self._add_instance_representation(component, type_obj)

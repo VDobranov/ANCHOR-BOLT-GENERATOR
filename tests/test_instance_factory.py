@@ -242,7 +242,7 @@ class TestCreateComponent:
     def test_create_component_creates_fastener(self, mock_builder_methods):
         """_create_component должен создавать IfcMechanicalFastener
 
-        ObjectType не указан явно на экземпляре, наследуется из типа через IfcRelDefinesByType.
+        Имя наследуется из типа, PredefinedType и ObjectType наследуются через IfcRelDefinesByType.
         """
         from instance_factory import InstanceFactory
         from type_factory import TypeFactory
@@ -255,10 +255,12 @@ class TestCreateComponent:
         nut_type = type_factory.get_or_create_nut_type(20, "09Г2С")
 
         instances_list = []
-        result = factory._create_component("Nut", "Nut_Test", (0, 0, 10), nut_type, instances_list)
+        result = factory._create_component("Nut", (0, 0, 10), nut_type, instances_list)
 
         assert result is not None
         assert result.is_a() == "IfcMechanicalFastener"
+        # Имя наследуется из типа
+        assert result.Name == "Гайка М20 ГОСТ 5915-70"
         # ObjectType не указан явно на экземпляре (наследуется из типа)
         assert result.ObjectType is None
         assert len(instances_list) == 1
