@@ -252,7 +252,7 @@ class TypeFactory:
         if key in self.types_cache:
             return self.types_cache[key]
 
-        type_name = f"Болт {bolt_type}.М{diameter}×{length} ГОСТ 24379.1-2012"
+        type_name = f"Болт {bolt_type}.М{diameter}×{length} {material} ГОСТ 24379.1-2012"
         ifc = get_ifcopenshell()
 
         assembly_type = self.ifc.create_entity(

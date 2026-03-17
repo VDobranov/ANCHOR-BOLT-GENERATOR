@@ -374,7 +374,7 @@ class TestGetOrCreateAssemblyType:
         assert result.is_a() == "IfcMechanicalFastenerType"
 
     def test_get_or_create_assembly_type_name_format(self):
-        """Имя типа должно следовать формату \"Болт {T}.М{d}×{L} ГОСТ 24379.1-2012\" """
+        """Имя типа должно следовать формату \"Болт {T}.М{d}×{L} {M} ГОСТ 24379.1-2012\" """
         from type_factory import TypeFactory
 
         mock_ifc = MockIfcDoc()
@@ -382,7 +382,7 @@ class TestGetOrCreateAssemblyType:
 
         result = factory.get_or_create_assembly_type("1.1", 20, 800, "09Г2С")
 
-        assert result.Name == "Болт 1.1.М20×800 ГОСТ 24379.1-2012"
+        assert result.Name == "Болт 1.1.М20×800 09Г2С ГОСТ 24379.1-2012"
 
     def test_get_or_create_assembly_type_caching(self):
         """get_or_create_assembly_type должен кэшировать результаты"""

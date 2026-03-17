@@ -103,7 +103,7 @@ class TestCreateBoltAssembly:
         assert assembly.ObjectType is None
 
     def test_create_bolt_assembly_name_format(self, mock_builder_methods):
-        """Имя сборки должно следовать формату \"Болт {T}.М{d}×{L} ГОСТ 24379.1-2012\" """
+        """Имя сборки должно следовать формату \"Болт {T}.М{d}×{L} {M} ГОСТ 24379.1-2012\" """
         from instance_factory import InstanceFactory
 
         mock_ifc = MockIfcDoc()
@@ -113,7 +113,7 @@ class TestCreateBoltAssembly:
             result = factory.create_bolt_assembly("1.1", 20, 800, "09Г2С")
 
         assembly = result["assembly"]
-        assert assembly.Name == "Болт 1.1.М20×800 ГОСТ 24379.1-2012"
+        assert assembly.Name == "Болт 1.1.М20×800 09Г2С ГОСТ 24379.1-2012"
 
     def test_create_bolt_assembly_components_count_type_1_1(self, mock_builder_methods):
         """Для типа 1.1 должно быть 4 компонента: шпилька + шайба + 2 гайки"""
