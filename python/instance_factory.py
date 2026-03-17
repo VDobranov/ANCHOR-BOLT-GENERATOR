@@ -300,7 +300,9 @@ class InstanceFactory:
             )
 
         # Mesh data для 3D визуализации
-        mesh_data = self._generate_mesh_data(components, bolt_type, diameter, length, material)
+        mesh_data = self._generate_mesh_data(
+            components, bolt_type, diameter, length, material, assembly.Name
+        )
 
         return {
             "assembly": assembly,
@@ -439,14 +441,29 @@ class InstanceFactory:
         builder = ShapeBuilder(self.ifc)
         return [builder.deep_copy(item) for item in items]
 
-    def _generate_mesh_data(self, components, bolt_type, diameter, length, material):
+    def _generate_mesh_data(
+        self, components, bolt_type, diameter, length, material, assembly_name=None
+    ):
         """Генерация mesh данных через ifcopenshell.geom"""
         from geometry_converter import convert_assembly_to_meshes
 
         color_map = {"STUD": 0x8B8B8B, "WASHER": 0xA9A9A9, "NUT": 0x696969, "ANCHORBOLT": 0x4F4F4F}
 
+        # Преобразуем assembly_name в строку Python
+        if assembly_name and hasattr(assembly_name, "__str__"):
+            assembly_name = str(assembly_name)
+
+        # Формируем информацию о сборке
+        assembly_info = {
+            "bolt_type": bolt_type,
+            "diameter": diameter,
+            "length": length,
+            "material": material,
+            "name": assembly_name or f"bolt_{bolt_type}_M{diameter}x{length}",
+        }
+
         # Конвертация IFC геометрии в Three.js mesh
-        mesh_data = convert_assembly_to_meshes(self.ifc, components, color_map)
+        mesh_data = convert_assembly_to_meshes(self.ifc, components, color_map, assembly_info)
 
         if not mesh_data or not mesh_data.get("meshes"):
             print(f"Warning: ifcopenshell.geom failed to generate mesh data")

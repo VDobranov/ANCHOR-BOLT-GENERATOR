@@ -9,6 +9,71 @@ class IFCBridge {
         this.currentIFCData = null;
     }
 
+    /**
+     * Конвертация Proxy-объекта Pyodide в обычный JavaScript объект
+     * Рекурсивно обрабатывает вложенные объекты и массивы
+     * @param {any} obj - Pyodide Proxy или обычный JS объект
+     * @returns {any} - Конвертированный JavaScript объект
+     */
+    convertPyodideObject(obj) {
+        if (!obj) return obj;
+        
+        // Если это Pyodide Proxy с методом toJs
+        if (obj && typeof obj === 'object' && typeof obj.toJs === 'function') {
+            try {
+                const jsObj = obj.toJs({ depth: 1 });
+                // Рекурсивно обрабатываем вложенные объекты
+                if (Array.isArray(jsObj)) {
+                    return jsObj.map(item => this.convertPyodideObject(item));
+                } else if (typeof jsObj === 'object' && jsObj !== null) {
+                    const result = {};
+                    for (const [key, value] of Object.entries(jsObj)) {
+                        result[key] = this.convertPyodideObject(value);
+                    }
+                    return result;
+                }
+                return jsObj;
+            } catch (e) {
+                // Если toJs не сработал, пробуем напрямую
+                return this.convertProxyDirectly(obj);
+            }
+        }
+        
+        // Если это обычный объект, рекурсивно обрабатываем
+        if (Array.isArray(obj)) {
+            return obj.map(item => this.convertPyodideObject(item));
+        } else if (typeof obj === 'object' && obj !== null) {
+            const result = {};
+            for (const [key, value] of Object.entries(obj)) {
+                result[key] = this.convertPyodideObject(value);
+            }
+            return result;
+        }
+        
+        return obj;
+    }
+
+    /**
+     * Прямое извлечение данных из Proxy-объекта
+     * @param {Proxy} proxy - Pyodide Proxy объект
+     * @returns {object} - JavaScript объект
+     */
+    convertProxyDirectly(proxy) {
+        const result = {};
+        try {
+            // Для dict: получаем ключи через Python
+            if (proxy && typeof proxy.keys === 'function') {
+                const keys = proxy.keys();
+                for (const key of keys) {
+                    result[key] = this.convertPyodideObject(proxy.get(key));
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to convert proxy directly:', e);
+        }
+        return result;
+    }
+
     async initialize() {
         try {
             UI.showStatus('Загрузка Python модулей...', 'info');
@@ -171,9 +236,12 @@ class IFCBridge {
 
             this.currentIFCData = result[0];
 
+            // Конвертация Proxy объектов Pyodide в JavaScript объекты
+            const meshData = this.convertPyodideObject(result[1]);
+
             return {
                 ifcData: result[0],
-                meshData: result[1],
+                meshData: meshData,
                 status: 'success'
             };
         } catch (error) {

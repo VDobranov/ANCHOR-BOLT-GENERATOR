@@ -37,6 +37,7 @@ class IFCViewer {
         this.meshes = [];
         this.selectedMesh = null;
         this.focusPoint = new THREE.Vector3(0, 0, 0);
+        this.assemblyInfo = null;
 
         window.addEventListener('resize', () => this.onWindowResize());
 
@@ -183,12 +184,18 @@ class IFCViewer {
             if (item.mesh.material) item.mesh.material.dispose();
         });
         this.meshes = [];
+        this.assemblyInfo = null;
 
         if (!meshData || !meshData.meshes) {
             if (savedCameraState) {
                 this.restoreCameraState(savedCameraState);
             }
             return;
+        }
+
+        // Сохранение информации о сборке
+        if (meshData.assembly_info) {
+            this.assemblyInfo = meshData.assembly_info;
         }
 
         // Создание новых мешей
@@ -202,7 +209,7 @@ class IFCViewer {
                 new THREE.BufferAttribute(new Float32Array(transformedVertices), 3));
             geometry.setIndex(
                 new THREE.BufferAttribute(new Uint32Array(data.indices), 1));
-            
+
             // Используем готовые нормали если есть, иначе вычисляем
             if (data.normals && data.normals.length > 0) {
                 geometry.setAttribute('normal',
@@ -233,6 +240,18 @@ class IFCViewer {
 
         if (savedCameraState && this.meshes.length > 0) {
             this.restoreCameraState(savedCameraState);
+        }
+
+        // Отправляем событие с данными о сборке для обновления панели свойств
+        if (this.assemblyInfo) {
+            window.dispatchEvent(new CustomEvent('meshSelected', {
+                detail: {
+                    id: 'assembly',
+                    name: this.assemblyInfo.name || 'Assembly',
+                    isAssembly: true,
+                    assemblyInfo: this.assemblyInfo
+                }
+            }));
         }
     }
 
@@ -315,6 +334,17 @@ class IFCViewer {
         } else {
             this.deselectMesh();
             this.focusPoint.set(0, 0, 0);
+            // Передаём данные о сборке если есть
+            if (this.assemblyInfo) {
+                window.dispatchEvent(new CustomEvent('meshSelected', {
+                    detail: {
+                        id: 'assembly',
+                        name: this.assemblyInfo.name || 'Assembly',
+                        isAssembly: true,
+                        assemblyInfo: this.assemblyInfo
+                    }
+                }));
+            }
         }
     }
 

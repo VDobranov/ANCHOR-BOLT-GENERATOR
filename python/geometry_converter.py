@@ -78,7 +78,7 @@ def convert_ifc_to_mesh(ifc_file, element, weld_vertices=True):
         return None
 
 
-def convert_assembly_to_meshes(ifc_file, components, color_map=None):
+def convert_assembly_to_meshes(ifc_file, components, color_map=None, assembly_info=None):
     """
     Конвертация сборки болта в список Three.js mesh
 
@@ -86,9 +86,10 @@ def convert_assembly_to_meshes(ifc_file, components, color_map=None):
         ifc_file: IFC документ
         components: список компонентов (IfcMechanicalFastener)
         color_map: dict {ObjectType: color} для раскраски
+        assembly_info: dict с информацией о сборке (bolt_type, diameter, length, material)
 
     Returns:
-        dict с meshes для Three.js
+        dict с meshes и assembly_info для Three.js
     """
     if color_map is None:
         color_map = {"STUD": 0x8B8B8B, "WASHER": 0xA9A9A9, "NUT": 0x696969, "ANCHORBOLT": 0x4F4F4F}
@@ -122,4 +123,8 @@ def convert_assembly_to_meshes(ifc_file, components, color_map=None):
         print("  Falling back to manual mesh generation")
         return None  # Возвращаем None для использования fallback
 
-    return {"meshes": meshes}
+    result = {"meshes": meshes}
+    if assembly_info:
+        result["assembly_info"] = assembly_info
+
+    return result

@@ -57,11 +57,46 @@ const UI = {
 
     /**
      * Обновление панели свойств
-     * @param {object} meshItem — выбранный mesh-объект
+     * @param {object} meshItem — выбранный mesh-объект или данные сборки
      */
     updatePropertiesPanel(meshItem) {
         const panel = document.getElementById('propertiesContent');
         if (!panel) return;
+
+        // Если есть данные о сборке, отображаем их
+        if (meshItem && meshItem.assemblyInfo) {
+            const info = meshItem.assemblyInfo;
+            const boltTypeNames = {
+                '1.1': 'Тип 1. Исполнение 1',
+                '1.2': 'Тип 1. Исполнение 2',
+                '2.1': 'Тип 2. Исполнение 1',
+                '5': 'Тип 5'
+            };
+            
+            panel.innerHTML = `
+                <div class="property-item">
+                    <span class="property-key">Имя:</span>
+                    <span class="property-value">${meshItem.name}</span>
+                </div>
+                <div class="property-item">
+                    <span class="property-key">Тип болта:</span>
+                    <span class="property-value">${boltTypeNames[info.bolt_type] || info.bolt_type}</span>
+                </div>
+                <div class="property-item">
+                    <span class="property-key">Диаметр:</span>
+                    <span class="property-value">М${info.diameter}</span>
+                </div>
+                <div class="property-item">
+                    <span class="property-key">Длина:</span>
+                    <span class="property-value">${info.length} мм</span>
+                </div>
+                <div class="property-item">
+                    <span class="property-key">Материал:</span>
+                    <span class="property-value">${info.material}</span>
+                </div>
+            `;
+            return;
+        }
 
         if (!meshItem) {
             panel.innerHTML = '<p class="placeholder">Выберите элемент в 3D сцене</p>';
