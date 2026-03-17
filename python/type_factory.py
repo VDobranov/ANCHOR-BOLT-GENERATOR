@@ -246,13 +246,13 @@ class TypeFactory:
         self.types_cache[key] = plate_type
         return plate_type
 
-    def get_or_create_assembly_type(self, bolt_type, diameter, material):
+    def get_or_create_assembly_type(self, bolt_type, diameter, length, material):
         """Создание/получение типа сборки"""
-        key = ("assembly", bolt_type, diameter, material)
+        key = ("assembly", bolt_type, diameter, length, material)
         if key in self.types_cache:
             return self.types_cache[key]
 
-        type_name = f"AnchorBoltAssembly_{bolt_type}_M{diameter}_{material}"
+        type_name = f"Болт {bolt_type}.М{diameter}×{length} ГОСТ 24379.1-2012"
         ifc = get_ifcopenshell()
 
         assembly_type = self.ifc.create_entity(

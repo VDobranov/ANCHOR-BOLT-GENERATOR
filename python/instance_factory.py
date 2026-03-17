@@ -69,7 +69,9 @@ class InstanceFactory:
         stud_type = self.type_factory.get_or_create_stud_type(bolt_type, diameter, length, material)
         nut_type = self.type_factory.get_or_create_nut_type(diameter, material)
         washer_type = self.type_factory.get_or_create_washer_type(diameter, material)
-        assembly_type = self.type_factory.get_or_create_assembly_type(bolt_type, diameter, material)
+        assembly_type = self.type_factory.get_or_create_assembly_type(
+            bolt_type, diameter, length, material
+        )
 
         # Получение типа плиты (только для типа 2.1)
         plate_type = None
@@ -91,7 +93,7 @@ class InstanceFactory:
             "IfcMechanicalFastener",
             GlobalId=ifc.guid.new(),
             OwnerHistory=owner_history,
-            Name=f"AnchorBolt_{bolt_type}_M{diameter}x{length}",
+            Name=assembly_type.Name,
         )
         self._add_instance_representation(assembly, assembly_type)
 

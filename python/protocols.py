@@ -162,7 +162,9 @@ class TypeFactoryProtocol(Protocol):
         """Создание/получение типа шайбы"""
         ...
 
-    def get_or_create_assembly_type(self, bolt_type: str, diameter: int, material: str) -> Any:
+    def get_or_create_assembly_type(
+        self, bolt_type: str, diameter: int, length: int, material: str
+    ) -> Any:
         """Создание/получение типа сборки"""
         ...
 
