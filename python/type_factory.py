@@ -61,8 +61,8 @@ class TypeFactory:
             GlobalId=ifc.guid.new(),
             OwnerHistory=self.owner_history,
             Name=type_name,
-            PredefinedType="USERDEFINED",
             ElementType="STUD",
+            PredefinedType="USERDEFINED",
         )
 
         # Делегируем построение геометрии в GeometryBuilder
@@ -123,8 +123,8 @@ class TypeFactory:
             GlobalId=ifc.guid.new(),
             OwnerHistory=self.owner_history,
             Name=type_name,
-            PredefinedType="USERDEFINED",
             ElementType="NUT",
+            PredefinedType="USERDEFINED",
         )
 
         # Делегируем построение геометрии в GeometryBuilder
@@ -174,8 +174,8 @@ class TypeFactory:
             GlobalId=ifc.guid.new(),
             OwnerHistory=self.owner_history,
             Name=type_name,
-            PredefinedType="USERDEFINED",
             ElementType="WASHER",
+            PredefinedType="USERDEFINED",
         )
 
         # Делегируем построение геометрии в GeometryBuilder
@@ -225,8 +225,8 @@ class TypeFactory:
             GlobalId=ifc.guid.new(),
             OwnerHistory=self.owner_history,
             Name=type_name,
-            PredefinedType="USERDEFINED",
             ElementType="ANCHORPLATE",
+            PredefinedType="USERDEFINED",
         )
 
         # Создание геометрии
