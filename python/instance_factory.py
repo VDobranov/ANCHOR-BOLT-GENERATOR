@@ -203,16 +203,21 @@ class InstanceFactory:
         if has_plate and plate_type:
             from gost_data import get_thread_length
 
+            from data import get_plate_dimensions
+
             l0 = get_thread_length(diameter, length) or length
             stud_bottom = -(length - l0)  # Низ шпильки
             # Плита над гайкой 2: центр на Z = stud_bottom + 18 + H + S/2 = stud_bottom + 34
             plate_center_z = stud_bottom + 34  # Центр плиты
             plate_placement = self._create_placement((0, 0, plate_center_z))
+            # Получаем размеры плиты для имени
+            plate_dim = get_plate_dimensions(diameter)
+            width = plate_dim["width"] if plate_dim else 0
             plate = self.ifc.create_entity(
                 "IfcMechanicalFastener",
                 GlobalId=ifc.guid.new(),
                 OwnerHistory=owner_history,
-                Name=f"Plate_M{diameter}",
+                Name=f"Плита {width} ГОСТ 24379.1-2012",
                 ObjectType="ANCHORPLATE",
                 PredefinedType="USERDEFINED",
                 ObjectPlacement=plate_placement,

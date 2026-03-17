@@ -217,7 +217,7 @@ class TypeFactory:
         thickness = plate_dim["thickness"]
         hole_d = plate_dim["hole_d"]
 
-        type_name = f"Plate_M{diameter}_B{width}_S{thickness}"
+        type_name = f"Плита {width} ГОСТ 24379.1-2012"
         ifc = get_ifcopenshell()
 
         plate_type = self.ifc.create_entity(
