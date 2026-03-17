@@ -134,8 +134,6 @@ class InstanceFactory:
             GlobalId=ifc.guid.new(),
             OwnerHistory=owner_history,
             Name=f"Шпилька {t}.М{diameter}×{length} ГОСТ 24379.1-2012",
-            ObjectType="STUD",
-            PredefinedType="USERDEFINED",
             ObjectPlacement=stud_placement,
         )
         self._add_instance_representation(stud, stud_type)
@@ -147,7 +145,6 @@ class InstanceFactory:
             washer_top = self._create_component(
                 "Washer",
                 f"Шайба М{diameter} ГОСТ 24379.1-2012",
-                "WASHER",
                 (0, 0, washer_thickness / 2),
                 washer_type,
                 washer_instances,
@@ -161,7 +158,6 @@ class InstanceFactory:
             nut_top1 = self._create_component(
                 "Nut",
                 f"Гайка М{diameter} ГОСТ 5915-70",
-                "NUT",
                 (0, 0, z_pos + nut_height / 2),
                 nut_type,
                 nut_instances,
@@ -175,7 +171,6 @@ class InstanceFactory:
             nut_top2 = self._create_component(
                 "Nut",
                 f"Гайка М{diameter} ГОСТ 5915-70",
-                "NUT",
                 (0, 0, z_pos + nut_height / 2),
                 nut_type,
                 nut_instances,
@@ -194,7 +189,6 @@ class InstanceFactory:
             nut_bottom2 = self._create_component(
                 "Nut",
                 f"Гайка М{diameter} ГОСТ 5915-70",
-                "NUT",
                 (0, 0, z_pos),
                 nut_type,
                 nut_instances,
@@ -221,8 +215,6 @@ class InstanceFactory:
                 GlobalId=ifc.guid.new(),
                 OwnerHistory=owner_history,
                 Name=f"Плита {width} ГОСТ 24379.1-2012",
-                ObjectType="ANCHORPLATE",
-                PredefinedType="USERDEFINED",
                 ObjectPlacement=plate_placement,
             )
             self._add_instance_representation(plate, plate_type)
@@ -240,7 +232,6 @@ class InstanceFactory:
             nut_bottom = self._create_component(
                 "Nut",
                 f"Гайка М{diameter} ГОСТ 5915-70",
-                "NUT",
                 (0, 0, z_pos),
                 nut_type,
                 nut_instances,
@@ -348,11 +339,11 @@ class InstanceFactory:
         )
 
     def _create_component(
-        self, comp_type, name, object_type, location, type_obj, instances_list, owner_history=None
+        self, comp_type, name, location, type_obj, instances_list, owner_history=None
     ):
-        """Создание компонента (гайка/шайба)
+        """Создание компонента (гайка/шайба/плита)
 
-        PredefinedType=USERDEFINED, т.к. ObjectType указан.
+        PredefinedType и ObjectType наследуются из типа.
         """
         ifc = get_ifcopenshell()
         placement = self._create_placement(location)
@@ -361,8 +352,6 @@ class InstanceFactory:
             GlobalId=ifc.guid.new(),
             OwnerHistory=owner_history,
             Name=name,
-            ObjectType=object_type,
-            PredefinedType="USERDEFINED",
             ObjectPlacement=placement,
         )
         self._add_instance_representation(component, type_obj)

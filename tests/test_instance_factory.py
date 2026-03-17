@@ -142,7 +142,10 @@ class TestCreateBoltAssembly:
         assert len(components) == 7  # stud + washer + 4 nuts + plate
 
     def test_create_bolt_assembly_stud_type(self, mock_builder_methods):
-        """Шпилька должна иметь ObjectType = STUD"""
+        """Шпилька наследует ObjectType из типа (ElementType=STUD)
+
+        На экземпляре ObjectType не указан явно, наследуется через IfcRelDefinesByType.
+        """
         from instance_factory import InstanceFactory
 
         mock_ifc = MockIfcDoc()
@@ -153,7 +156,8 @@ class TestCreateBoltAssembly:
 
         stud = result["stud"]
         assert stud is not None
-        assert stud.ObjectType == "STUD"
+        # ObjectType не указан явно на экземпляре (наследуется из типа)
+        assert stud.ObjectType is None
 
     def test_create_bolt_assembly_creates_relations(self, mock_builder_methods):
         """create_bolt_assembly должен создавать отношения"""
@@ -236,7 +240,10 @@ class TestCreateComponent:
             yield
 
     def test_create_component_creates_fastener(self, mock_builder_methods):
-        """_create_component должен создавать IfcMechanicalFastener"""
+        """_create_component должен создавать IfcMechanicalFastener
+
+        ObjectType не указан явно на экземпляре, наследуется из типа через IfcRelDefinesByType.
+        """
         from instance_factory import InstanceFactory
         from type_factory import TypeFactory
 
@@ -248,13 +255,12 @@ class TestCreateComponent:
         nut_type = type_factory.get_or_create_nut_type(20, "09Г2С")
 
         instances_list = []
-        result = factory._create_component(
-            "Nut", "Nut_Test", "NUT", (0, 0, 10), nut_type, instances_list
-        )
+        result = factory._create_component("Nut", "Nut_Test", (0, 0, 10), nut_type, instances_list)
 
         assert result is not None
         assert result.is_a() == "IfcMechanicalFastener"
-        assert result.ObjectType == "NUT"
+        # ObjectType не указан явно на экземпляре (наследуется из типа)
+        assert result.ObjectType is None
         assert len(instances_list) == 1
 
 
