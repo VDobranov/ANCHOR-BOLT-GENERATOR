@@ -132,6 +132,7 @@ class InstanceFactory:
             OwnerHistory=owner_history,
             Name=f"Stud_M{diameter}x{length}",
             ObjectType="STUD",
+            PredefinedType="USERDEFINED",
             ObjectPlacement=stud_placement,
         )
         self._add_instance_representation(stud, stud_type)
@@ -213,6 +214,7 @@ class InstanceFactory:
                 OwnerHistory=owner_history,
                 Name=f"Plate_M{diameter}",
                 ObjectType="ANCHORPLATE",
+                PredefinedType="USERDEFINED",
                 ObjectPlacement=plate_placement,
             )
             self._add_instance_representation(plate, plate_type)
@@ -340,7 +342,10 @@ class InstanceFactory:
     def _create_component(
         self, comp_type, name, object_type, location, type_obj, instances_list, owner_history=None
     ):
-        """Создание компонента (гайка/шайба)"""
+        """Создание компонента (гайка/шайба)
+
+        PredefinedType=USERDEFINED, т.к. ObjectType указан.
+        """
         ifc = get_ifcopenshell()
         placement = self._create_placement(location)
         component = self.ifc.create_entity(
@@ -349,6 +354,7 @@ class InstanceFactory:
             OwnerHistory=owner_history,
             Name=name,
             ObjectType=object_type,
+            PredefinedType="USERDEFINED",
             ObjectPlacement=placement,
         )
         self._add_instance_representation(component, type_obj)
