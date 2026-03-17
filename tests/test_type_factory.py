@@ -307,7 +307,7 @@ class TestGetOrCreateWasherType:
         assert result.is_a() == "IfcMechanicalFastenerType"
 
     def test_get_or_create_washer_type_name_format(self):
-        """Имя типа должно следовать формату Washer_M{diameter}_OD{outer_d}"""
+        """Имя типа должно следовать формату \"Шайба М{d} ГОСТ 24379.1-2012\" """
         from unittest.mock import patch
 
         from type_factory import TypeFactory
@@ -330,8 +330,7 @@ class TestGetOrCreateWasherType:
 
             result = factory.get_or_create_washer_type(20, "09Г2С")
 
-        assert "Washer_M20" in result.Name
-        assert "OD" in result.Name
+        assert result.Name == "Шайба М20 ГОСТ 24379.1-2012"
 
     def test_get_or_create_washer_type_caching(self):
         """get_or_create_washer_type должен кэшировать результаты"""

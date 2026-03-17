@@ -166,7 +166,7 @@ class TypeFactory:
         washer_dim = get_washer_dimensions(diameter)
         outer_d = washer_dim["outer_diameter"] if washer_dim else diameter + 10
         thickness = washer_dim["thickness"] if washer_dim else 3
-        type_name = f"Washer_M{diameter}_OD{outer_d}"
+        type_name = f"Шайба М{diameter} ГОСТ 24379.1-2012"
         ifc = get_ifcopenshell()
 
         washer_type = self.ifc.create_entity(

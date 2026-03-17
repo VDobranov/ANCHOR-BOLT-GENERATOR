@@ -143,7 +143,7 @@ class InstanceFactory:
         if has_top_washer:
             washer_top = self._create_component(
                 "Washer",
-                f"Washer_Top_M{diameter}",
+                f"Шайба М{diameter} ГОСТ 24379.1-2012",
                 "WASHER",
                 (0, 0, washer_thickness / 2),
                 washer_type,
