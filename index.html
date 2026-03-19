@@ -65,6 +65,36 @@
                         </select>
                     </div>
 
+                    <!-- Настройки экспорта IFC -->
+                    <h3>Настройки экспорта IFC</h3>
+                    
+                    <!-- Класс сборки -->
+                    <div class="form-group">
+                        <label for="assemblyClass">Класс сборки:</label>
+                        <select id="assemblyClass" required>
+                            <option value="IfcMechanicalFastener" selected>IfcMechanicalFastener</option>
+                            <option value="IfcElementAssembly">IfcElementAssembly</option>
+                        </select>
+                    </div>
+
+                    <!-- Режим формирования -->
+                    <div class="form-group">
+                        <label for="assemblyMode">Режим формирования:</label>
+                        <select id="assemblyMode" required>
+                            <option value="separate" selected>Вроссыпь (отдельные компоненты)</option>
+                            <option value="unified">Целиком (булева операция)</option>
+                        </select>
+                    </div>
+
+                    <!-- Тип геометрии -->
+                    <div class="form-group">
+                        <label for="geometryType">Тип геометрии:</label>
+                        <select id="geometryType" required>
+                            <option value="solid" selected>Твердотельная (B-Rep)</option>
+                            <option value="triangulated" disabled>Триангулированная (скоро)</option>
+                        </select>
+                    </div>
+
                     <!-- Кнопки -->
                     <div class="button-group">
                         <button type="button" id="downloadBtn" class="btn btn-secondary" disabled>

@@ -163,7 +163,12 @@ class TypeFactoryProtocol(Protocol):
         ...
 
     def get_or_create_assembly_type(
-        self, bolt_type: str, diameter: int, length: int, material: str
+        self,
+        bolt_type: str,
+        diameter: int,
+        length: int,
+        material: str,
+        assembly_class: str = "IfcMechanicalFastener",
     ) -> Any:
         """Создание/получение типа сборки"""
         ...

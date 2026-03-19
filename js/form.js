@@ -266,7 +266,108 @@ class BoltForm {
     }
 }
 
+/**
+ * Класс для управления настройками экспорта IFC
+ */
+class IFCExportSettings {
+    constructor(onSettingsChange) {
+        this.onSettingsChange = onSettingsChange || null;
+        this.elements = {
+            assemblyClass: document.getElementById('assemblyClass'),
+            assemblyMode: document.getElementById('assemblyMode'),
+            geometryType: document.getElementById('geometryType')
+        };
+        
+        console.log('IFCExportSettings initialized:', {
+            assemblyClass: this.elements.assemblyClass,
+            assemblyMode: this.elements.assemblyMode,
+            geometryType: this.elements.geometryType
+        });
+        
+        // Добавляем обработчики изменений
+        this.setupListeners();
+    }
+    
+    /**
+     * Настройка обработчиков событий
+     */
+    setupListeners() {
+        const { assemblyClass, assemblyMode, geometryType } = this.elements;
+        
+        // При изменении настроек — перегенерировать болт
+        if (assemblyClass) {
+            assemblyClass.addEventListener('change', () => this.triggerChange());
+        }
+        if (assemblyMode) {
+            assemblyMode.addEventListener('change', () => this.triggerChange());
+        }
+        if (geometryType) {
+            geometryType.addEventListener('change', () => this.triggerChange());
+        }
+    }
+    
+    /**
+     * Триггер изменения настроек
+     */
+    triggerChange() {
+        if (this.onSettingsChange) {
+            this.onSettingsChange(this.getSettings());
+        }
+    }
+
+    /**
+     * Получение текущих настроек экспорта
+     * @returns {Object} Настройки экспорта
+     */
+    getSettings() {
+        const settings = {
+            assemblyClass: this.elements.assemblyClass?.value || 'IfcMechanicalFastener',
+            assemblyMode: this.elements.assemblyMode?.value || 'separate',
+            geometryType: this.elements.geometryType?.value || 'solid'
+        };
+        
+        console.log('getSettings() elements:', {
+            assemblyClass: this.elements.assemblyClass,
+            assemblyClassValue: this.elements.assemblyClass?.value,
+            assemblyMode: this.elements.assemblyMode,
+            assemblyModeValue: this.elements.assemblyMode?.value,
+            geometryType: this.elements.geometryType,
+            geometryTypeValue: this.elements.geometryType?.value
+        });
+        
+        return settings;
+    }
+
+    /**
+     * Установка настроек экспорта
+     * @param {Object} settings - Настройки для установки
+     */
+    setSettings(settings) {
+        if (settings.assemblyClass && this.elements.assemblyClass) {
+            this.elements.assemblyClass.value = settings.assemblyClass;
+        }
+        if (settings.assemblyMode && this.elements.assemblyMode) {
+            this.elements.assemblyMode.value = settings.assemblyMode;
+        }
+        if (settings.geometryType && this.elements.geometryType) {
+            this.elements.geometryType.value = settings.geometryType;
+        }
+    }
+
+    /**
+     * Настройки по умолчанию
+     * @returns {Object} Настройки по умолчанию
+     */
+    getDefaultSettings() {
+        return {
+            assemblyClass: 'IfcMechanicalFastener',
+            assemblyMode: 'separate',
+            geometryType: 'solid'
+        };
+    }
+}
+
 // Export
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = BoltForm;
+    module.exports = { BoltForm, IFCExportSettings };
 }

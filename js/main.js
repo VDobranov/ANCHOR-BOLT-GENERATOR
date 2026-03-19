@@ -6,6 +6,7 @@
 let viewer = null;
 let bridge = null;
 let form = null;
+let exportSettings = null;
 let pyodide = null;
 
 /**
@@ -36,6 +37,10 @@ async function initializeApp() {
         await form.init();
         console.log('✓ Форма инициализирована');
 
+        // Инициализация настроек экспорта
+        exportSettings = new IFCExportSettings(handleExportSettingsChange);
+        console.log('✓ Настройки экспорта инициализированы');
+
         // Генерация болта по умолчанию
         UI.showStatus('Генерация болта по умолчанию...', 'info');
         await generateDefaultBolt();
@@ -56,6 +61,16 @@ async function handleParamsChange(params) {
 }
 
 /**
+ * Обработчик изменения настроек экспорта
+ */
+async function handleExportSettingsChange(settings) {
+    console.log('Export settings changed:', settings);
+    // Перегенерировать болт с новыми настройками
+    const params = form.getParams();
+    await generateBolt(params);
+}
+
+/**
  * Генерация болта с заданными параметрами
  */
 async function generateBolt(params) {
@@ -68,7 +83,22 @@ async function generateBolt(params) {
     UI.showStatus(`Генерирую болт: ${params.bolt_type}, М${params.diameter}x${params.length}...`, 'info');
 
     try {
-        const result = await bridge.generateBolt(params);
+        // Получение настроек экспорта
+        const settings = exportSettings.getSettings();
+        
+        // Логирование для отладки
+        console.log('Export settings:', settings);
+        
+        // Конвертация настроек для Python
+        const exportSettingsForPython = {
+            assembly_class: settings.assemblyClass,
+            assembly_mode: settings.assemblyMode,
+            geometry_type: settings.geometryType
+        };
+
+        console.log('Calling generateBolt with settings:', exportSettingsForPython);
+
+        const result = await bridge.generateBolt(params, exportSettingsForPython);
 
         if (result.status === 'error') {
             UI.showStatus(`Ошибка: ${result.message}`, 'error', 5000);
@@ -102,11 +132,17 @@ async function generateDefaultBolt() {
 /**
  * Download IFC файла
  */
-function downloadIFCFile() {
+async function downloadIFCFile() {
+    // Сначала перегенерируем болт с текущими настройками
+    const params = form.getParams();
+    await generateBolt(params);
+    
+    // Небольшая задержка для завершения генерации
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     const ifcData = bridge.getIFCData();
     if (!ifcData) return;
 
-    const params = form.getParams();
     const filename = UI.generateFilename(params);
 
     UI.downloadFile(ifcData, filename);

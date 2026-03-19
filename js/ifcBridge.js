@@ -221,16 +221,33 @@ class IFCBridge {
         `);
     }
 
-    async generateBolt(params) {
+    async generateBolt(params, exportSettings) {
         try {
             const paramsJson = JSON.stringify(params)
+                .replace(/false/g, 'False')
+                .replace(/true/g, 'True');
+
+            // Настройки экспорта по умолчанию
+            const settings = exportSettings || {
+                assembly_class: 'IfcMechanicalFastener',
+                assembly_mode: 'separate',
+                geometry_type: 'solid'
+            };
+
+            const settingsJson = JSON.stringify(settings)
                 .replace(/false/g, 'False')
                 .replace(/true/g, 'True');
 
             const result = await this.pyodide.runPythonAsync(`
                 from instance_factory import generate_bolt_assembly
                 params = ${paramsJson}
-                ifc_str, mesh_data = generate_bolt_assembly(params)
+                settings = ${settingsJson}
+                ifc_str, mesh_data = generate_bolt_assembly(
+                    params,
+                    settings.get('assembly_class', 'IfcMechanicalFastener'),
+                    settings.get('assembly_mode', 'separate'),
+                    settings.get('geometry_type', 'solid')
+                )
                 (ifc_str, mesh_data)
             `);
 

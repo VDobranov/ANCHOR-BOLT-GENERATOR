@@ -246,22 +246,52 @@ class TypeFactory:
         self.types_cache[key] = plate_type
         return plate_type
 
-    def get_or_create_assembly_type(self, bolt_type, diameter, length, material):
-        """Создание/получение типа сборки"""
-        key = ("assembly", bolt_type, diameter, length, material)
+    def get_or_create_assembly_type(
+        self,
+        bolt_type: str,
+        diameter: int,
+        length: int,
+        material: str,
+        assembly_class: str = "IfcMechanicalFastener",
+    ):
+        """
+        Создание или получение типа сборки
+
+        Args:
+            bolt_type: Тип болта
+            diameter: Диаметр
+            length: Длина
+            material: Материал
+            assembly_class: Класс сборки ('IfcMechanicalFastener' или 'IfcElementAssembly')
+
+        Returns:
+            IfcMechanicalFastenerType или IfcElementAssemblyType
+        """
+        key = ("assembly", bolt_type, diameter, length, material, assembly_class)
         if key in self.types_cache:
             return self.types_cache[key]
 
         type_name = f"Болт {bolt_type}.М{diameter}×{length} {material} ГОСТ 24379.1-2012"
         ifc = get_ifcopenshell()
 
-        assembly_type = self.ifc.create_entity(
-            "IfcMechanicalFastenerType",
-            GlobalId=ifc.guid.new(),
-            OwnerHistory=self.owner_history,
-            Name=type_name,
-            PredefinedType="ANCHORBOLT",
-        )
+        # Выбираем тип в зависимости от assembly_class
+        if assembly_class == "IfcElementAssembly":
+            assembly_type = self.ifc.create_entity(
+                "IfcElementAssemblyType",
+                GlobalId=ifc.guid.new(),
+                OwnerHistory=self.owner_history,
+                Name=type_name,
+                PredefinedType="USERDEFINED",
+                ElementType="ANCHORBOLT",
+            )
+        else:
+            assembly_type = self.ifc.create_entity(
+                "IfcMechanicalFastenerType",
+                GlobalId=ifc.guid.new(),
+                OwnerHistory=self.owner_history,
+                Name=type_name,
+                PredefinedType="ANCHORBOLT",
+            )
 
         # Создаём материал сборки (MaterialList)
         mat_name = get_material_name(material)

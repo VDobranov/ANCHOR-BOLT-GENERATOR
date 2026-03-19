@@ -356,6 +356,75 @@ class GeometryBuilder:
 
         return self._create_shape_representation(context, swept_area)
 
+    def create_bent_stud_solid_raw(self, bolt_type, diameter, length):
+        """Создание IfcSweptDiskSolid для изогнутой шпильки (без IfcShapeRepresentation)"""
+        axis_curve = self.create_composite_curve_stud(bolt_type, diameter, length)
+        return self.create_swept_disk_solid(axis_curve, diameter / 2.0)
+
+    def create_straight_stud_solid_raw(self, diameter, length):
+        """Создание IfcSweptDiskSolid для прямой шпильки (без IfcShapeRepresentation)"""
+        # Прямая ось от (0,0,0) до (0,0,-length)
+        axis = self.builder.polyline([V(0.0, 0.0), V(0.0, -length)])
+        return self.create_swept_disk_solid(axis, diameter / 2.0)
+
+    def create_nut_solid_raw(self, diameter, height):
+        """Создание IfcExtrudedAreaSolid для гайки (без IfcShapeRepresentation)"""
+        from gost_data import get_nut_dimensions
+
+        # Получаем размер под ключ из DIM.py
+        nut_dim = get_nut_dimensions(diameter)
+        s_width = nut_dim["s_width"] if nut_dim else diameter * 1.5
+
+        # Радиус описанной окружности (до вершин): R = S / √3
+        outer_radius = s_width / math.sqrt(3)
+        inner_radius = diameter / 2.0 + 0.5
+
+        # Внешний шестиугольник через polyline
+        hex_points = []
+        for i in range(6):
+            angle = i * math.pi / 3
+            x = outer_radius * math.cos(angle)
+            y = outer_radius * math.sin(angle)
+            hex_points.append(V(x, y))
+
+        outer_curve = self.builder.polyline(hex_points, closed=True)
+
+        # Внутреннее отверстие (круг)
+        inner_circle = self.builder.circle((0.0, 0.0), inner_radius)
+
+        # Профиль с отверстием
+        profile = self.builder.profile(outer_curve, inner_curves=[inner_circle])
+
+        # Экструзия — возвращаем IfcExtrudedAreaSolid напрямую
+        return self.builder.extrude(profile, magnitude=height)
+
+    def create_washer_solid_raw(self, inner_diameter, outer_diameter, thickness):
+        """Создание IfcExtrudedAreaSolid для шайбы (без IfcShapeRepresentation)"""
+        inner_radius = inner_diameter / 2.0 + 0.5
+        outer_radius = outer_diameter / 2.0
+
+        # Внешний и внутренний круги
+        outer_circle = self.builder.circle((0.0, 0.0), outer_radius)
+        inner_circle = self.builder.circle((0.0, 0.0), inner_radius)
+
+        # Профиль с отверстием
+        profile = self.builder.profile(outer_circle, inner_curves=[inner_circle])
+
+        # Экструзия — возвращаем IfcExtrudedAreaSolid напрямую
+        return self.builder.extrude(profile, magnitude=thickness)
+
+    def create_plate_solid_raw(self, diameter, width, thickness, hole_d):
+        """Создание IfcExtrudedAreaSolid для плиты (без IfcShapeRepresentation)"""
+        # Прямоугольный профиль с отверстием
+        rect_curve = self.builder.rectangle((0.0, 0.0), width, width)
+        hole_circle = self.builder.circle((0.0, 0.0), hole_d / 2.0)
+
+        # Профиль с отверстием
+        profile = self.builder.profile(rect_curve, inner_curves=[hole_circle])
+
+        # Экструзия — возвращаем IfcExtrudedAreaSolid напрямую
+        return self.builder.extrude(profile, magnitude=thickness)
+
     def create_nut_solid(self, diameter, height):
         """Создание геометрии гайки (шестиугольник с отверстием) через shape_builder"""
         from gost_data import get_nut_dimensions
@@ -451,3 +520,75 @@ class GeometryBuilder:
                 product_type.RepresentationMaps = list(product_type.RepresentationMaps) + [rep_map]
             else:
                 product_type.RepresentationMaps.append(rep_map)
+
+    def create_boolean_union(self, shapes):
+        """
+        Булево объединение списка solid через IfcCSGSolid
+
+        Args:
+            shapes: список IFC solid сущностей (IfcSolidModel) для объединения.
+                    Это могут быть IfcSweptDiskSolid, IfcExtrudedAreaSolid, etc.
+
+        Returns:
+            IfcCSGSolid (обёртка над IfcBooleanResult)
+        """
+        if len(shapes) < 2:
+            return shapes[0] if shapes else None
+
+        # Все shapes уже IfcSolidModel, создаём цепочку IfcBooleanResult
+        result = shapes[0]
+        for solid in shapes[1:]:
+            result = self.ifc.create_entity(
+                "IfcBooleanResult",
+                Operator="UNION",  # Без точек — ifcopenshell добавит при экспорте
+                FirstOperand=result,
+                SecondOperand=solid,
+            )
+
+        # Оборачиваем IfcBooleanResult в IfcCSGSolid
+        # IfcCSGSolid принимает IfcBooleanOperand (которым является IfcBooleanResult)
+        csg_solid = self.ifc.create_entity(
+            "IfcCSGSolid",
+            TreeRootExpression=result,
+        )
+
+        return csg_solid
+
+    def create_triangulated_face_set(self, vertices, faces):
+        """
+        Создание IfcTriangulatedFaceSet из вершин и граней
+
+        Args:
+            vertices: список 3D координат [(x1,y1,z1), (x2,y2,z2), ...]
+            faces: список треугольников [[0,1,2], [0,2,3], ...] (индексы 0-based)
+
+        Returns:
+            IfcTriangulatedFaceSet
+        """
+        # Конвертируем вершины в формат для shape_builder
+        points = [tuple(v) for v in vertices]
+
+        # shape_builder.triangulated_face_set ожидает индексы 0-based
+        return self.builder.triangulated_face_set(points, faces)
+
+    def create_shape_representation_from_face_set(self, face_set):
+        """
+        Создание IfcShapeRepresentation с IfcTriangulatedFaceSet
+
+        Args:
+            face_set: IfcTriangulatedFaceSet
+
+        Returns:
+            IfcShapeRepresentation
+        """
+        context = self._get_context()
+
+        shape_rep = self.ifc.create_entity(
+            "IfcShapeRepresentation",
+            ContextOfItems=context,
+            RepresentationIdentifier="Body",
+            RepresentationType="Tessellation",  # Для IfcTriangulatedFaceSet
+            Items=[face_set],
+        )
+
+        return shape_rep

@@ -26,9 +26,23 @@ class InstanceFactory:
         self.type_factory: TypeFactoryProtocol = type_factory or TypeFactory(ifc_doc)
         self.material_manager = MaterialManager(ifc_doc)
 
-    def create_bolt_assembly(self, bolt_type, diameter, length, material):
+    def create_bolt_assembly(
+        self,
+        bolt_type,
+        diameter,
+        length,
+        material,
+        assembly_class="IfcMechanicalFastener",
+        assembly_mode="separate",
+        geometry_type="solid",
+    ):
         """
         Создание полной сборки анкерного болта
+
+        Args:
+            assembly_class: Класс сборки ("IfcMechanicalFastener" или "IfcElementAssembly")
+            assembly_mode: Режим сборки ("separate" или "unified")
+            geometry_type: Тип геометрии ("solid" или "mesh")
 
         Состав сборки по умолчанию:
         - Типы 1.1, 1.2, 5: шпилька + верхняя шайба + 2 верхних гайки
@@ -65,18 +79,24 @@ class InstanceFactory:
             plate_dim_data = get_plate_dimensions(diameter)
             plate_thickness = plate_dim_data["thickness"] if plate_dim_data else 0
 
-        # Получение типов
-        stud_type = self.type_factory.get_or_create_stud_type(bolt_type, diameter, length, material)
-        nut_type = self.type_factory.get_or_create_nut_type(diameter, material)
-        washer_type = self.type_factory.get_or_create_washer_type(diameter, material)
-        assembly_type = self.type_factory.get_or_create_assembly_type(
-            bolt_type, diameter, length, material
-        )
-
-        # Получение типа плиты (только для типа 2.1)
+        # Получение типов - ТОЛЬКО для separate режима
+        stud_type = None
+        nut_type = None
+        washer_type = None
         plate_type = None
-        if has_plate:
-            plate_type = self.type_factory.get_or_create_plate_type(diameter, material)
+
+        if assembly_mode == "separate":
+            stud_type = self.type_factory.get_or_create_stud_type(
+                bolt_type, diameter, length, material
+            )
+            nut_type = self.type_factory.get_or_create_nut_type(diameter, material)
+            washer_type = self.type_factory.get_or_create_washer_type(diameter, material)
+            if has_plate:
+                plate_type = self.type_factory.get_or_create_plate_type(diameter, material)
+
+        assembly_type = self.type_factory.get_or_create_assembly_type(
+            bolt_type, diameter, length, material, assembly_class
+        )
 
         # Получение storey для размещения
         storeys = self.ifc.by_type("IfcBuildingStorey")
@@ -87,14 +107,37 @@ class InstanceFactory:
         owner_history = owner_histories[0] if owner_histories else None
 
         # Создание assembly с OwnerHistory
-        # PredefinedType=ANCHORBOLT (из типа), поэтому ObjectType не указываем ($)
-        ifc = get_ifcopenshell()
-        assembly = self.ifc.create_entity(
-            "IfcMechanicalFastener",
-            GlobalId=ifc.guid.new(),
-            OwnerHistory=owner_history,
-            Name=assembly_type.Name,
+        assembly_placement = self.ifc.create_entity(
+            "IfcLocalPlacement",
+            PlacementRelTo=None,
+            RelativePlacement=self.ifc.create_entity(
+                "IfcAxis2Placement3D",
+                Location=self.ifc.create_entity("IfcCartesianPoint", Coordinates=[0.0, 0.0, 0.0]),
+                Axis=self.ifc.create_entity("IfcDirection", DirectionRatios=[0.0, 0.0, 1.0]),
+                RefDirection=self.ifc.create_entity(
+                    "IfcDirection", DirectionRatios=[1.0, 0.0, 0.0]
+                ),
+            ),
         )
+
+        if assembly_class == "IfcElementAssembly":
+            assembly = self.ifc.create_entity(
+                "IfcElementAssembly",
+                GlobalId=ifc.guid.new(),
+                OwnerHistory=owner_history,
+                Name=assembly_type.Name,
+                PredefinedType="USERDEFINED",
+                ObjectType="ANCHORBOLT",
+                ObjectPlacement=assembly_placement,
+            )
+        else:
+            assembly = self.ifc.create_entity(
+                "IfcMechanicalFastener",
+                GlobalId=ifc.guid.new(),
+                OwnerHistory=owner_history,
+                Name=assembly_type.Name,
+                ObjectPlacement=assembly_placement,
+            )
         self._add_instance_representation(assembly, assembly_type)
 
         # Создаём материал сборки и ассоциируем с assembly
@@ -103,133 +146,119 @@ class InstanceFactory:
         if mat:
             self.material_manager.associate_material(assembly, mat)
 
-        # Компоненты
+        # Компоненты - ТОЛЬКО для separate режима
         components = []
         stud_instances = []
         nut_instances = []
         washer_instances = []
-        plate_instances = []  # Для типа 2.1
+        plate_instances = []
 
-        # Шпилька
-        # Для типа 1.1: смещение вверх на длину резьбы, чтобы начало резьбы было в (0,0,0)
-        # Для типа 1.2: смещение на l0 (длина резьбы), чтобы низ резьбы был в (0,0,0)
-        # Для типа 2.1: геометрия от Z=0 до Z=+length, размещаем на Z=l0 с осью вниз
-        # Для типа 5: геометрия от Z=0 до Z=+length, размещаем на Z=l0 с осью вниз
-        stud_offset = 0.0
-        stud_axis_down = False
-        if bolt_type in ("1.1", "1.2"):
-            from gost_data import get_thread_length
+        if assembly_mode == "separate":
+            # Шпилька
+            stud_offset = 0.0
+            stud_axis_down = False
+            if bolt_type in ("1.1", "1.2"):
+                from gost_data import get_thread_length
 
-            stud_offset = get_thread_length(diameter, length) or 0
-        elif bolt_type in ("2.1", "5"):
-            from gost_data import get_thread_length
+                stud_offset = get_thread_length(diameter, length) or 0
+            elif bolt_type in ("2.1", "5"):
+                from gost_data import get_thread_length
 
-            l0 = get_thread_length(diameter, length) or length
-            stud_offset = l0  # Размещаем на Z=l0
-            stud_axis_down = True  # Ось направлена вниз
-        stud_placement = self._create_placement((0, 0, stud_offset), axis_down=stud_axis_down)
-        # Имя наследуется из типа
-        stud = self.ifc.create_entity(
-            "IfcMechanicalFastener",
-            GlobalId=ifc.guid.new(),
-            OwnerHistory=owner_history,
-            Name=stud_type.Name,
-            ObjectPlacement=stud_placement,
-        )
-        self._add_instance_representation(stud, stud_type)
-        stud_instances.append(stud)
-        components.append(stud)
-
-        # Верхняя шайба (для всех типов)
-        if has_top_washer:
-            washer_top = self._create_component(
-                "Washer",
-                (0, 0, washer_thickness / 2),
-                washer_type,
-                washer_instances,
-                owner_history,
-            )
-            components.append(washer_top)
-
-        # Верхняя гайка 1
-        if has_top_nut1:
-            z_pos = washer_thickness / 2
-            nut_top1 = self._create_component(
-                "Nut",
-                (0, 0, z_pos + nut_height / 2),
-                nut_type,
-                nut_instances,
-                owner_history,
-            )
-            components.append(nut_top1)
-
-        # Верхняя гайка 2
-        if has_top_nut2:
-            z_pos = washer_thickness + nut_height
-            nut_top2 = self._create_component(
-                "Nut",
-                (0, 0, z_pos + nut_height / 2),
-                nut_type,
-                nut_instances,
-                owner_history,
-            )
-            components.append(nut_top2)
-
-        # Нижняя гайка 2 (только для типа 2.1, самая нижняя)
-        if has_bottom_nut2:
-            # Позиция: центр на 18 мм выше низа шпильки
-            from gost_data import get_thread_length
-
-            l0 = get_thread_length(diameter, length) or length
-            stud_bottom = -(length - l0)  # Низ шпильки
-            z_pos = stud_bottom + 18  # Центр нижней гайки 2
-            nut_bottom2 = self._create_component(
-                "Nut",
-                (0, 0, z_pos),
-                nut_type,
-                nut_instances,
-                owner_history,
-            )
-            components.append(nut_bottom2)
-
-        # Анкерная плита (только для типа 2.1, между нижними гайками)
-        if has_plate and plate_type:
-            from gost_data import get_thread_length
-
-            l0 = get_thread_length(diameter, length) or length
-            stud_bottom = -(length - l0)  # Низ шпильки
-            # Плита над гайкой 2: центр на Z = stud_bottom + 18 + H + S/2 = stud_bottom + 34
-            plate_center_z = stud_bottom + 34  # Центр плиты
-            plate_placement = self._create_placement((0, 0, plate_center_z))
-            plate = self.ifc.create_entity(
+                l0 = get_thread_length(diameter, length) or length
+                stud_offset = l0
+                stud_axis_down = True
+            stud_placement = self._create_placement((0, 0, stud_offset), axis_down=stud_axis_down)
+            stud = self.ifc.create_entity(
                 "IfcMechanicalFastener",
                 GlobalId=ifc.guid.new(),
                 OwnerHistory=owner_history,
-                Name=plate_type.Name,
-                ObjectPlacement=plate_placement,
+                Name=stud_type.Name,
+                ObjectPlacement=stud_placement,
             )
-            self._add_instance_representation(plate, plate_type)
-            plate_instances.append(plate)
-            components.append(plate)
+            self._add_instance_representation(stud, stud_type)
+            stud_instances.append(stud)
+            components.append(stud)
 
-        # Нижняя гайка 1 (только для типа 2.1, над плитой)
-        if has_bottom_nut:
-            # Гайка над плитой: центр на Z = stud_bottom + 18 + H + S + H/2 = stud_bottom + 50
-            from gost_data import get_thread_length
+            # Шайба
+            if has_top_washer:
+                washer_top = self._create_component(
+                    "Washer",
+                    (0, 0, washer_thickness / 2),
+                    washer_type,
+                    washer_instances,
+                    owner_history,
+                )
+                components.append(washer_top)
 
-            l0 = get_thread_length(diameter, length) or length
-            stud_bottom = -(length - l0)  # Низ шпильки
-            z_pos = stud_bottom + 50  # Центр гайки 1
-            nut_bottom = self._create_component(
-                "Nut",
-                (0, 0, z_pos),
-                nut_type,
-                nut_instances,
-                owner_history,
-            )
-            components.append(nut_bottom)
+            # Гайка 1
+            if has_top_nut1:
+                nut_top1 = self._create_component(
+                    "Nut",
+                    (0, 0, washer_thickness / 2 + nut_height / 2),
+                    nut_type,
+                    nut_instances,
+                    owner_history,
+                )
+                components.append(nut_top1)
 
-        # IfcRelDefinesByType для каждого типа
+            # Гайка 2
+            if has_top_nut2:
+                nut_top2 = self._create_component(
+                    "Nut",
+                    (0, 0, washer_thickness + nut_height + nut_height / 2),
+                    nut_type,
+                    nut_instances,
+                    owner_history,
+                )
+                components.append(nut_top2)
+
+            # Нижняя гайка 2
+            if has_bottom_nut2:
+                from gost_data import get_thread_length
+
+                l0 = get_thread_length(diameter, length) or length
+                stud_bottom = -(length - l0)
+                nut_bottom2 = self._create_component(
+                    "Nut",
+                    (0, 0, stud_bottom + 18),
+                    nut_type,
+                    nut_instances,
+                    owner_history,
+                )
+                components.append(nut_bottom2)
+
+            # Плита
+            if has_plate and plate_type:
+                from gost_data import get_thread_length
+
+                l0 = get_thread_length(diameter, length) or length
+                stud_bottom = -(length - l0)
+                plate_center_z = stud_bottom + 18 + nut_height + plate_thickness / 2
+                plate = self._create_component(
+                    "Plate",
+                    (0, 0, plate_center_z),
+                    plate_type,
+                    plate_instances,
+                    owner_history,
+                )
+                components.append(plate)
+
+            # Нижняя гайка 1
+            if has_bottom_nut:
+                from gost_data import get_thread_length
+
+                l0 = get_thread_length(diameter, length) or length
+                stud_bottom = -(length - l0)
+                nut_bottom = self._create_component(
+                    "Nut",
+                    (0, 0, stud_bottom + 18 + plate_thickness + nut_height / 2),
+                    nut_type,
+                    nut_instances,
+                    owner_history,
+                )
+                components.append(nut_bottom)
+
+        # IfcRelDefinesByType
         self.ifc.create_entity(
             "IfcRelDefinesByType",
             GlobalId=ifc.guid.new(),
@@ -272,43 +301,53 @@ class InstanceFactory:
 
         # IfcRelContainedInSpatialStructure
         if storey:
+            elements = [assembly] if assembly_mode == "unified" else [assembly] + components
             self.ifc.create_entity(
                 "IfcRelContainedInSpatialStructure",
                 GlobalId=ifc.guid.new(),
                 OwnerHistory=owner_history,
                 RelatingStructure=storey,
-                RelatedElements=[assembly] + components,
+                RelatedElements=elements,
             )
 
-        # IfcRelAggregates
-        self.ifc.create_entity(
-            "IfcRelAggregates",
-            GlobalId=ifc.guid.new(),
-            OwnerHistory=owner_history,
-            RelatingObject=assembly,
-            RelatedObjects=components,
-        )
-
-        # IfcRelConnectsElements между компонентами
-        for i in range(len(components) - 1):
+        # IfcRelAggregates и IfcRelConnectsElements - ТОЛЬКО для separate
+        if assembly_mode == "separate":
             self.ifc.create_entity(
-                "IfcRelConnectsElements",
+                "IfcRelAggregates",
                 GlobalId=ifc.guid.new(),
                 OwnerHistory=owner_history,
-                RelatingElement=components[i],
-                RelatedElement=components[i + 1],
+                RelatingObject=assembly,
+                RelatedObjects=components,
             )
+            for i in range(len(components) - 1):
+                self.ifc.create_entity(
+                    "IfcRelConnectsElements",
+                    GlobalId=ifc.guid.new(),
+                    OwnerHistory=owner_history,
+                    RelatingElement=components[i],
+                    RelatedElement=components[i + 1],
+                )
 
-        # Mesh data для 3D визуализации
-        mesh_data = self._generate_mesh_data(
-            components, bolt_type, diameter, length, material, assembly.Name
-        )
+        # Unified mode - булева геометрия
+        if assembly_mode == "unified":
+            self._apply_unified_mode(assembly, geometry_type, bolt_type, diameter, length)
+
+        # Mesh data
+        if assembly_mode == "unified":
+            mesh_data = self._generate_mesh_data_unified(
+                assembly, bolt_type, diameter, length, material, assembly.Name
+            )
+        else:
+            mesh_data = self._generate_mesh_data(
+                components, bolt_type, diameter, length, material, assembly.Name
+            )
 
         return {
             "assembly": assembly,
-            "stud": stud,
+            "stud": stud if assembly_mode == "separate" else None,
             "components": components,
             "mesh_data": mesh_data,
+            "ifc_doc": self.ifc,
         }
 
     def _create_placement(self, location, axis_down=False):
@@ -471,8 +510,113 @@ class InstanceFactory:
 
         return mesh_data
 
+    def _apply_unified_mode(self, assembly, geometry_type, bolt_type, diameter, length):
+        """Булево объединение геометрии через IfcCSGSolid"""
+        from geometry_builder import GeometryBuilder
+        from gost_data import get_nut_dimensions, get_washer_dimensions
 
-def generate_bolt_assembly(params: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+        builder = GeometryBuilder(self.ifc)
+        nut_dim = get_nut_dimensions(diameter)
+        washer_dim = get_washer_dimensions(diameter)
+        nut_height = nut_dim["height"] if nut_dim else 10
+        washer_thickness = washer_dim["thickness"] if washer_dim else 3
+
+        all_solids = []
+
+        # Шпилька
+        if bolt_type in ["1.1", "1.2"]:
+            stud_solid = builder.create_bent_stud_solid_raw(bolt_type, diameter, length)
+        else:
+            stud_solid = builder.create_straight_stud_solid_raw(diameter, length)
+        all_solids.append(stud_solid)
+
+        # Шайба
+        washer_solid = builder.create_washer_solid_raw(
+            diameter,
+            washer_dim["outer_diameter"] if washer_dim else diameter + 10,
+            washer_thickness,
+        )
+        all_solids.append(washer_solid)
+
+        # Гайки
+        for _ in range(4 if bolt_type == "2.1" else 2):
+            nut_solid = builder.create_nut_solid_raw(diameter, nut_height)
+            all_solids.append(nut_solid)
+
+        # Плита
+        if bolt_type == "2.1":
+            from data import get_plate_dimensions
+
+            plate_dim = get_plate_dimensions(diameter)
+            if plate_dim:
+                plate_solid = builder.create_plate_solid_raw(
+                    diameter, plate_dim["width"], plate_dim["thickness"], plate_dim["hole_d"]
+                )
+                all_solids.append(plate_solid)
+
+        # Булево объединение
+        if len(all_solids) >= 2:
+            unified_shape = builder.create_boolean_union(all_solids)
+            context = builder._get_context()
+            shape_rep = self.ifc.create_entity(
+                "IfcShapeRepresentation",
+                ContextOfItems=context,
+                RepresentationIdentifier="Body",
+                RepresentationType="SolidModel",
+                Items=[unified_shape],
+            )
+            assembly.Representation = self.ifc.create_entity(
+                "IfcProductDefinitionShape", Representations=[shape_rep]
+            )
+
+    def _generate_mesh_data_unified(
+        self, assembly, bolt_type, diameter, length, material, assembly_name=None
+    ):
+        """Генерация mesh из IfcCSGSolid"""
+        from geometry_converter import convert_ifc_to_mesh
+
+        color_map = {"ANCHORBOLT": 0x4F4F4F}
+
+        # Преобразуем assembly_name в строку Python
+        if assembly_name and hasattr(assembly_name, "__str__"):
+            assembly_name = str(assembly_name)
+
+        mesh_data = convert_ifc_to_mesh(self.ifc, assembly)
+        if not mesh_data:
+            return {"meshes": []}
+
+        return {
+            "meshes": [
+                {
+                    "id": assembly.id(),
+                    "name": assembly_name or "Assembly",
+                    "vertices": mesh_data["vertices"],
+                    "indices": mesh_data["indices"],
+                    "normals": mesh_data["normals"],
+                    "color": color_map.get("ANCHORBOLT", 0x4F4F4F),
+                    "metadata": {
+                        "Type": "ANCHORBOLT",
+                        "GlobalId": assembly.GlobalId,
+                        "unified": True,
+                    },
+                }
+            ],
+            "assembly_info": {
+                "bolt_type": bolt_type,
+                "diameter": diameter,
+                "length": length,
+                "material": material,
+                "name": assembly_name or f"bolt_{bolt_type}_M{diameter}x{length}",
+            },
+        }
+
+
+def generate_bolt_assembly(
+    params: Dict[str, Any],
+    assembly_class="IfcMechanicalFastener",
+    assembly_mode="separate",
+    geometry_type="solid",
+) -> Tuple[str, Dict[str, Any]]:
     """
     Главная функция для генерации болта
 
@@ -482,6 +626,9 @@ def generate_bolt_assembly(params: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]
             - diameter: Диаметр (мм)
             - length: Длина (мм)
             - material: Материал ('09Г2С', 'ВСт3пс2', '10Г2')
+        assembly_class: Класс сборки ('IfcMechanicalFastener' или 'IfcElementAssembly')
+        assembly_mode: Режим формирования ('separate' или 'unified')
+        geometry_type: Тип геометрии ('solid' или 'triangulated')
 
     Returns:
         Кортеж (ifc_string, mesh_data):
@@ -501,6 +648,9 @@ def generate_bolt_assembly(params: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]
         diameter=params["diameter"],
         length=params["length"],
         material=params["material"],
+        assembly_class=assembly_class,
+        assembly_mode=assembly_mode,
+        geometry_type=geometry_type,
     )
 
     # Экспорт во временный файл (для совместимости с ifcopenshell.write)
