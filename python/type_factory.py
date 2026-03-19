@@ -415,6 +415,10 @@ class TypeFactory:
 
         shape = ifcopenshell.geom.create_shape(settings, temp_product)
 
+        # Удаляем временный продукт и представление
+        self.ifc.remove(temp_product)
+        self.ifc.remove(temp_shape_rep)
+
         if shape and len(shape.geometry.verts) > 0:
             verts = shape.geometry.verts
             faces = shape.geometry.faces
