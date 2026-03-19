@@ -361,13 +361,14 @@ class GeometryBuilder:
         axis_curve = self.create_composite_curve_stud(bolt_type, diameter, length)
         return self.create_swept_disk_solid(axis_curve, diameter / 2.0)
 
-    def create_straight_stud_solid_raw(self, diameter, length):
+    def create_straight_stud_solid_raw(self, diameter, length, position=None):
         """Создание IfcSweptDiskSolid для прямой шпильки (без IfcShapeRepresentation)"""
         # Прямая ось от (0,0,0) до (0,0,-length) — 3D кривая
-        axis = self.builder.polyline([V(0.0, 0.0, 0.0), V(0.0, 0.0, -length)])
+        z_offset = position[2] if position else 0.0
+        axis = self.builder.polyline([V(0.0, 0.0, z_offset), V(0.0, 0.0, z_offset - length)])
         return self.create_swept_disk_solid(axis, diameter / 2.0)
 
-    def create_nut_solid_raw(self, diameter, height):
+    def create_nut_solid_raw(self, diameter, height, position=None):
         """Создание IfcExtrudedAreaSolid для гайки (без IfcShapeRepresentation)"""
         from gost_data import get_nut_dimensions
 
@@ -396,9 +397,9 @@ class GeometryBuilder:
         profile = self.builder.profile(outer_curve, inner_curves=[inner_circle])
 
         # Экструзия — возвращаем IfcExtrudedAreaSolid напрямую
-        return self.builder.extrude(profile, magnitude=height)
+        return self.builder.extrude(profile, magnitude=height, position=position)
 
-    def create_washer_solid_raw(self, inner_diameter, outer_diameter, thickness):
+    def create_washer_solid_raw(self, inner_diameter, outer_diameter, thickness, position=None):
         """Создание IfcExtrudedAreaSolid для шайбы (без IfcShapeRepresentation)"""
         inner_radius = inner_diameter / 2.0 + 0.5
         outer_radius = outer_diameter / 2.0
@@ -411,9 +412,9 @@ class GeometryBuilder:
         profile = self.builder.profile(outer_circle, inner_curves=[inner_circle])
 
         # Экструзия — возвращаем IfcExtrudedAreaSolid напрямую
-        return self.builder.extrude(profile, magnitude=thickness)
+        return self.builder.extrude(profile, magnitude=thickness, position=position)
 
-    def create_plate_solid_raw(self, diameter, width, thickness, hole_d):
+    def create_plate_solid_raw(self, diameter, width, thickness, hole_d, position=None):
         """Создание IfcExtrudedAreaSolid для плиты (без IfcShapeRepresentation)"""
         # Прямоугольный профиль с отверстием
         rect_curve = self.builder.rectangle(size=(width, width), position=(0.0, 0.0))
@@ -423,7 +424,7 @@ class GeometryBuilder:
         profile = self.builder.profile(rect_curve, inner_curves=[hole_circle])
 
         # Экструзия — возвращаем IfcExtrudedAreaSolid напрямую
-        return self.builder.extrude(profile, magnitude=thickness)
+        return self.builder.extrude(profile, magnitude=thickness, position=position)
 
     def create_nut_solid(self, diameter, height):
         """Создание геометрии гайки (шестиугольник с отверстием) через shape_builder"""

@@ -513,7 +513,7 @@ class InstanceFactory:
     def _apply_unified_mode(self, assembly, geometry_type, bolt_type, diameter, length):
         """Булево объединение геометрии через IfcCSGSolid"""
         from geometry_builder import GeometryBuilder
-        from gost_data import get_nut_dimensions, get_washer_dimensions
+        from gost_data import get_nut_dimensions, get_thread_length, get_washer_dimensions
 
         builder = GeometryBuilder(self.ifc)
         nut_dim = get_nut_dimensions(diameter)
@@ -523,36 +523,90 @@ class InstanceFactory:
 
         all_solids = []
 
-        # Шпилька
+        # Определяем состав сборки
+        has_top_washer = True
+        has_top_nut1 = True
+        has_top_nut2 = True
+        has_bottom_nut2 = bolt_type == "2.1"
+        has_plate = bolt_type == "2.1"
+        has_bottom_nut = bolt_type == "2.1"
+
+        # Вычисляем l0 для позиционирования
+        l0 = get_thread_length(diameter, length) or length
+
+        # Шпилька — создаётся с учётом типа
         if bolt_type in ["1.1", "1.2"]:
+            # Изогнутая шпилька: геометрия уже содержит правильные координаты
             stud_solid = builder.create_bent_stud_solid_raw(bolt_type, diameter, length)
         else:
+            # Прямая шпилька: от (0,0,0) до (0,0,-length)
+            # Для типа 2.1 и 5: размещаем так, чтобы резьба начиналась в Z=0
+            # Смещаем вверх на l0, чтобы низ шпильки был в Z=-(length-l0)
             stud_solid = builder.create_straight_stud_solid_raw(diameter, length)
         all_solids.append(stud_solid)
 
-        # Шайба
+        # Шайба: центр на Z = washer_thickness/2 (над верхом шпильки Z=0)
         washer_solid = builder.create_washer_solid_raw(
             diameter,
             washer_dim["outer_diameter"] if washer_dim else diameter + 10,
             washer_thickness,
+            position=(0.0, 0.0, washer_thickness / 2),
         )
         all_solids.append(washer_solid)
 
-        # Гайки
-        for _ in range(4 if bolt_type == "2.1" else 2):
-            nut_solid = builder.create_nut_solid_raw(diameter, nut_height)
-            all_solids.append(nut_solid)
+        # Гайка 1: центр на Z = washer_thickness + nut_height/2
+        nut_solid_1 = builder.create_nut_solid_raw(
+            diameter, nut_height, position=(0.0, 0.0, washer_thickness + nut_height / 2)
+        )
+        all_solids.append(nut_solid_1)
 
-        # Плита
-        if bolt_type == "2.1":
+        # Гайка 2: центр на Z = washer_thickness + nut_height + nut_height/2
+        nut_solid_2 = builder.create_nut_solid_raw(
+            diameter,
+            nut_height,
+            position=(0.0, 0.0, washer_thickness + nut_height + nut_height / 2),
+        )
+        all_solids.append(nut_solid_2)
+
+        # Нижняя гайка 2 (тип 2.1): центр на Z = stud_bottom + 18
+        if has_bottom_nut2:
+            stud_bottom = -(length - l0)  # Низ шпильки
+            nut_bottom_z = stud_bottom + 18
+            nut_solid_bottom2 = builder.create_nut_solid_raw(
+                diameter, nut_height, position=(0.0, 0.0, nut_bottom_z)
+            )
+            all_solids.append(nut_solid_bottom2)
+
+        # Плита (тип 2.1): между нижней гайкой 2 и нижней гайкой 1
+        if has_plate:
             from data import get_plate_dimensions
 
             plate_dim = get_plate_dimensions(diameter)
             if plate_dim:
+                # Плита над нижней гайкой 2: центр на Z = stud_bottom + 18 + nut_height + plate_thickness/2
+                plate_thickness = plate_dim["thickness"]
+                plate_z = stud_bottom + 18 + nut_height + plate_thickness / 2
                 plate_solid = builder.create_plate_solid_raw(
-                    diameter, plate_dim["width"], plate_dim["thickness"], plate_dim["hole_d"]
+                    diameter,
+                    plate_dim["width"],
+                    plate_thickness,
+                    plate_dim["hole_d"],
+                    position=(0.0, 0.0, plate_z),
                 )
                 all_solids.append(plate_solid)
+
+        # Нижняя гайка 1 (тип 2.1): над плитой
+        if has_bottom_nut:
+            stud_bottom = -(length - l0)
+            plate_thickness = (
+                get_plate_dimensions(diameter)["thickness"] if get_plate_dimensions(diameter) else 0
+            )
+            # Гайка над плитой: центр на Z = stud_bottom + 18 + nut_height + plate_thickness + nut_height/2
+            nut_bottom_z = stud_bottom + 18 + nut_height + plate_thickness + nut_height / 2
+            nut_solid_bottom = builder.create_nut_solid_raw(
+                diameter, nut_height, position=(0.0, 0.0, nut_bottom_z)
+            )
+            all_solids.append(nut_solid_bottom)
 
         # Булево объединение
         if len(all_solids) >= 2:
