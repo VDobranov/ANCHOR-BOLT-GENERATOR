@@ -23,9 +23,12 @@ class InstanceFactory:
         self,
         ifc_doc: IfcDocumentProtocol,
         type_factory: Optional[TypeFactoryProtocol] = None,
+        geometry_type: str = "solid",
     ):
         self.ifc: IfcDocumentProtocol = ifc_doc
-        self.type_factory: TypeFactoryProtocol = type_factory or TypeFactory(ifc_doc)
+        self.type_factory: TypeFactoryProtocol = (
+            type_factory or TypeFactory(ifc_doc, geometry_type=geometry_type)
+        )
         self.material_manager = MaterialManager(ifc_doc)
 
     def create_bolt_assembly(
@@ -817,7 +820,7 @@ def generate_bolt_assembly(
     # Сброс документа: удаление предыдущих болтов
     ifc_doc = reset_ifc_document()
 
-    factory = InstanceFactory(ifc_doc)
+    factory = InstanceFactory(ifc_doc, geometry_type=geometry_type)
     result = factory.create_bolt_assembly(
         bolt_type=params["bolt_type"],
         diameter=params["diameter"],

@@ -27,12 +27,15 @@ class TypeFactory:
     - Геометрия кэшируется по ключу (тип, диаметр, длина)
     """
 
-    def __init__(self, ifc_doc: IfcDocumentProtocol):
+    def __init__(
+        self, ifc_doc: IfcDocumentProtocol, geometry_type: str = "solid"
+    ):
         self.ifc: IfcDocumentProtocol = ifc_doc
         self.types_cache: Dict[Any, Any] = {}
         self.representation_maps: Dict[tuple, Any] = {}  # Кэш RepresentationMap по ключу
         self.builder = GeometryBuilder(ifc_doc)
         self.material_manager = MaterialManager(ifc_doc)
+        self.geometry_type = geometry_type  # "solid" или "faceted"
         # Получаем OwnerHistory из документа
         owner_histories = self.ifc.by_type("IfcOwnerHistory")
         self.owner_history = owner_histories[0] if owner_histories else None
@@ -80,6 +83,10 @@ class TypeFactory:
         else:
             # Другие типы
             shape_rep = self.builder.create_straight_stud_solid(diameter, length)
+
+        # Конвертация в faceted если нужно
+        if self.geometry_type == "faceted":
+            shape_rep = self._create_faceted_representation(shape_rep)
 
         # Ассоциируем RepresentationMap с типом
         self.builder.associate_representation(stud_type, shape_rep)
@@ -132,6 +139,11 @@ class TypeFactory:
 
         # Делегируем построение геометрии в GeometryBuilder
         shape_rep = self.builder.create_nut_solid(diameter, height)
+
+        # Конвертация в faceted если нужно
+        if self.geometry_type == "faceted":
+            shape_rep = self._create_faceted_representation(shape_rep)
+
         self.builder.associate_representation(nut_type, shape_rep)
 
         # Кэшируем RepresentationMap
@@ -183,6 +195,11 @@ class TypeFactory:
 
         # Делегируем построение геометрии в GeometryBuilder
         shape_rep = self.builder.create_washer_solid(diameter, outer_d, thickness)
+
+        # Конвертация в faceted если нужно
+        if self.geometry_type == "faceted":
+            shape_rep = self._create_faceted_representation(shape_rep)
+
         self.builder.associate_representation(washer_type, shape_rep)
 
         # Создаём материал и ассоциируем с типом
@@ -234,6 +251,11 @@ class TypeFactory:
 
         # Создание геометрии
         shape_rep = self.builder.create_plate_solid(diameter, width, thickness, hole_d)
+
+        # Конвертация в faceted если нужно
+        if self.geometry_type == "faceted":
+            shape_rep = self._create_faceted_representation(shape_rep)
+
         self.builder.associate_representation(plate_type, shape_rep)
 
         # Создание материала и ассоциация
@@ -341,3 +363,79 @@ class TypeFactory:
             geom_key = (component_type, diameter)
 
         return self.representation_maps.get(geom_key)
+
+    def _create_faceted_representation(self, solid_representation):
+        """
+        Создание IfcFacetedBrep из solid representation
+
+        Args:
+            solid_representation: IfcShapeRepresentation с solid геометрией
+
+        Returns:
+            IfcShapeRepresentation с IfcFacetedBrep
+        """
+        import ifcopenshell
+        import ifcopenshell.geom
+        from ifcopenshell.util.shape_builder import ShapeBuilder
+
+        shape_builder = ShapeBuilder(self.ifc)
+
+        # Создаём временный продукт для извлечения mesh
+        context = solid_representation.ContextOfItems
+
+        temp_shape_rep = self.ifc.create_entity(
+            "IfcShapeRepresentation",
+            ContextOfItems=context,
+            RepresentationIdentifier="Body",
+            RepresentationType="SolidModel",
+            Items=[solid_representation.Items[0]],
+        )
+
+        temp_product = self.ifc.create_entity(
+            "IfcBuildingElementProxy",
+            GlobalId=ifcopenshell.guid.new(),
+            Name="TempProxyForMesh",
+            ObjectPlacement=self.ifc.create_entity(
+                "IfcLocalPlacement",
+                None,
+                self.ifc.create_entity(
+                    "IfcAxis2Placement3D",
+                    self.ifc.create_entity("IfcCartesianPoint", (0.0, 0.0, 0.0)),
+                ),
+            ),
+            Representation=self.ifc.create_entity(
+                "IfcProductDefinitionShape", Representations=[temp_shape_rep]
+            ),
+        )
+
+        # Извлекаем mesh через ifcopenshell.geom
+        settings = ifcopenshell.geom.settings()
+        settings.set(settings.WELD_VERTICES, True)
+        settings.set(settings.USE_WORLD_COORDS, True)
+
+        shape = ifcopenshell.geom.create_shape(settings, temp_product)
+
+        if shape and len(shape.geometry.verts) > 0:
+            verts = shape.geometry.verts
+            faces = shape.geometry.faces
+
+            # Масштабируем из метров в миллиметры
+            verts_mm = [v * 1000.0 for v in verts]
+
+            points = [tuple(verts_mm[i : i + 3]) for i in range(0, len(verts_mm), 3)]
+            triangles = [list(faces[i : i + 3]) for i in range(0, len(faces), 3)]
+
+            faceted_brep = shape_builder.faceted_brep(points, triangles)
+
+            shape_rep = self.ifc.create_entity(
+                "IfcShapeRepresentation",
+                ContextOfItems=context,
+                RepresentationIdentifier="Body",
+                RepresentationType="Brep",
+                Items=[faceted_brep],
+            )
+
+            return shape_rep
+
+        # Fallback: возвращаем оригинальную solid геометрию
+        return solid_representation
