@@ -278,13 +278,7 @@ class IFCExportSettings {
             assemblyMode: document.getElementById('assemblyMode'),
             geometryType: document.getElementById('geometryType')
         };
-        
-        console.log('IFCExportSettings initialized:', {
-            assemblyClass: this.elements.assemblyClass,
-            assemblyMode: this.elements.assemblyMode,
-            geometryType: this.elements.geometryType
-        });
-        
+
         // Добавляем обработчики изменений
         this.setupListeners();
     }
@@ -326,16 +320,7 @@ class IFCExportSettings {
             assemblyMode: this.elements.assemblyMode?.value || 'separate',
             geometryType: this.elements.geometryType?.value || 'solid'
         };
-        
-        console.log('getSettings() elements:', {
-            assemblyClass: this.elements.assemblyClass,
-            assemblyClassValue: this.elements.assemblyClass?.value,
-            assemblyMode: this.elements.assemblyMode,
-            assemblyModeValue: this.elements.assemblyMode?.value,
-            geometryType: this.elements.geometryType,
-            geometryTypeValue: this.elements.geometryType?.value
-        });
-        
+
         return settings;
     }
 

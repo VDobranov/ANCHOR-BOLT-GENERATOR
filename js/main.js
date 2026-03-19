@@ -64,7 +64,6 @@ async function handleParamsChange(params) {
  * Обработчик изменения настроек экспорта
  */
 async function handleExportSettingsChange(settings) {
-    console.log('Export settings changed:', settings);
     // Перегенерировать болт с новыми настройками
     const params = form.getParams();
     await generateBolt(params);
@@ -85,18 +84,13 @@ async function generateBolt(params) {
     try {
         // Получение настроек экспорта
         const settings = exportSettings.getSettings();
-        
-        // Логирование для отладки
-        console.log('Export settings:', settings);
-        
+
         // Конвертация настроек для Python
         const exportSettingsForPython = {
             assembly_class: settings.assemblyClass,
             assembly_mode: settings.assemblyMode,
             geometry_type: settings.geometryType
         };
-
-        console.log('Calling generateBolt with settings:', exportSettingsForPython);
 
         const result = await bridge.generateBolt(params, exportSettingsForPython);
 
