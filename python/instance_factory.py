@@ -556,30 +556,33 @@ class InstanceFactory:
             )
         all_solids.append(stud_solid)
 
-        # Шайба: центр на Z = washer_thickness (как в separate режиме)
-        # В separate: ObjectPlacement Z=washer_thickness/2, геометрия 0..thickness
-        # В мире: washer_thickness/2 .. washer_thickness/2+thickness = washer_thickness (центр)
+        # Шайба: в separate ObjectPlacement Z=washer_thickness/2=4мм, геометрия 0..8мм
+        # В мире: 4..12мм, центр 8мм
+        # В unified: position=washer_thickness/2=4мм даёт геометрию от 4мм до 12мм
         washer_solid = builder.create_washer_solid_raw(
             diameter,
             washer_dim["outer_diameter"] if washer_dim else diameter + 10,
             washer_thickness,
-            position=(0.0, 0.0, washer_thickness),
+            position=(0.0, 0.0, washer_thickness / 2),
         )
         all_solids.append(washer_solid)
 
-        # Гайка 1: центр на Z = washer_thickness + nut_height/2
+        # Гайка 1: лежит на шайбе (Z=12мм), центр на Z = 20мм
+        # Шайба: 4-12мм, гайка 1: 12-28мм
+        # position = washer_thickness/2 + washer_thickness = 4 + 8 = 12мм
         nut_solid_1 = builder.create_nut_solid_raw(
             diameter,
             nut_height,
-            position=(0.0, 0.0, washer_thickness + nut_height / 2),
+            position=(0.0, 0.0, washer_thickness / 2 + washer_thickness),
         )
         all_solids.append(nut_solid_1)
 
-        # Гайка 2: центр на Z = washer_thickness + nut_height + nut_height/2
+        # Гайка 2: с просветом 4мм, position = washer_thickness/2 + washer_thickness + nut_height + 4
+        # = 4 + 8 + 16 + 4 = 32мм, геометрия от 32 до 48мм
         nut_solid_2 = builder.create_nut_solid_raw(
             diameter,
             nut_height,
-            position=(0.0, 0.0, washer_thickness + nut_height + nut_height / 2),
+            position=(0.0, 0.0, washer_thickness / 2 + washer_thickness + nut_height + 4),
         )
         all_solids.append(nut_solid_2)
 
