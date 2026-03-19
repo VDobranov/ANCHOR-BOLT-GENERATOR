@@ -541,35 +541,34 @@ class InstanceFactory:
             stud_solid = builder.create_bent_stud_solid_raw(bolt_type, diameter, length)
         else:
             # Прямая шпилька: от (0,0,0) до (0,0,-length)
-            # Для типа 2.1 и 5: смещаем на l0 вверх, чтобы резьба начиналась в Z=0
-            # Низ шпильки будет в Z=-(length-l0)
-            stud_solid = builder.create_straight_stud_solid_raw(
-                diameter, length, position=(0.0, 0.0, l0)
-            )
+            # В separate режиме шпилька имеет ObjectPlacement Z=l0, но геометрия от (0,0,0)
+            # В unified режиме создаём геометрию сразу в мировых координатах
+            # Шпилька от Z=0 до Z=-length (без смещения)
+            stud_solid = builder.create_straight_stud_solid_raw(diameter, length)
         all_solids.append(stud_solid)
 
-        # Шайба: центр на Z = l0 + washer_thickness/2 (над верхом шпильки Z=l0)
+        # Шайба: центр на Z = washer_thickness/2 (над верхом шпильки Z=0)
         washer_solid = builder.create_washer_solid_raw(
             diameter,
             washer_dim["outer_diameter"] if washer_dim else diameter + 10,
             washer_thickness,
-            position=(0.0, 0.0, l0 + washer_thickness / 2),
+            position=(0.0, 0.0, washer_thickness / 2),
         )
         all_solids.append(washer_solid)
 
-        # Гайка 1: центр на Z = l0 + washer_thickness + nut_height/2
+        # Гайка 1: центр на Z = washer_thickness/2 + nut_height/2 (над верхом шайбы)
         nut_solid_1 = builder.create_nut_solid_raw(
             diameter,
             nut_height,
-            position=(0.0, 0.0, l0 + washer_thickness + nut_height / 2),
+            position=(0.0, 0.0, washer_thickness / 2 + nut_height / 2),
         )
         all_solids.append(nut_solid_1)
 
-        # Гайка 2: центр на Z = l0 + washer_thickness + nut_height + nut_height/2
+        # Гайка 2: центр на Z = washer_thickness + nut_height + nut_height/2
         nut_solid_2 = builder.create_nut_solid_raw(
             diameter,
             nut_height,
-            position=(0.0, 0.0, l0 + washer_thickness + nut_height + nut_height / 2),
+            position=(0.0, 0.0, washer_thickness + nut_height + nut_height / 2),
         )
         all_solids.append(nut_solid_2)
 
