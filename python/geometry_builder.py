@@ -363,8 +363,8 @@ class GeometryBuilder:
 
     def create_straight_stud_solid_raw(self, diameter, length):
         """Создание IfcSweptDiskSolid для прямой шпильки (без IfcShapeRepresentation)"""
-        # Прямая ось от (0,0,0) до (0,0,-length)
-        axis = self.builder.polyline([V(0.0, 0.0), V(0.0, -length)])
+        # Прямая ось от (0,0,0) до (0,0,-length) — 3D кривая
+        axis = self.builder.polyline([V(0.0, 0.0, 0.0), V(0.0, 0.0, -length)])
         return self.create_swept_disk_solid(axis, diameter / 2.0)
 
     def create_nut_solid_raw(self, diameter, height):
@@ -416,7 +416,7 @@ class GeometryBuilder:
     def create_plate_solid_raw(self, diameter, width, thickness, hole_d):
         """Создание IfcExtrudedAreaSolid для плиты (без IfcShapeRepresentation)"""
         # Прямоугольный профиль с отверстием
-        rect_curve = self.builder.rectangle((0.0, 0.0), width, width)
+        rect_curve = self.builder.rectangle(size=(width, width), position=(0.0, 0.0))
         hole_circle = self.builder.circle((0.0, 0.0), hole_d / 2.0)
 
         # Профиль с отверстием
