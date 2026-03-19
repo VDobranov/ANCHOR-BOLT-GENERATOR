@@ -421,8 +421,15 @@ class GeometryBuilder:
 
     def create_plate_solid_raw(self, diameter, width, thickness, hole_d, position=None):
         """Создание IfcExtrudedAreaSolid для плиты (без IfcShapeRepresentation)"""
-        # Прямоугольный профиль с отверстием
-        rect_curve = self.builder.rectangle(size=(width, width), position=(0.0, 0.0))
+        # Прямоугольный профиль с отверстием, центрированный вокруг (0,0)
+        half = width / 2.0
+        square_points = [
+            V(-half, -half),
+            V(half, -half),
+            V(half, half),
+            V(-half, half),
+        ]
+        rect_curve = self.builder.polyline(square_points, closed=True)
         hole_circle = self.builder.circle((0.0, 0.0), hole_d / 2.0)
 
         # Профиль с отверстием
