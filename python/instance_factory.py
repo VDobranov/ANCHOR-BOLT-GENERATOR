@@ -536,44 +536,47 @@ class InstanceFactory:
 
         # Шпилька — создаётся с учётом типа
         if bolt_type in ["1.1", "1.2"]:
-            # Изогнутая шпилька: геометрия уже содержит правильные координаты
-            # Верх резьбы в Z=0, низ шпильки в Z=-(Ll)
+            # Изогнутая шпилька: геометрия от Z=0 до Z=-Ll
             # В separate режиме шпилька имеет ObjectPlacement Z=l0
-            # В unified режиме нужно сместить геометрию на l0 вверх
-            stud_solid = builder.create_bent_stud_solid_raw(bolt_type, diameter, length)
-            # TODO: применить трансформацию для изогнутой шпильки
-        else:
-            # Прямая шпилька: в separate режиме имеет ObjectPlacement Z=l0
             # В unified режиме создаём геометрию сразу в мировых координатах
-            # Верх шпильки: Z = l0
-            # Низ шпильки: Z = l0 - length = -(length - l0)
+            # Смещаем на l0 вверх
+            stud_solid = builder.create_bent_stud_solid_raw(
+                bolt_type, diameter, length, position=(0.0, 0.0, l0)
+            )
+        else:
+            # Прямая шпилька: в separate режиме геометрия от (0,0,0) до (0,0,-length)
+            # ObjectPlacement Z=l0 смещает инстанс в мир на Z=l0
+            # В unified режиме создаём геометрию сразу в мировых координатах
+            # От Z=l0 до Z=l0-length
             stud_solid = builder.create_straight_stud_solid_raw(
                 diameter, length, position=(0.0, 0.0, l0)
             )
         all_solids.append(stud_solid)
 
-        # Шайба: центр на Z = l0 + washer_thickness/2 (над верхом шпильки Z=l0)
+        # Шайба: центр на Z = washer_thickness (как в separate режиме)
+        # В separate: ObjectPlacement Z=washer_thickness/2, геометрия 0..thickness
+        # В мире: washer_thickness/2 .. washer_thickness/2+thickness = washer_thickness (центр)
         washer_solid = builder.create_washer_solid_raw(
             diameter,
             washer_dim["outer_diameter"] if washer_dim else diameter + 10,
             washer_thickness,
-            position=(0.0, 0.0, l0 + washer_thickness / 2),
+            position=(0.0, 0.0, washer_thickness),
         )
         all_solids.append(washer_solid)
 
-        # Гайка 1: центр на Z = l0 + washer_thickness/2 + nut_height/2
+        # Гайка 1: центр на Z = washer_thickness + nut_height/2
         nut_solid_1 = builder.create_nut_solid_raw(
             diameter,
             nut_height,
-            position=(0.0, 0.0, l0 + washer_thickness / 2 + nut_height / 2),
+            position=(0.0, 0.0, washer_thickness + nut_height / 2),
         )
         all_solids.append(nut_solid_1)
 
-        # Гайка 2: центр на Z = l0 + washer_thickness + nut_height + nut_height/2
+        # Гайка 2: центр на Z = washer_thickness + nut_height + nut_height/2
         nut_solid_2 = builder.create_nut_solid_raw(
             diameter,
             nut_height,
-            position=(0.0, 0.0, l0 + washer_thickness + nut_height + nut_height / 2),
+            position=(0.0, 0.0, washer_thickness + nut_height + nut_height / 2),
         )
         all_solids.append(nut_solid_2)
 

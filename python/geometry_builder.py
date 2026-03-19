@@ -192,7 +192,7 @@ class GeometryBuilder:
 
         return [p1, p2, p3, p4, p5, p6]
 
-    def create_composite_curve_stud(self, bolt_type, diameter, length):
+    def create_composite_curve_stud(self, bolt_type, diameter, length, position=None):
         """
         Создание составной кривой для шпильки через shape_builder.polyline()
 
@@ -222,6 +222,8 @@ class GeometryBuilder:
             get_thread_length,
         )
 
+        z_offset = position[2] if position else 0.0
+
         # Для типа 1.1 используем подход BlenderBIM
         if bolt_type == "1.1":
             R = get_bolt_bend_radius(diameter, length) or diameter
@@ -230,12 +232,12 @@ class GeometryBuilder:
             L0 = get_thread_length(diameter, length) or 0
             L2 = get_bolt_hook_length(diameter, length) or 0
 
-            # 5 точек как в BlenderBIM
-            p1 = [0.0, 0.0, 0.0]
-            p2 = [0.0, 0.0, -Ll + r]
-            p3 = [r - r / math.sqrt(2), 0.0, -Ll + r - r / math.sqrt(2)]
-            p4 = [r, 0.0, -Ll]
-            p5 = [r + L2, 0.0, -Ll]
+            # 5 точек как в BlenderBIM, смещённые на z_offset
+            p1 = [0.0, 0.0, 0.0 + z_offset]
+            p2 = [0.0, 0.0, -Ll + r + z_offset]
+            p3 = [r - r / math.sqrt(2), 0.0, -Ll + r - r / math.sqrt(2) + z_offset]
+            p4 = [r, 0.0, -Ll + z_offset]
+            p5 = [r + L2, 0.0, -Ll + z_offset]
 
             # shape_builder.polyline с arc_points=[2] (индекс средней точки дуги)
             points = [V(*p1), V(*p2), V(*p3), V(*p4), V(*p5)]
@@ -252,6 +254,9 @@ class GeometryBuilder:
             # Расчёт 6 точек для типа 1.2
             points = self._calculate_stud_points_type_1_2(diameter, length, l1, l2, l3, R)
 
+            # Смещаем все точки на z_offset
+            points = [[p[0], p[1], p[2] + z_offset] for p in points]
+
             # shape_builder.polyline с arc_points=[3] (индекс средней точки дуги p4)
             points_v = [V(*p) for p in points]
             return self.builder.polyline(points_v, arc_points=[3])
@@ -263,8 +268,8 @@ class GeometryBuilder:
             # Тип 2.1: прямая шпилька длиной L
             # Верх шпильки: Z = 0
             # Низ шпильки: Z = -length
-            p1 = V(0.0, 0.0, 0.0)
-            p2 = V(0.0, 0.0, float(-length))
+            p1 = V(0.0, 0.0, 0.0 + z_offset)
+            p2 = V(0.0, 0.0, float(-length) + z_offset)
 
             return self.builder.polyline([p1, p2])
 
@@ -274,8 +279,8 @@ class GeometryBuilder:
             # Тип 5: прямая шпилька длиной L
             # Верх шпильки: Z = 0
             # Низ шпильки: Z = -length
-            p1 = V(0.0, 0.0, 0.0)
-            p2 = V(0.0, 0.0, float(-length))
+            p1 = V(0.0, 0.0, 0.0 + z_offset)
+            p2 = V(0.0, 0.0, float(-length) + z_offset)
 
             return self.builder.polyline([p1, p2])
 
@@ -356,9 +361,9 @@ class GeometryBuilder:
 
         return self._create_shape_representation(context, swept_area)
 
-    def create_bent_stud_solid_raw(self, bolt_type, diameter, length):
+    def create_bent_stud_solid_raw(self, bolt_type, diameter, length, position=None):
         """Создание IfcSweptDiskSolid для изогнутой шпильки (без IfcShapeRepresentation)"""
-        axis_curve = self.create_composite_curve_stud(bolt_type, diameter, length)
+        axis_curve = self.create_composite_curve_stud(bolt_type, diameter, length, position)
         return self.create_swept_disk_solid(axis_curve, diameter / 2.0)
 
     def create_straight_stud_solid_raw(self, diameter, length, position=None):
