@@ -28,6 +28,11 @@ class TestExportSettings:
         return InstanceFactory(ifc_doc)
 
     @pytest.fixture
+    def factory_faceted(self, ifc_doc):
+        """Создание InstanceFactory с faceted геометрией"""
+        return InstanceFactory(ifc_doc, geometry_type="faceted")
+
+    @pytest.fixture
     def bolt_params(self):
         """Базовые параметры болта для тестов"""
         return {
@@ -196,9 +201,11 @@ class TestExportSettings:
     @pytest.mark.parametrize(
         "assembly_class,assembly_mode,geometry_type",
         [
-            # separate режим: только solid (ExtrudedAreaSolid)
+            # separate режим: solid и faceted
             ("IfcMechanicalFastener", "separate", "solid"),
+            ("IfcMechanicalFastener", "separate", "faceted"),
             ("IfcElementAssembly", "separate", "solid"),
+            ("IfcElementAssembly", "separate", "faceted"),
             # unified режим: solid и faceted
             ("IfcMechanicalFastener", "unified", "solid"),
             ("IfcMechanicalFastener", "unified", "faceted"),
@@ -212,9 +219,12 @@ class TestExportSettings:
         ],
     )
     def test_all_combinations(
-        self, factory, bolt_params, assembly_class, assembly_mode, geometry_type
+        self, ifc_doc, bolt_params, assembly_class, assembly_mode, geometry_type
     ):
         """Тест всех комбинаций настроек"""
+        # Создаём factory с правильным geometry_type
+        factory = InstanceFactory(ifc_doc, geometry_type=geometry_type)
+        
         result = factory.create_bolt_assembly(
             assembly_class=assembly_class,
             assembly_mode=assembly_mode,
@@ -248,9 +258,10 @@ class TestExportSettings:
                 boolean_results = ifc_doc.by_type("IfcBooleanResult")
                 assert len(boolean_results) > 0, f"Ожидается IfcBooleanResult для {assembly_mode}"
 
-        # Проверка geometry_type (только для unified режима)
-        # Для separate режима геометрия создаётся через IfcExtrudedAreaSolid, а не IfcFacetedBrep
-        if geometry_type == "faceted" and assembly_mode == "unified":
+        # Проверка geometry_type
+        # Для separate режима: faceted создаёт IfcFacetedBrep для каждого компонента
+        # Для unified режима: faceted создаёт один IfcFacetedBrep для всей сборки
+        if geometry_type == "faceted":
             breps = ifc_doc.by_type("IfcFacetedBrep")
             assert len(breps) > 0, f"Ожидается IfcFacetedBrep для {geometry_type}"
         elif geometry_type == "triangulated":
