@@ -233,7 +233,8 @@ class InstanceFactory:
 
                 l0 = get_thread_length(diameter, length) or length
                 stud_bottom = -(length - l0)
-                plate_center_z = stud_bottom + 18 + nut_height + plate_thickness / 2
+                # Плита лежит НА нижней гайке 2: центр на Z = stud_bottom + 18 + nut_height/2 + plate_thickness/2
+                plate_center_z = stud_bottom + 18 + nut_height / 2 + plate_thickness / 2
                 plate = self._create_component(
                     "Plate",
                     (0, 0, plate_center_z),
@@ -249,9 +250,11 @@ class InstanceFactory:
 
                 l0 = get_thread_length(diameter, length) or length
                 stud_bottom = -(length - l0)
+                # Нижняя гайка 1 лежит НА плите: центр на Z = stud_bottom + 18 + nut_height/2 + plate_thickness + nut_height/2
+                nut_bottom_z = stud_bottom + 18 + nut_height / 2 + plate_thickness + nut_height / 2
                 nut_bottom = self._create_component(
                     "Nut",
-                    (0, 0, stud_bottom + 18 + plate_thickness + nut_height / 2),
+                    (0, 0, nut_bottom_z),
                     nut_type,
                     nut_instances,
                     owner_history,
@@ -595,9 +598,9 @@ class InstanceFactory:
 
             plate_dim = get_plate_dimensions(diameter)
             if plate_dim:
-                # Плита над нижней гайкой 2: центр на Z = stud_bottom + 18 + nut_height + plate_thickness/2
+                # Плита лежит НА нижней гайке 2: центр на Z = stud_bottom + 18 + nut_height/2 + plate_thickness/2
                 plate_thickness = plate_dim["thickness"]
-                plate_z = stud_bottom + 18 + nut_height + plate_thickness / 2
+                plate_z = stud_bottom + 18 + nut_height / 2 + plate_thickness / 2
                 plate_solid = builder.create_plate_solid_raw(
                     diameter,
                     plate_dim["width"],
@@ -613,8 +616,8 @@ class InstanceFactory:
             plate_thickness = (
                 get_plate_dimensions(diameter)["thickness"] if get_plate_dimensions(diameter) else 0
             )
-            # Гайка над плитой: центр на Z = stud_bottom + 18 + plate_thickness + nut_height/2
-            nut_bottom_z = stud_bottom + 18 + plate_thickness + nut_height / 2
+            # Гайка лежит НА плите: центр на Z = stud_bottom + 18 + nut_height/2 + plate_thickness + nut_height/2
+            nut_bottom_z = stud_bottom + 18 + nut_height / 2 + plate_thickness + nut_height / 2
             nut_solid_bottom = builder.create_nut_solid_raw(
                 diameter, nut_height, position=(0.0, 0.0, nut_bottom_z)
             )
