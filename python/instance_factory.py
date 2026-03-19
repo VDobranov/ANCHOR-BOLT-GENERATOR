@@ -613,8 +613,8 @@ class InstanceFactory:
             plate_thickness = (
                 get_plate_dimensions(diameter)["thickness"] if get_plate_dimensions(diameter) else 0
             )
-            # Гайка над плитой: центр на Z = stud_bottom + 18 + nut_height + plate_thickness + nut_height/2
-            nut_bottom_z = stud_bottom + 18 + nut_height + plate_thickness + nut_height / 2
+            # Гайка над плитой: центр на Z = stud_bottom + 18 + plate_thickness + nut_height/2
+            nut_bottom_z = stud_bottom + 18 + plate_thickness + nut_height / 2
             nut_solid_bottom = builder.create_nut_solid_raw(
                 diameter, nut_height, position=(0.0, 0.0, nut_bottom_z)
             )
