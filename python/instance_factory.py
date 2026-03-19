@@ -692,8 +692,14 @@ class InstanceFactory:
                         verts = shape.geometry.verts
                         faces = shape.geometry.faces
 
+                        # ifcopenshell.geom возвращает координаты в метрах,
+                        # а IFC использует миллиметры — масштабируем в 1000 раз
+                        verts_mm = [v * 1000.0 for v in verts]
+
                         # Преобразуем плоский список вершин в список кортежей
-                        points = [tuple(verts[i : i + 3]) for i in range(0, len(verts), 3)]
+                        points = [
+                            tuple(verts_mm[i : i + 3]) for i in range(0, len(verts_mm), 3)
+                        ]
 
                         # Преобразуем плоский список граней в список треугольников
                         triangles = [list(faces[i : i + 3]) for i in range(0, len(faces), 3)]
