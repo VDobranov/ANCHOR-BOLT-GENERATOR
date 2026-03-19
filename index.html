@@ -70,7 +70,7 @@
                     
                     <!-- Класс сборки -->
                     <div class="form-group">
-                        <label for="assemblyClass">Класс сборки:</label>
+                        <label for="assemblyClass">Класс для сборки:</label>
                         <select id="assemblyClass" required>
                             <option value="IfcMechanicalFastener" selected>IfcMechanicalFastener</option>
                             <option value="IfcElementAssembly">IfcElementAssembly</option>
@@ -79,10 +79,10 @@
 
                     <!-- Режим формирования -->
                     <div class="form-group">
-                        <label for="assemblyMode">Режим формирования:</label>
+                        <label for="assemblyMode">Состав болта:</label>
                         <select id="assemblyMode" required>
-                            <option value="separate" selected>Вроссыпь (отдельные компоненты)</option>
-                            <option value="unified">Целиком (булева операция)</option>
+                            <option value="separate" selected>Вроссыпь</option>
+                            <option value="unified">Всё одним телом</option>
                         </select>
                     </div>
 
@@ -90,8 +90,8 @@
                     <div class="form-group">
                         <label for="geometryType">Тип геометрии:</label>
                         <select id="geometryType" required>
-                            <option value="solid" selected>Твердотельная (B-Rep)</option>
-                            <option value="triangulated" disabled>Триангулированная (скоро)</option>
+                            <option value="solid" selected>Твердотельная</option>
+                            <option value="triangulated" disabled>Поверхностная</option>
                         </select>
                     </div>
 
