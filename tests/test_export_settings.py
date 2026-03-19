@@ -163,6 +163,25 @@ class TestExportSettings:
 
         assert has_solid, "Ожидается твёрдотельная геометрия"
 
+    def test_geometry_type_faceted(self, factory, bolt_params):
+        """Faceted: геометрия через IfcFacetedBrep"""
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="unified",
+            geometry_type="faceted",
+            **bolt_params,
+        )
+
+        ifc_doc = result["ifc_doc"]
+
+        # Проверка наличия IfcFacetedBrep
+        has_brep = False
+        for entity in ifc_doc.by_type("IfcFacetedBrep"):
+            has_brep = True
+            break
+
+        assert has_brep, "Ожидается геометрия IfcFacetedBrep"
+
     def test_geometry_type_triangulated(self, factory, bolt_params):
         """Triangulated: геометрия через IfcTriangulatedFaceSet
 
@@ -171,27 +190,31 @@ class TestExportSettings:
         pytest.skip("Triangulated режим требует реализации конвертации B-Rep в mesh")
 
     # =============================================================================
-    # Комбинированные тесты (все 12 комбинаций)
+    # Комбинированные тесты (все комбинации)
     # =============================================================================
 
     @pytest.mark.parametrize(
         "assembly_class,assembly_mode,geometry_type",
         [
+            # separate режим: только solid (ExtrudedAreaSolid)
             ("IfcMechanicalFastener", "separate", "solid"),
+            ("IfcElementAssembly", "separate", "solid"),
+            # unified режим: solid и faceted
+            ("IfcMechanicalFastener", "unified", "solid"),
+            ("IfcMechanicalFastener", "unified", "faceted"),
+            ("IfcElementAssembly", "unified", "solid"),
+            ("IfcElementAssembly", "unified", "faceted"),
             # TODO: Добавить triangulated режимы после реализации
             # ("IfcMechanicalFastener", "separate", "triangulated"),
-            ("IfcMechanicalFastener", "unified", "solid"),
             # ("IfcMechanicalFastener", "unified", "triangulated"),
-            ("IfcElementAssembly", "separate", "solid"),
             # ("IfcElementAssembly", "separate", "triangulated"),
-            ("IfcElementAssembly", "unified", "solid"),
             # ("IfcElementAssembly", "unified", "triangulated"),
         ],
     )
     def test_all_combinations(
         self, factory, bolt_params, assembly_class, assembly_mode, geometry_type
     ):
-        """Тест всех комбинаций настроек (без triangulated)"""
+        """Тест всех комбинаций настроек"""
         result = factory.create_bolt_assembly(
             assembly_class=assembly_class,
             assembly_mode=assembly_mode,
@@ -216,12 +239,21 @@ class TestExportSettings:
 
         # Проверка assembly_mode
         if assembly_mode == "unified":
-            # Должен быть IfcBooleanResult
-            boolean_results = ifc_doc.by_type("IfcBooleanResult")
-            assert len(boolean_results) > 0, f"Ожидается IfcBooleanResult для {assembly_mode}"
+            if geometry_type == "faceted":
+                # Для faceted режима: IfcFacetedBrep уже создан, BooleanResult может не быть
+                breps = ifc_doc.by_type("IfcFacetedBrep")
+                assert len(breps) > 0, f"Ожидается IfcFacetedBrep для {geometry_type}"
+            else:
+                # Для solid режима: должен быть IfcBooleanResult
+                boolean_results = ifc_doc.by_type("IfcBooleanResult")
+                assert len(boolean_results) > 0, f"Ожидается IfcBooleanResult для {assembly_mode}"
 
-        # Проверка geometry_type
-        if geometry_type == "triangulated":
+        # Проверка geometry_type (только для unified режима)
+        # Для separate режима геометрия создаётся через IfcExtrudedAreaSolid, а не IfcFacetedBrep
+        if geometry_type == "faceted" and assembly_mode == "unified":
+            breps = ifc_doc.by_type("IfcFacetedBrep")
+            assert len(breps) > 0, f"Ожидается IfcFacetedBrep для {geometry_type}"
+        elif geometry_type == "triangulated":
             triangulated_faces = ifc_doc.by_type("IfcTriangulatedFaceSet")
             assert (
                 len(triangulated_faces) > 0

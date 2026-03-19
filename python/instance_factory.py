@@ -20,7 +20,9 @@ class InstanceFactory:
     """Фабрика инстансов болтов"""
 
     def __init__(
-        self, ifc_doc: IfcDocumentProtocol, type_factory: Optional[TypeFactoryProtocol] = None
+        self,
+        ifc_doc: IfcDocumentProtocol,
+        type_factory: Optional[TypeFactoryProtocol] = None,
     ):
         self.ifc: IfcDocumentProtocol = ifc_doc
         self.type_factory: TypeFactoryProtocol = type_factory or TypeFactory(ifc_doc)
@@ -489,7 +491,12 @@ class InstanceFactory:
         """Генерация mesh данных через ifcopenshell.geom"""
         from geometry_converter import convert_assembly_to_meshes
 
-        color_map = {"STUD": 0x8B8B8B, "WASHER": 0xA9A9A9, "NUT": 0x696969, "ANCHORBOLT": 0x4F4F4F}
+        color_map = {
+            "STUD": 0x8B8B8B,
+            "WASHER": 0xA9A9A9,
+            "NUT": 0x696969,
+            "ANCHORBOLT": 0x4F4F4F,
+        }
 
         # Преобразуем assembly_name в строку Python
         if assembly_name and hasattr(assembly_name, "__str__"):
@@ -582,7 +589,11 @@ class InstanceFactory:
         nut_solid_2 = builder.create_nut_solid_raw(
             diameter,
             nut_height,
-            position=(0.0, 0.0, washer_thickness / 2 + washer_thickness + nut_height + 4),
+            position=(
+                0.0,
+                0.0,
+                washer_thickness / 2 + washer_thickness + nut_height + 4,
+            ),
         )
         all_solids.append(nut_solid_2)
 
@@ -630,16 +641,101 @@ class InstanceFactory:
         if len(all_solids) >= 2:
             unified_shape = builder.create_boolean_union(all_solids)
             context = builder._get_context()
-            shape_rep = self.ifc.create_entity(
-                "IfcShapeRepresentation",
-                ContextOfItems=context,
-                RepresentationIdentifier="Body",
-                RepresentationType="SolidModel",
-                Items=[unified_shape],
-            )
-            assembly.Representation = self.ifc.create_entity(
-                "IfcProductDefinitionShape", Representations=[shape_rep]
-            )
+
+            if geometry_type == "faceted":
+                # Для faceted режима: извлекаем mesh из IfcCSGSolid и создаём IfcFacetedBrep
+                import ifcopenshell
+                import ifcopenshell.geom
+                from ifcopenshell.util.shape_builder import ShapeBuilder
+
+                shape_builder = ShapeBuilder(self.ifc)
+
+                # Извлекаем mesh из IfcCSGSolid через ifcopenshell.geom
+                # Для этого нужно создать временный продукт с представлением
+                try:
+                    # Создаём временное представление
+                    temp_shape_rep = self.ifc.create_entity(
+                        "IfcShapeRepresentation",
+                        ContextOfItems=context,
+                        RepresentationIdentifier="Body",
+                        RepresentationType="SolidModel",
+                        Items=[unified_shape],
+                    )
+
+                    # Создаём временный продукт для извлечения геометрии
+                    temp_product = self.ifc.create_entity(
+                        "IfcBuildingElementProxy",
+                        GlobalId=ifcopenshell.guid.new(),
+                        Name="TempProxyForMesh",
+                        ObjectPlacement=self.ifc.create_entity(
+                            "IfcLocalPlacement",
+                            None,
+                            self.ifc.create_entity(
+                                "IfcAxis2Placement3D",
+                                self.ifc.create_entity("IfcCartesianPoint", (0.0, 0.0, 0.0)),
+                            ),
+                        ),
+                        Representation=self.ifc.create_entity(
+                            "IfcProductDefinitionShape",
+                            Representations=[temp_shape_rep],
+                        ),
+                    )
+
+                    # Извлекаем mesh через ifcopenshell.geom
+                    settings = ifcopenshell.geom.settings()
+                    settings.set(settings.WELD_VERTICES, True)
+                    settings.set(settings.USE_WORLD_COORDS, True)
+
+                    shape = ifcopenshell.geom.create_shape(settings, temp_product)
+
+                    if shape and len(shape.geometry.verts) > 0:
+                        verts = shape.geometry.verts
+                        faces = shape.geometry.faces
+
+                        # Преобразуем плоский список вершин в список кортежей
+                        points = [tuple(verts[i : i + 3]) for i in range(0, len(verts), 3)]
+
+                        # Преобразуем плоский список граней в список треугольников
+                        triangles = [list(faces[i : i + 3]) for i in range(0, len(faces), 3)]
+
+                        # Создаём IfcFacetedBrep через ShapeBuilder
+                        faceted_brep = shape_builder.faceted_brep(points, triangles)
+
+                        # Создаём представление с Brep
+                        shape_rep = builder.create_shape_representation_from_brep(faceted_brep)
+                        assembly.Representation = self.ifc.create_entity(
+                            "IfcProductDefinitionShape", Representations=[shape_rep]
+                        )
+                    else:
+                        raise ValueError("Empty mesh from ifcopenshell.geom")
+
+                except Exception as e:
+                    # Fallback к SolidModel если не удалось создать Brep
+                    print(
+                        f"Warning: Could not create FacetedBrep: {e}. Falling back to SolidModel."
+                    )
+                    shape_rep = self.ifc.create_entity(
+                        "IfcShapeRepresentation",
+                        ContextOfItems=context,
+                        RepresentationIdentifier="Body",
+                        RepresentationType="SolidModel",
+                        Items=[unified_shape],
+                    )
+                    assembly.Representation = self.ifc.create_entity(
+                        "IfcProductDefinitionShape", Representations=[shape_rep]
+                    )
+            else:
+                # Solid режим: используем IfcCSGSolid напрямую
+                shape_rep = self.ifc.create_entity(
+                    "IfcShapeRepresentation",
+                    ContextOfItems=context,
+                    RepresentationIdentifier="Body",
+                    RepresentationType="SolidModel",
+                    Items=[unified_shape],
+                )
+                assembly.Representation = self.ifc.create_entity(
+                    "IfcProductDefinitionShape", Representations=[shape_rep]
+                )
 
     def _generate_mesh_data_unified(
         self, assembly, bolt_type, diameter, length, material, assembly_name=None

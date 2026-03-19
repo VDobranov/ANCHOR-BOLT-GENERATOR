@@ -605,3 +605,25 @@ class GeometryBuilder:
         )
 
         return shape_rep
+
+    def create_shape_representation_from_brep(self, brep):
+        """
+        Создание IfcShapeRepresentation с IfcFacetedBrep
+
+        Args:
+            brep: IfcFacetedBrep
+
+        Returns:
+            IfcShapeRepresentation
+        """
+        context = self._get_context()
+
+        shape_rep = self.ifc.create_entity(
+            "IfcShapeRepresentation",
+            ContextOfItems=context,
+            RepresentationIdentifier="Body",
+            RepresentationType="Brep",  # Для IfcFacetedBrep
+            Items=[brep],
+        )
+
+        return shape_rep
