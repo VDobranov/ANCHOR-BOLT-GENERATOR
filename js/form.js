@@ -164,7 +164,8 @@ class BoltForm {
                     option.textContent = `${l}`;
                     length.appendChild(option);
                 });
-                length.value = lengths[0];
+                // Всегда устанавливаем 500 мм при смене типа
+                length.value = '500';
             } else {
                 const option = document.createElement('option');
                 option.value = '';

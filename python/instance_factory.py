@@ -647,7 +647,8 @@ class InstanceFactory:
         """Генерация mesh из IfcCSGSolid"""
         from geometry_converter import convert_ifc_to_mesh
 
-        color_map = {"ANCHORBOLT": 0x4F4F4F}
+        # Цвет как у шпильки в separate режиме (STUD: 0x8B8B8B)
+        color_map = {"ANCHORBOLT": 0x8B8B8B}
 
         # Преобразуем assembly_name в строку Python
         if assembly_name and hasattr(assembly_name, "__str__"):
