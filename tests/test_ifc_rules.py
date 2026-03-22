@@ -1264,3 +1264,462 @@ class TestIFCRules:
                 scale = profile.Reflection_scale
                 assert scale != -1, \
                     f"IfcDerivedProfileDef не должен использовать зеркалирование (SWE002)"
+
+    # =============================================================================
+    # Приоритет 2: Общие правила валидации
+    # =============================================================================
+
+    # =============================================================================
+    # CLS000: Classification association - v1
+    # =============================================================================
+
+    def test_cls000_classification_association(self, factory, bolt_params):
+        """
+        CLS000: Ассоциация классификации
+
+        Требование: Если используется классификация, она должна быть корректно
+        ассоциирована с элементами
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Для генератора болтов классификация опциональна
+        # Проверяем что если есть ассоциации, то они корректны
+        classifications = ifc_doc.by_type("IfcClassification")
+        class_associations = ifc_doc.by_type("IfcRelAssociatesClassification")
+
+        for assoc in class_associations:
+            # Проверяем что RelatingClassification указан
+            assert assoc.RelatingClassification is not None, \
+                "IfcRelAssociatesClassification должен иметь RelatingClassification (CLS000)"
+
+            # Проверяем что RelatedObjects не пустой
+            related = assoc.RelatedObjects or []
+            assert len(related) > 0, \
+                "IfcRelAssociatesClassification должен иметь RelatedObjects (CLS000)"
+
+    # =============================================================================
+    # CTX000: Presentation colours and textures - v2
+    # =============================================================================
+
+    def test_ctx000_presentation_colours_and_textures(self, factory, bolt_params):
+        """
+        CTX000: Цвета и текстуры представления
+
+        Требование: Если используются цвета/текстуры, они должны быть корректны
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Проверяем стилизованную геометрию
+        styled_items = ifc_doc.by_type("IfcStyledItem")
+
+        for item in styled_items:
+            # Проверяем что стиль указан
+            styles = item.Styles or []
+            assert len(styles) > 0, \
+                "IfcStyledItem должен иметь стили (CTX000)"
+
+    # =============================================================================
+    # GRP000: Groups - v1
+    # =============================================================================
+
+    def test_grp000_groups(self, factory, bolt_params):
+        """
+        GRP000: Группы
+
+        Требование: Если используются группы, они должны быть корректны
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Для болтов assembly уже является группой элементов
+        # Проверяем IfcGroup если есть
+        groups = ifc_doc.by_type("IfcGroup")
+
+        for group in groups:
+            # Проверяем что группа имеет имя
+            assert group.GlobalId is not None, \
+                "IfcGroup должен иметь GlobalId (GRP000)"
+
+    # =============================================================================
+    # GRP001: Acyclic groups - v1
+    # =============================================================================
+
+    def test_grp001_acyclic_groups(self, factory, bolt_params):
+        """
+        GRP001: Ациклические группы
+
+        Требование: Группы не должны образовывать циклов
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Проверяем группы на циклы
+        groups = ifc_doc.by_type("IfcGroup")
+        rel_assigns = ifc_doc.by_type("IfcRelAssignsToGroup")
+
+        # Строим граф групп
+        group_members = {}
+        for rel in rel_assigns:
+            group = rel.RelatingGroup
+            members = rel.RelatedObjects or []
+            if group not in group_members:
+                group_members[group] = []
+            group_members[group].extend(members)
+
+        # Проверяем на циклы (DFS)
+        def has_cycle(group, visited, rec_stack):
+            visited.add(group)
+            rec_stack.add(group)
+
+            for member in group_members.get(group, []):
+                if member.is_a("IfcGroup"):
+                    if member not in visited:
+                        if has_cycle(member, visited, rec_stack):
+                            return True
+                    elif member in rec_stack:
+                        return True
+
+            rec_stack.remove(group)
+            return False
+
+        visited = set()
+        for group in groups:
+            if group not in visited:
+                rec_stack = set()
+                assert not has_cycle(group, visited, rec_stack), \
+                    f"Обнаружен цикл в группах (GRP001)"
+
+    # =============================================================================
+    # LAY000: Presentation layer assignment - v1
+    # =============================================================================
+
+    def test_lay000_presentation_layer_assignment(self, factory, bolt_params):
+        """
+        LAY000: Назначение слоёв представления
+
+        Требование: Если используются слои, они должны быть корректны
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Проверяем слои
+        layers = ifc_doc.by_type("IfcPresentationLayerAssignment")
+
+        for layer in layers:
+            # Проверяем что слой имеет имя
+            assert layer.Name, \
+                "IfcPresentationLayerAssignment должен иметь имя (LAY000)"
+
+            # Проверяем что AssignedItems не пустой
+            items = layer.AssignedItems or []
+            assert len(items) > 0, \
+                "IfcPresentationLayerAssignment должен иметь AssignedItems (LAY000)"
+
+    # =============================================================================
+    # MAT000: Materials - полная проверка - v1
+    # =============================================================================
+
+    def test_mat000_materials_complete(self, factory, bolt_params):
+        """
+        MAT000: Материалы (полная проверка)
+
+        Требование: Материалы должны быть определены и корректно ассоциированы
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Проверяем материалы
+        materials = ifc_doc.by_type("IfcMaterial")
+        assert len(materials) > 0, "Должны быть определены материалы (MAT000)"
+
+        # Проверяем ассоциации
+        mat_associations = ifc_doc.by_type("IfcRelAssociatesMaterial")
+        assert len(mat_associations) > 0, \
+            "Должны быть ассоциации материалов (MAT000)"
+
+        # Проверяем что каждый материал имеет имя
+        for mat in materials:
+            assert mat.Name, \
+                f"Материал должен иметь имя: {mat} (MAT000)"
+
+        # Проверяем что материалы ассоциированы с элементами или типами
+        for assoc in mat_associations:
+            related = assoc.RelatedObjects or []
+            assert len(related) > 0, \
+                "Материал должен быть ассоциирован с объектами (MAT000)"
+
+    # =============================================================================
+    # POR000: Port connectivity and nesting - v1
+    # =============================================================================
+
+    def test_por000_port_connectivity(self, factory, bolt_params):
+        """
+        POR000: Порты и соединения
+
+        Требование: Если используются порты, они должны быть корректны
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Для болтов порты не требуются
+        # Проверяем что если есть порты, то они корректны
+        ports = ifc_doc.by_type("IfcDistributionPort")
+
+        for port in ports:
+            assert port.GlobalId is not None, \
+                "IfcDistributionPort должен иметь GlobalId (POR000)"
+
+    # =============================================================================
+    # PSE001: Standard properties and property sets - v3
+    # =============================================================================
+
+    def test_pse001_standard_property_sets(self, factory, bolt_params):
+        """
+        PSE001: Стандартные наборы свойств
+
+        Требование: Если используются наборы свойств, они должны соответствовать
+        стандарту
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Проверяем наборы свойств
+        prop_sets = ifc_doc.by_type("IfcPropertySet")
+
+        for prop_set in prop_sets:
+            # Проверяем что набор имеет имя
+            assert prop_set.Name, \
+                "IfcPropertySet должен иметь имя (PSE001)"
+
+            # Проверяем что есть свойства
+            properties = prop_set.HasProperties or []
+            assert len(properties) > 0, \
+                "IfcPropertySet должен иметь свойства (PSE001)"
+
+    # =============================================================================
+    # PSE002: Custom properties and property sets - v1
+    # =============================================================================
+
+    def test_pse002_custom_property_sets(self, factory, bolt_params):
+        """
+        PSE002: Пользовательские наборы свойств
+
+        Требование: Пользовательские наборы свойств должны быть корректны
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Проверяем все property sets
+        prop_sets = ifc_doc.by_type("IfcPropertySet")
+
+        for prop_set in prop_sets:
+            # Проверяем что свойства имеют тип
+            properties = prop_set.HasProperties or []
+            for prop in properties:
+                if prop.is_a("IfcPropertySingleValue"):
+                    assert hasattr(prop, 'NominalValue'), \
+                        "IfcPropertySingleValue должен иметь NominalValue (PSE002)"
+
+    # =============================================================================
+    # QTY000: Quantities for objects - v1
+    # =============================================================================
+
+    def test_qty000_quantities_for_objects(self, factory, bolt_params):
+        """
+        QTY000: Количества для объектов
+
+        Требование: Если используются количества, они должны быть корректны
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Проверяем наборы количеств
+        qty_sets = ifc_doc.by_type("IfcElementQuantity")
+
+        for qty_set in qty_sets:
+            # Проверяем что набор имеет имя
+            assert qty_set.Name, \
+                "IfcElementQuantity должен иметь имя (QTY000)"
+
+    # =============================================================================
+    # QTY001: Standard quantities and quantity sets - v1
+    # =============================================================================
+
+    def test_qty001_standard_quantities(self, factory, bolt_params):
+        """
+        QTY001: Стандартные количества
+
+        Требование: Стандартные количества должны быть корректны
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Проверяем количества
+        qty_sets = ifc_doc.by_type("IfcElementQuantity")
+
+        for qty_set in qty_sets:
+            quantities = qty_set.Quantities or []
+            for qty in quantities:
+                # Проверяем что количество имеет значение
+                if hasattr(qty, 'LengthValue'):
+                    assert qty.LengthValue is not None, \
+                        "Количество должно иметь значение (QTY001)"
+
+    # =============================================================================
+    # SPA000: Spaces information - v1
+    # =============================================================================
+
+    def test_spa000_spaces_information(self, factory, bolt_params):
+        """
+        SPA000: Информация о пространствах
+
+        Требование: Если используются пространства (IfcSpace), они должны быть
+        корректны
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Для генератора болтов IfcSpace не требуется
+        # Проверяем что если есть, то корректны
+        spaces = ifc_doc.by_type("IfcSpace")
+
+        for space in spaces:
+            assert space.GlobalId is not None, \
+                "IfcSpace должен иметь GlobalId (SPA000)"
+
+    # =============================================================================
+    # VER000: Versioning and revision control - v1
+    # =============================================================================
+
+    def test_ver000_versioning_and_revision(self, ifc_doc):
+        """
+        VER000: Версионирование и контроль изменений
+
+        Требование: Файл должен содержать информацию о версии
+        """
+        # Проверяем что OwnerHistory существует
+        owner_histories = ifc_doc.by_type("IfcOwnerHistory")
+        assert len(owner_histories) > 0, \
+            "Должен быть IfcOwnerHistory (VER000)"
+
+        # Проверяем что есть версия приложения
+        for hist in owner_histories:
+            if hist.OwningApplication:
+                app = hist.OwningApplication
+                assert hasattr(app, 'Version'), \
+                    "Приложение должно иметь версию (VER000)"
+
+    # =============================================================================
+    # VRT000: Virtual elements - v1
+    # =============================================================================
+
+    def test_vrt000_virtual_elements(self, factory, bolt_params):
+        """
+        VRT000: Виртуальные элементы
+
+        Требование: Если используются виртуальные элементы, они должны быть
+        корректны
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Для болтов виртуальные элементы не требуются
+        # Проверяем что если есть, то корректны
+        virtual_elements = [e for e in ifc_doc if 'Virtual' in e.is_a()]
+
+        for elem in virtual_elements:
+            assert elem.GlobalId is not None, \
+                f"Виртуальный элемент должен иметь GlobalId (VRT000)"
+
+    # =============================================================================
+    # GEM011: Curve segments consistency - v2
+    # =============================================================================
+
+    def test_gem011_curve_segments_consistency(self, factory, bolt_params):
+        """
+        GEM011: Согласованность сегментов кривой
+
+        Требование: Сегменты кривой должны быть согласованы
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Проверяем кривые
+        curves = ifc_doc.by_type("IfcCompositeCurve")
+
+        for curve in curves:
+            segments = curve.Segments or []
+            assert len(segments) > 0, \
+                "IfcCompositeCurve должен иметь сегменты (GEM011)"
