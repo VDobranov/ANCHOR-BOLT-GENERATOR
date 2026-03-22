@@ -174,7 +174,7 @@ class InstanceFactory:
                 l0 = get_thread_length(diameter, length) or length
                 stud_offset = l0
                 stud_axis_down = True
-            stud_placement = self._create_placement((0, 0, stud_offset), axis_down=stud_axis_down)
+            stud_placement = self._create_placement((0, 0, stud_offset), axis_down=stud_axis_down, rel_to=assembly_placement)
             stud = self.ifc.create_entity(
                 "IfcMechanicalFastener",
                 GlobalId=ifc.guid.new(),
@@ -194,6 +194,7 @@ class InstanceFactory:
                     washer_type,
                     washer_instances,
                     owner_history,
+                    assembly_placement,
                 )
                 components.append(washer_top)
 
@@ -205,6 +206,7 @@ class InstanceFactory:
                     nut_type,
                     nut_instances,
                     owner_history,
+                    assembly_placement,
                 )
                 components.append(nut_top1)
 
@@ -216,6 +218,7 @@ class InstanceFactory:
                     nut_type,
                     nut_instances,
                     owner_history,
+                    assembly_placement,
                 )
                 components.append(nut_top2)
 
@@ -231,6 +234,7 @@ class InstanceFactory:
                     nut_type,
                     nut_instances,
                     owner_history,
+                    assembly_placement,
                 )
                 components.append(nut_bottom2)
 
@@ -248,6 +252,7 @@ class InstanceFactory:
                     plate_type,
                     plate_instances,
                     owner_history,
+                    assembly_placement,
                 )
                 components.append(plate)
 
@@ -265,6 +270,7 @@ class InstanceFactory:
                     nut_type,
                     nut_instances,
                     owner_history,
+                    assembly_placement,
                 )
                 components.append(nut_bottom)
 
@@ -360,15 +366,25 @@ class InstanceFactory:
             "ifc_doc": self.ifc,
         }
 
-    def _create_placement(self, location, axis_down=False):
-        """Создание 3D размещения"""
+    def _create_placement(self, location, axis_down=False, rel_to=None):
+        """Создание 3D размещения
+        
+        Согласно правилу OJP001: если элемент является частью другого элемента
+        через IfcRelAggregates, то его размещение должно быть относительным
+        (PlacementRelTo должен указывать на размещение контейнера).
+        
+        Args:
+            location: Координаты (x, y, z)
+            axis_down: Направление оси Z (-1 или 1)
+            rel_to: IfcLocalPlacement контейнера (для относительного размещения)
+        """
         coords = [float(x) for x in location]
         # Для типа 2.1 и 5: ось направлена вниз, чтобы шпилька шла от Z=0 до Z=+length
         # но размещалась от Z=l0 вниз до Z=-(L-l0)
         axis_z = -1.0 if axis_down else 1.0
         return self.ifc.create_entity(
             "IfcLocalPlacement",
-            PlacementRelTo=None,
+            PlacementRelTo=rel_to,
             RelativePlacement=self.ifc.create_entity(
                 "IfcAxis2Placement3D",
                 Location=self.ifc.create_entity("IfcCartesianPoint", Coordinates=coords),
@@ -379,15 +395,16 @@ class InstanceFactory:
             ),
         )
 
-    def _create_component(self, comp_type, location, type_obj, instances_list, owner_history=None):
+    def _create_component(self, comp_type, location, type_obj, instances_list, owner_history=None, assembly_placement=None):
         """Создание компонента (гайка/шайба/плита)
 
         Имя наследуется из типа.
         PredefinedType не указывается (наследуется от типа через IfcRelDefinesByType).
         Согласно правилу OJT001: если экземпляр связан с типом, PredefinedType должен быть пустым.
+        Согласно правилу OJP001: размещение компонента должно быть относительным assembly_placement.
         """
         ifc = get_ifcopenshell()
-        placement = self._create_placement(location)
+        placement = self._create_placement(location, rel_to=assembly_placement)
         component = self.ifc.create_entity(
             "IfcMechanicalFastener",
             GlobalId=ifc.guid.new(),
