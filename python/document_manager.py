@@ -83,10 +83,16 @@ class IFCDocumentManager:
         # Создаём базовый файл с IfcOwnerHistory на ID #1 через SPF
         timestamp = int(time.time())
 
+        # Согласно buildingSMART IFC Header Policy:
+        # - FILE_DESCRIPTION: ViewDefinition для IFC4 — ReferenceView_V1.2
+        # - FILE_NAME: name, time_stamp (ISO 8601), author, organization, 
+        #              preprocessor_version, originating_system, authorization
+        # - originating_system формат: "Company - Application - Version"
+        
         spf_content = f"""ISO-10303-21;
 HEADER;
-FILE_DESCRIPTION(('ViewDefinition [CoordinationView]'),'2;1');
-FILE_NAME('','{time.strftime('%Y-%m-%dT%H:%M:%S')}',(''),(''),'IfcOpenShell 0.8.4','IfcOpenShell 0.8.4','');
+FILE_DESCRIPTION(('ViewDefinition [ReferenceView_V1.2]'),'2;1');
+FILE_NAME('anchor_bolt.ifc','{time.strftime('%Y-%m-%dT%H:%M:%S')}',('Anchor Bolt Generator'),('ABG'),'Anchor Bolt Generator 1.0','ABG - Anchor Bolt Generator - 1.0','none');
 FILE_SCHEMA(('{schema}'));
 ENDSEC;
 DATA;
@@ -323,10 +329,16 @@ END-ISO-10303-21;
         # Пересоздаём базовую структуру с IfcOwnerHistory на ID #1
         timestamp = int(time.time())
 
+        # Согласно buildingSMART IFC Header Policy:
+        # - FILE_DESCRIPTION: ViewDefinition для IFC4 — ReferenceView_V1.2
+        # - FILE_NAME: name, time_stamp (ISO 8601), author, organization,
+        #              preprocessor_version, originating_system, authorization
+        # - originating_system формат: "Company - Application - Version"
+
         spf_content = f"""ISO-10303-21;
 HEADER;
-FILE_DESCRIPTION(('ViewDefinition [CoordinationView]'),'2;1');
-FILE_NAME('','{time.strftime('%Y-%m-%dT%H:%M:%S')}',(''),(''),'IfcOpenShell 0.8.4','IfcOpenShell 0.8.4','');
+FILE_DESCRIPTION(('ViewDefinition [ReferenceView_V1.2]'),'2;1');
+FILE_NAME('anchor_bolt.ifc','{time.strftime('%Y-%m-%dT%H:%M:%S')}',('Anchor Bolt Generator'),('ABG'),'Anchor Bolt Generator 1.0','ABG - Anchor Bolt Generator - 1.0','none');
 FILE_SCHEMA(('IFC4'));
 ENDSEC;
 DATA;
