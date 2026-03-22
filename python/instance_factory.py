@@ -515,22 +515,22 @@ class InstanceFactory:
     def _weld_nearby_vertices(self, verts, faces, tolerance=0.01):
         """
         Сваривает вершины которые находятся близко друг к другу
-        
+
         Нужно для BRP002: IfcClosedShell должен быть связным.
         Булевы операции создают вершины в местах касания компонентов,
         но они не имеют одинаковых координат из-за погрешностей вычислений.
-        
+
         Args:
             verts: Плоский список координат [x1, y1, z1, x2, y2, z2, ...]
             faces: Плоский список индексов граней [v0, v1, v2, v3, v4, v5, ...]
             tolerance: Допуск в мм (вершины ближе этого расстояния свариваются)
-        
+
         Returns:
             Кортеж (new_verts, new_faces) со сваренными вершинами и обновлёнными гранями
         """
         if not verts or not faces:
             return verts, faces
-        
+
         import numpy as np
         
         # Преобразуем в numpy array для удобства
@@ -567,6 +567,61 @@ class InstanceFactory:
             new_verts.extend(vert.tolist())
         
         return new_verts, new_faces
+
+    def _fix_triangle_orientation(self, verts, faces):
+        """
+        Исправляет ориентацию треугольников для GEM001.
+
+        Для IfcClosedShell все грани должны быть ориентированы так, чтобы
+        нормали были направлены наружу. Это обеспечивает, что каждое ребро
+        используется ровно 1 раз с правильной ориентацией.
+
+        Алгоритм:
+        1. Вычисляем центр масс всех вершин
+        2. Для каждого треугольника вычисляем нормаль
+        3. Если нормаль направлена внутрь (к центру), инвертируем треугольник
+
+        Args:
+            verts: Плоский список координат [x1, y1, z1, ...]
+            faces: Плоский список индексов [v0, v1, v2, ...]
+
+        Returns:
+            Кортеж (verts, new_faces) с исправленной ориентацией
+        """
+        if not verts or not faces:
+            return verts, faces
+
+        import numpy as np
+
+        verts_array = np.array(verts).reshape(-1, 3)
+
+        # Вычисляем центр масс
+        center = np.mean(verts_array, axis=0)
+
+        new_faces = []
+        for i in range(0, len(faces), 3):
+            v0, v1, v2 = faces[i], faces[i+1], faces[i+2]
+
+            p0 = verts_array[v0]
+            p1 = verts_array[v1]
+            p2 = verts_array[v2]
+
+            # Вычисляем нормаль треугольника (правое правило)
+            edge1 = p1 - p0
+            edge2 = p2 - p0
+            normal = np.cross(edge1, edge2)
+
+            # Вектор от центра к треугольнику
+            to_triangle = p0 - center
+
+            # Если нормаль направлена внутрь (скалярное произведение < 0), инвертируем
+            if np.dot(normal, to_triangle) < 0:
+                # Инвертируем порядок вершин
+                new_faces.extend([v0, v2, v1])
+            else:
+                new_faces.extend([v0, v1, v2])
+
+        return verts, new_faces
 
     def _generate_mesh_data(
         self, components, bolt_type, diameter, length, material, assembly_name=None
@@ -794,6 +849,10 @@ class InstanceFactory:
                         # Свариваем вершины которые находятся близко друг к другу
                         # Это нужно для BRP002: IfcClosedShell должен быть связным
                         verts_mm, faces = self._weld_nearby_vertices(verts_mm, faces, tolerance=0.01)
+
+                        # Исправляем ориентацию треугольников для GEM001
+                        # Все нормали должны быть направлены наружу
+                        verts_mm, faces = self._fix_triangle_orientation(verts_mm, faces)
 
                         # Преобразуем в points и triangles
                         points = [
