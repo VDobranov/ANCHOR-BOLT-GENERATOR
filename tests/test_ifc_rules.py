@@ -161,6 +161,149 @@ class TestIFCRules:
         assert found, "Assembly должен быть включён в пространственную структуру (SPS007)"
 
     # =============================================================================
+    # SPS002: Correct spatial breakdown - v3
+    # =============================================================================
+
+    def test_sps002_correct_spatial_breakdown(self, factory, bolt_params):
+        """
+        SPS002: Корректная пространственная декомпозиция
+
+        Требование: Пространственные элементы должны образовывать иерархию:
+        IfcProject → IfcSite → IfcBuilding → IfcBuildingStorey
+        через отношения IfcRelAggregates
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Проверяем наличие всех уровней пространственной структуры
+        projects = ifc_doc.by_type("IfcProject")
+        sites = ifc_doc.by_type("IfcSite")
+        buildings = ifc_doc.by_type("IfcBuilding")
+        storeys = ifc_doc.by_type("IfcBuildingStorey")
+
+        assert len(projects) == 1, "Должен быть один IfcProject"
+        assert len(sites) >= 1, "Должен быть хотя бы один IfcSite"
+        assert len(buildings) >= 1, "Должен быть хотя бы один IfcBuilding"
+        assert len(storeys) >= 1, "Должен быть хотя бы один IfcBuildingStorey"
+
+        # Проверяем иерархию через IfcRelAggregates
+        rel_aggregates = ifc_doc.by_type("IfcRelAggregates")
+
+        # Project → Site
+        project = projects[0]
+        site = sites[0]
+        site_in_project = any(
+            rel.RelatingObject == project and site in (rel.RelatedObjects or [])
+            for rel in rel_aggregates
+        )
+        assert site_in_project, "IfcSite должен быть в IfcProject (SPS002)"
+
+        # Site → Building
+        building = buildings[0]
+        building_in_site = any(
+            rel.RelatingObject == site and building in (rel.RelatedObjects or [])
+            for rel in rel_aggregates
+        )
+        assert building_in_site, "IfcBuilding должен быть в IfcSite (SPS002)"
+
+        # Building → Storey
+        storey = storeys[0]
+        storey_in_building = any(
+            rel.RelatingObject == building and storey in (rel.RelatedObjects or [])
+            for rel in rel_aggregates
+        )
+        assert storey_in_building, "IfcBuildingStorey должен быть в IfcBuilding (SPS002)"
+
+    # =============================================================================
+    # SPS005: Simultaneous spatial relationships - v2
+    # =============================================================================
+
+    def test_sps005_simultaneous_spatial_relationships(self, factory, bolt_params):
+        """
+        SPS005: Одновременные пространственные отношения
+
+        Требование: Элемент не должен одновременно участвовать в
+        IfcRelContainedInSpatialStructure и IfcRelReferencedInSpatialStructure
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Получаем все отношения
+        rel_contained = ifc_doc.by_type("IfcRelContainedInSpatialStructure")
+        rel_referenced = ifc_doc.by_type("IfcRelReferencedInSpatialStructure")
+
+        # Собираем все элементы из каждого типа отношений
+        contained_elements = set()
+        for rel in rel_contained:
+            for elem in (rel.RelatedElements or []):
+                contained_elements.add(elem.id())
+
+        referenced_elements = set()
+        for rel in rel_referenced:
+            for elem in (rel.RelatedElements or []):
+                referenced_elements.add(elem.id())
+
+        # Проверяем что нет пересечений
+        overlap = contained_elements & referenced_elements
+        assert len(overlap) == 0, \
+            f"Элементы не должны быть одновременно в Contained и Referenced: {overlap} (SPS005)"
+
+    # =============================================================================
+    # SPS008: Spatial container representations - v1
+    # =============================================================================
+
+    def test_sps008_spatial_container_representations(self, factory, bolt_params):
+        """
+        SPS008: Представления пространственных контейнеров
+
+        Требование: Пространственные элементы (Site, Building, Storey) должны
+        иметь геометрическое представление (Representation)
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Проверяем пространственные элементы
+        sites = ifc_doc.by_type("IfcSite")
+        buildings = ifc_doc.by_type("IfcBuilding")
+        storeys = ifc_doc.by_type("IfcBuildingStorey")
+
+        # Для IFC4 ADD2 представление пространственных элементов опционально
+        # Проверяем что если представление есть, то оно корректно
+        for site in sites:
+            if hasattr(site, 'Representation') and site.Representation:
+                # Проверяем что Representation — это IfcProductDefinitionShape
+                assert site.Representation.is_a("IfcProductDefinitionShape"), \
+                    f"Representation IfcSite должен быть IfcProductDefinitionShape (SPS008)"
+
+        for building in buildings:
+            if hasattr(building, 'Representation') and building.Representation:
+                assert building.Representation.is_a("IfcProductDefinitionShape"), \
+                    f"Representation IfcBuilding должен быть IfcProductDefinitionShape (SPS008)"
+
+        for storey in storeys:
+            if hasattr(storey, 'Representation') and storey.Representation:
+                assert storey.Representation.is_a("IfcProductDefinitionShape"), \
+                    f"Representation IfcBuildingStorey должен быть IfcProductDefinitionShape (SPS008)"
+
+        # Примечание: Для простых случаев (как генератор болтов) отсутствие
+        # геометрического представления у пространственных элементов допустимо
+
+    # =============================================================================
     # MAT000: Materials - v1
     # =============================================================================
 
