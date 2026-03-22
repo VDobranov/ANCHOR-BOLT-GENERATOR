@@ -62,7 +62,11 @@ class TestExportSettings:
         assert assembly.is_a("IfcMechanicalFastener")
 
     def test_assembly_class_element_assembly(self, factory, bolt_params):
-        """IfcElementAssembly: сборка создаётся как IfcElementAssembly"""
+        """IfcElementAssembly: сборка создаётся как IfcElementAssembly
+        
+        Согласно правилу OJT001: PredefinedType пустой (наследуется от типа),
+        ObjectType указан для уточнения типа объекта.
+        """
         result = factory.create_bolt_assembly(
             assembly_class="IfcElementAssembly",
             assembly_mode="separate",
@@ -75,8 +79,8 @@ class TestExportSettings:
 
         # Проверяем, что assembly — IfcElementAssembly
         assert assembly.is_a("IfcElementAssembly")
-        # Проверяем PredefinedType
-        assert assembly.PredefinedType == "USERDEFINED"
+        # Проверяем PredefinedType (должен быть пустым согласно OJT001)
+        assert assembly.PredefinedType is None, "PredefinedType должен быть пустым (OJT001)"
         # Проверяем ObjectType
         assert assembly.ObjectType == "ANCHORBOLT"
 
@@ -240,9 +244,11 @@ class TestExportSettings:
         assert "components" in result
 
         # Проверка assembly_class
+        # Согласно правилу OJT001: если экземпляр связан с типом через IfcRelDefinesByType,
+        # PredefinedType должен быть пустым (наследуется от типа)
         if assembly_class == "IfcElementAssembly":
             assert result["assembly"].is_a("IfcElementAssembly")
-            assert result["assembly"].PredefinedType == "USERDEFINED"
+            assert result["assembly"].PredefinedType is None, "PredefinedType должен быть пустым (OJT001)"
             assert result["assembly"].ObjectType == "ANCHORBOLT"
         else:
             assert result["assembly"].is_a("IfcMechanicalFastener")
@@ -302,6 +308,47 @@ class TestExportSettings:
         assert subcontext.TargetView == "MODEL_VIEW", "TargetView должен быть 'MODEL_VIEW'"
         assert subcontext.ParentContext is not None, "ParentContext не должен быть None"
         assert subcontext.TargetScale == 1.0, "TargetScale должен быть 1.0"
+
+    def test_ojt001_predefined_type_rule(self, factory, bolt_params):
+        """Правило OJT001: PredefinedType пустой если есть связь с типом"""
+        # Тест для IfcElementAssembly
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcElementAssembly",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+        assembly = result["assembly"]
+
+        # Проверяем что PredefinedType пустой
+        assert assembly.PredefinedType is None, "PredefinedType должен быть пустым (OJT001)"
+
+        # Проверяем что ObjectType указан
+        assert assembly.ObjectType == "ANCHORBOLT", "ObjectType должен быть указан"
+
+        # Проверяем что есть связь с типом через IfcRelDefinesByType
+        rel_defines = ifc_doc.by_type("IfcRelDefinesByType")
+        assert len(rel_defines) > 0, "Должна быть связь IfcRelDefinesByType"
+
+        # Находим связь для assembly
+        assembly_type_relation = None
+        for rel in rel_defines:
+            if assembly in (rel.RelatedObjects or []):
+                assembly_type_relation = rel
+                break
+
+        assert assembly_type_relation is not None, "Assembly должен быть связан с типом"
+
+        # Проверяем что у типа PredefinedType != NOTDEFINED
+        relating_type = assembly_type_relation.RelatingType
+        assert relating_type.PredefinedType is not None, "Тип должен иметь PredefinedType"
+        assert not relating_type.PredefinedType.startswith("NOTDEFINED"), "PredefinedType типа не должен быть NOTDEFINED"
+
+        # Тест для IfcMechanicalFastener (компоненты)
+        for comp in result["components"]:
+            if comp.is_a("IfcMechanicalFastener"):
+                assert comp.PredefinedType is None, f"Компонент {comp.is_a()} должен иметь пустой PredefinedType (OJT001)"
 
     def test_spatial_structure_valid(self, factory, bolt_params):
         """Пространственная структура корректна"""

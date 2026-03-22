@@ -125,13 +125,15 @@ class InstanceFactory:
             ),
         )
 
+        # Согласно правилу OJT001: если экземпляр связан с типом через IfcRelDefinesByType
+        # и у типа PredefinedType != NOTDEFINED, то PredefinedType у экземпляра должен быть пустым
+        # ObjectType указывается для уточнения типа объекта
         if assembly_class == "IfcElementAssembly":
             assembly = self.ifc.create_entity(
                 "IfcElementAssembly",
                 GlobalId=ifc.guid.new(),
                 OwnerHistory=owner_history,
                 Name=assembly_type.Name,
-                PredefinedType="USERDEFINED",
                 ObjectType="ANCHORBOLT",
                 ObjectPlacement=assembly_placement,
             )
@@ -380,7 +382,9 @@ class InstanceFactory:
     def _create_component(self, comp_type, location, type_obj, instances_list, owner_history=None):
         """Создание компонента (гайка/шайба/плита)
 
-        Имя, PredefinedType и ObjectType наследуются из типа.
+        Имя наследуется из типа.
+        PredefinedType не указывается (наследуется от типа через IfcRelDefinesByType).
+        Согласно правилу OJT001: если экземпляр связан с типом, PredefinedType должен быть пустым.
         """
         ifc = get_ifcopenshell()
         placement = self._create_placement(location)
