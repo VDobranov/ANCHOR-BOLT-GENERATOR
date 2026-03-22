@@ -417,9 +417,17 @@ class TypeFactory:
 
         shape = ifcopenshell.geom.create_shape(settings, temp_product)
 
-        # Удаляем временный продукт и представление
-        self.ifc.remove(temp_product)
-        self.ifc.remove(temp_shape_rep)
+        # Удаляем временный продукт и всю цепочку связанных сущностей
+        # Используем remove_deep2 с do_not_delete для защиты контекста
+        # Контекст используется в других представлениях, поэтому не должен быть удалён
+        import ifcopenshell.util.element
+        
+        context = temp_shape_rep.ContextOfItems
+        ifcopenshell.util.element.remove_deep2(
+            self.ifc, 
+            temp_product,
+            do_not_delete={context}
+        )
 
         if shape and len(shape.geometry.verts) > 0:
             verts = shape.geometry.verts

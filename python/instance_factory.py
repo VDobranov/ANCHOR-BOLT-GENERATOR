@@ -695,9 +695,21 @@ class InstanceFactory:
 
                     shape = ifcopenshell.geom.create_shape(settings, temp_product)
 
-                    # Удаляем временный продукт и представление
-                    self.ifc.remove(temp_product)
-                    self.ifc.remove(temp_shape_rep)
+                    # Перед удалением temp_product, очищаем temp_shape_rep.Items
+                    # чтобы remove_deep2 не шёл через unified_shape
+                    # unified_shape будет удалён отдельно позже
+                    temp_shape_rep.Items = []
+
+                    # Удаляем временный продукт и всю цепочку связанных сущностей
+                    # do_not_delete защищает контекст и другие общие ресурсы
+                    import ifcopenshell.util.element
+                    
+                    context = temp_shape_rep.ContextOfItems
+                    ifcopenshell.util.element.remove_deep2(
+                        self.ifc, 
+                        temp_product,
+                        do_not_delete={context}
+                    )
 
                     if shape and len(shape.geometry.verts) > 0:
                         verts = shape.geometry.verts
@@ -728,34 +740,33 @@ class InstanceFactory:
                         # Теперь unified_shape и all_solids не используются — можно удалять
                         # Используем ifcopenshell.util.element.remove_deep2() для правильного удаления
                         import ifcopenshell.util.element
+
+                        # unified_shape — корневая сущность, remove_deep2 удалит всю цепочку:
+                        # - unified_shape (IfcCSGSolid или IfcBooleanResult)
+                        # - BooleanResult цепочку (FirstOperand/SecondOperand)
+                        # - all_solids (через BooleanResult)
+                        # - профили, кривые, точки (через all_solids)
+                        # do_not_delete защищает контекст и другие общие ресурсы
+                        protected = {
+                            *self.ifc.by_type("IfcGeometricRepresentationContext"),
+                            *self.ifc.by_type("IfcOwnerHistory"),
+                            *self.ifc.by_type("IfcPerson"),
+                            *self.ifc.by_type("IfcOrganization"),
+                        }
                         
-                        # Сначала удаляем BooleanResult цепочку (если есть)
-                        # Они ссылаются друг на друга, поэтому удаляем с конца цепочки
-                        for boolean_result in list(self.ifc.by_type("IfcBooleanResult")):
-                            try:
-                                ifcopenshell.util.element.remove_deep2(self.ifc, boolean_result)
-                            except Exception:
-                                pass
+                        ifcopenshell.util.element.remove_deep2(
+                            self.ifc, 
+                            unified_shape,
+                            do_not_delete=protected
+                        )
                         
-                        # Потом удаляем all_solids (IfcExtrudedAreaSolid, IfcSweptDiskSolid, IfcCSGSolid)
-                        for solid in all_solids:
-                            try:
-                                ifcopenshell.util.element.remove_deep2(self.ifc, solid)
-                            except Exception:
-                                pass
-                        
-                        # Потом удаляем unified_shape (IfcCSGSolid или IfcBooleanResult)
-                        try:
-                            ifcopenshell.util.element.remove_deep2(self.ifc, unified_shape)
-                        except Exception:
-                            pass
-                        
-                        # Удаляем старое представление assembly
+                        # old_representation — корневая сущность для старого представления
                         if old_representation:
-                            try:
-                                ifcopenshell.util.element.remove_deep2(self.ifc, old_representation)
-                            except Exception:
-                                pass
+                            ifcopenshell.util.element.remove_deep2(
+                                self.ifc, 
+                                old_representation,
+                                do_not_delete=protected
+                            )
                     else:
                         raise ValueError("Empty mesh from ifcopenshell.geom")
 
