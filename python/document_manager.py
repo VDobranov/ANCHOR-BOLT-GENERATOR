@@ -200,6 +200,16 @@ END-ISO-10303-21;
         gen = IFCGenerator(f)
         gen.setup_units_and_contexts()
 
+        # GRF003: Добавляем IfcProjectedCRS для соответствия правилу
+        # CRS требуется при наличии IfcBuilding
+        projected_crs = f.create_entity(
+            "IfcProjectedCRS",
+            Name="EPSG:3857",  # WGS 84 / Pseudo-Mercator (по умолчанию)
+            Description="Web Mercator - Default projected CRS",
+            GeodeticDatum="WGS84",
+            VerticalDatum="unknown",
+        )
+
     def get_document(self, doc_id: Optional[str] = None) -> Any:
         """
         Получение IFC документа по ID

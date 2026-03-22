@@ -1788,11 +1788,16 @@ class TestIFCRules:
         """
         GRF003: Наличие CRS с пространственными элементами
 
-        Требование: Если есть пространственные элементы с геопривязкой,
-        должен быть CRS
+        Требование: Если есть IfcBuilding или IfcFacility, должен быть IfcProjectedCRS
         """
-        # Проверка уже покрыта в GRF000
-        assert True  # Заглушка
+        # Проверяем наличие IfcBuilding
+        buildings = ifc_doc.by_type("IfcBuilding")
+
+        if len(buildings) > 0:
+            # Если есть здание, должен быть IfcProjectedCRS
+            projected_crs = ifc_doc.by_type("IfcProjectedCRS")
+            assert len(projected_crs) >= 1, \
+                "Если есть IfcBuilding, должен быть IfcProjectedCRS (GRF003)"
 
     # =============================================================================
     # GRF004: Valid EPSG prefix in coordinate reference system - v1
