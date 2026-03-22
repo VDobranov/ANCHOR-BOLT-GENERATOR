@@ -411,8 +411,9 @@ class TypeFactory:
         )
 
         # Извлекаем mesh через ifcopenshell.geom
+        # WELD_VERTICES=False чтобы избежать несвязных рёбер (BRP002)
         settings = ifcopenshell.geom.settings()
-        settings.set(settings.WELD_VERTICES, True)
+        settings.set(settings.WELD_VERTICES, False)
         settings.set(settings.USE_WORLD_COORDS, True)
 
         shape = ifcopenshell.geom.create_shape(settings, temp_product)
