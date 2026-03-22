@@ -492,6 +492,62 @@ class InstanceFactory:
         builder = ShapeBuilder(self.ifc)
         return [builder.deep_copy(item) for item in items]
 
+    def _weld_nearby_vertices(self, verts, faces, tolerance=0.01):
+        """
+        Сваривает вершины которые находятся близко друг к другу
+        
+        Нужно для BRP002: IfcClosedShell должен быть связным.
+        Булевы операции создают вершины в местах касания компонентов,
+        но они не имеют одинаковых координат из-за погрешностей вычислений.
+        
+        Args:
+            verts: Плоский список координат [x1, y1, z1, x2, y2, z2, ...]
+            faces: Плоский список индексов граней [v0, v1, v2, v3, v4, v5, ...]
+            tolerance: Допуск в мм (вершины ближе этого расстояния свариваются)
+        
+        Returns:
+            Кортеж (new_verts, new_faces) со сваренными вершинами и обновлёнными гранями
+        """
+        if not verts or not faces:
+            return verts, faces
+        
+        import numpy as np
+        
+        # Преобразуем в numpy array для удобства
+        verts_array = np.array(verts).reshape(-1, 3)
+        
+        # Словарь для маппинга вершин: старый индекс -> новый индекс
+        vertex_map = {}
+        # Список представительных вершин
+        unique_verts = []
+        
+        for i, vert in enumerate(verts_array):
+            # Ищем ближайшую представительную вершину
+            found = False
+            for j, unique_vert in enumerate(unique_verts):
+                if np.linalg.norm(vert - unique_vert) < tolerance:
+                    vertex_map[i] = j
+                    found = True
+                    break
+            
+            if not found:
+                # Добавляем новую представительную вершину
+                vertex_map[i] = len(unique_verts)
+                unique_verts.append(vert)
+        
+        # Обновляем грани
+        new_faces = []
+        for i in range(0, len(faces), 3):
+            v0, v1, v2 = faces[i], faces[i+1], faces[i+2]
+            new_faces.extend([vertex_map[v0], vertex_map[v1], vertex_map[v2]])
+        
+        # Возвращаем плоский список координат представительных вершин
+        new_verts = []
+        for vert in unique_verts:
+            new_verts.extend(vert.tolist())
+        
+        return new_verts, new_faces
+
     def _generate_mesh_data(
         self, components, bolt_type, diameter, length, material, assembly_name=None
     ):
@@ -658,7 +714,6 @@ class InstanceFactory:
                 shape_builder = ShapeBuilder(self.ifc)
 
                 # Извлекаем mesh из IfcCSGSolid через ifcopenshell.geom
-                # Для этого нужно создать временный продукт с представлением
                 try:
                     # Создаём временное представление
                     temp_shape_rep = self.ifc.create_entity(
@@ -689,20 +744,17 @@ class InstanceFactory:
                     )
 
                     # Извлекаем mesh через ifcopenshell.geom
-                    # WELD_VERTICES=False чтобы избежать несвязных рёбер (BRP002)
+                    # WELD_VERTICES=True для сварки вершин
                     settings = ifcopenshell.geom.settings()
-                    settings.set(settings.WELD_VERTICES, False)
+                    settings.set(settings.WELD_VERTICES, True)
                     settings.set(settings.USE_WORLD_COORDS, True)
 
                     shape = ifcopenshell.geom.create_shape(settings, temp_product)
 
                     # Перед удалением temp_product, очищаем temp_shape_rep.Items
-                    # чтобы remove_deep2 не шёл через unified_shape
-                    # unified_shape будет удалён отдельно позже
                     temp_shape_rep.Items = []
 
                     # Удаляем временный продукт и всю цепочку связанных сущностей
-                    # do_not_delete защищает контекст и другие общие ресурсы
                     import ifcopenshell.util.element
                     
                     context = temp_shape_rep.ContextOfItems
@@ -716,19 +768,20 @@ class InstanceFactory:
                         verts = shape.geometry.verts
                         faces = shape.geometry.faces
 
-                        # ifcopenshell.geom возвращает координаты в метрах,
-                        # а IFC использует миллиметры — масштабируем в 1000 раз
+                        # Масштабируем в мм
                         verts_mm = [v * 1000.0 for v in verts]
 
-                        # Преобразуем плоский список вершин в список кортежей
+                        # Свариваем вершины которые находятся близко друг к другу
+                        # Это нужно для BRP002: IfcClosedShell должен быть связным
+                        verts_mm, faces = self._weld_nearby_vertices(verts_mm, faces, tolerance=0.01)
+
+                        # Преобразуем в points и triangles
                         points = [
                             tuple(verts_mm[i : i + 3]) for i in range(0, len(verts_mm), 3)
                         ]
-
-                        # Преобразуем плоский список граней в список треугольников
                         triangles = [list(faces[i : i + 3]) for i in range(0, len(faces), 3)]
 
-                        # Создаём IfcFacetedBrep через ShapeBuilder
+                        # Создаём IfcFacetedBrep
                         faceted_brep = shape_builder.faceted_brep(points, triangles)
 
                         # Создаём представление с Brep
@@ -738,16 +791,9 @@ class InstanceFactory:
                             "IfcProductDefinitionShape", Representations=[shape_rep]
                         )
                         
-                        # Теперь unified_shape и all_solids не используются — можно удалять
-                        # Используем ifcopenshell.util.element.remove_deep2() для правильного удаления
+                        # Удаляем unified_shape и all_solids
                         import ifcopenshell.util.element
 
-                        # unified_shape — корневая сущность, remove_deep2 удалит всю цепочку:
-                        # - unified_shape (IfcCSGSolid или IfcBooleanResult)
-                        # - BooleanResult цепочку (FirstOperand/SecondOperand)
-                        # - all_solids (через BooleanResult)
-                        # - профили, кривые, точки (через all_solids)
-                        # do_not_delete защищает контекст и другие общие ресурсы
                         protected = {
                             *self.ifc.by_type("IfcGeometricRepresentationContext"),
                             *self.ifc.by_type("IfcOwnerHistory"),
@@ -761,7 +807,6 @@ class InstanceFactory:
                             do_not_delete=protected
                         )
                         
-                        # old_representation — корневая сущность для старого представления
                         if old_representation:
                             ifcopenshell.util.element.remove_deep2(
                                 self.ifc, 
@@ -772,7 +817,7 @@ class InstanceFactory:
                         raise ValueError("Empty mesh from ifcopenshell.geom")
 
                 except Exception as e:
-                    # Fallback к SolidModel если не удалось создать Brep
+                    # Fallback к SolidModel
                     print(
                         f"Warning: Could not create FacetedBrep: {e}. Falling back to SolidModel."
                     )
