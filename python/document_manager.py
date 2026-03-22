@@ -202,6 +202,7 @@ END-ISO-10303-21;
 
         # GRF003: Добавляем IfcProjectedCRS для соответствия правилу
         # CRS требуется при наличии IfcBuilding
+        # IFC105: Связываем CRS с IfcProject через HasCoordinateOperation
         projected_crs = f.create_entity(
             "IfcProjectedCRS",
             Name="EPSG:3857",  # WGS 84 / Pseudo-Mercator (по умолчанию)
@@ -209,6 +210,25 @@ END-ISO-10303-21;
             GeodeticDatum="WGS84",
             VerticalDatum="unknown",
         )
+        
+        # IFC4: IfcCoordinateReferenceSystemSelect может быть IfcGeometricRepresentationContext
+        # Используем контекст как SourceCRS
+        context = f.by_type("IfcGeometricRepresentationContext")[0] if f.by_type("IfcGeometricRepresentationContext") else None
+        
+        if context:
+            # Создаём IfcMapConversion для связи Project с CRS
+            # GRF005: Scale должен быть указан явно
+            # Проект использует миллиметры (IfcSIUnit ... .MILLI..METRE), CRS использует метры
+            # Scale = 1.0 / 0.001 = 1000.0 (коэффициент преобразования мм в м для координат)
+            coord_operation = f.create_entity(
+                "IfcMapConversion",
+                SourceCRS=context,
+                TargetCRS=projected_crs,
+                Scale=1000.0,  # Миллиметры в метры (координаты * 1000)
+            )
+            
+            # Связываем IfcProject с операцией через HasCoordinateOperation
+            # В IFC4 IfcProject не имеет HasCoordinateOperation, связь через контекст
 
     def get_document(self, doc_id: Optional[str] = None) -> Any:
         """

@@ -315,15 +315,14 @@ class TypeFactory:
                 PredefinedType="ANCHORBOLT",
             )
 
-        # Создаём материал сборки (MaterialList)
+        # Создаём материал сборки
+        # Согласно IFC102: IfcMaterialList deprecated в IFC4
+        # Используем прямой IfcMaterial вместо списка
         mat_name = get_material_name(material)
         mat = self.material_manager.get_material(mat_name)
         if mat:
-            # Создаём список материалов для сборки (шпилька + гайки + шайбы)
-            material_list = self.material_manager.create_material_list(
-                [mat, mat, mat]  # Все компоненты из одного материала
-            )
-            self.material_manager.associate_material(assembly_type, material_list)
+            # Ассоциируем материал напрямую (без IfcMaterialList)
+            self.material_manager.associate_material(assembly_type, mat)
 
         # Сборка не имеет собственной геометрии
         self.types_cache[key] = assembly_type

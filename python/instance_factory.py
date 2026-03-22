@@ -316,8 +316,11 @@ class InstanceFactory:
             )
 
         # IfcRelContainedInSpatialStructure
+        # Согласно правилам SPS003, SPS005, SPS007:
+        # Компоненты сборки (IfcRelAggregates) не должны быть в пространственной структуре.
+        # Только главный элемент сборки помещается в IfcRelContainedInSpatialStructure.
         if storey:
-            elements = [assembly] if assembly_mode == "unified" else [assembly] + components
+            elements = [assembly]  # Только assembly, без компонентов
             self.ifc.create_entity(
                 "IfcRelContainedInSpatialStructure",
                 GlobalId=ifc.guid.new(),
