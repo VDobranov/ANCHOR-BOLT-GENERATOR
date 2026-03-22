@@ -40,6 +40,16 @@ class IFCGenerator:
             WorldCoordinateSystem=world_coordinate_system,
         )
 
+        # Создаём субконтекст для 3D Body representation
+        # Улучшает совместимость с Tekla, Revit, Solibri
+        body_subcontext = f.create_entity(
+            "IfcGeometricRepresentationSubContext",
+            ContextIdentifier="Body",
+            TargetView="MODEL_VIEW",
+            ParentContext=geometric_context,
+            TargetScale=1.0,
+        )
+
         # Привязка к проекту
         projects = f.by_type("IfcProject")
         if not projects:
@@ -47,7 +57,7 @@ class IFCGenerator:
 
         project = projects[0]
         project.UnitsInContext = unit_assignment
-        project.RepresentationContexts = [geometric_context]
+        project.RepresentationContexts = [geometric_context, body_subcontext]
 
     def export_to_string(self):
         """Экспорт в строку"""

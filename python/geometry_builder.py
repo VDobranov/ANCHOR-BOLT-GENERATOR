@@ -27,27 +27,41 @@ class GeometryBuilder:
         if self._context:
             return self._context
 
-        # Пробуем получить контекст через get_context
+        # Пробуем получить субконтекст через get_context
         self._context = get_context(self.ifc, "Model", "Body", "MODEL_VIEW")
 
-        # Если контекст не найден, создаём вручную
+        # Если субконтекст не найден, пробуем получить основной контекст
         if self._context is None:
-            contexts = self.ifc.by_type("IfcGeometricRepresentationContext")
-            if contexts:
-                self._context = contexts[0]
+            subcontexts = self.ifc.by_type("IfcGeometricRepresentationSubContext")
+            if subcontexts:
+                # Используем первый найденный субконтекст
+                self._context = subcontexts[0]
             else:
-                # Создаём новый контекст
-                self._context = self.ifc.create_entity(
-                    "IfcGeometricRepresentationContext",
-                    ContextType="Model",
-                    CoordinateSpaceDimension=3,
-                    Precision=1e-05,
-                    WorldCoordinateSystem=self.ifc.create_entity(
-                        "IfcAxis2Placement3D",
-                        Location=self.ifc.create_entity(
-                            "IfcCartesianPoint", Coordinates=[0.0, 0.0, 0.0]
+                # Создаём основной контекст и субконтекст
+                contexts = self.ifc.by_type("IfcGeometricRepresentationContext")
+                if contexts:
+                    main_context = contexts[0]
+                else:
+                    main_context = self.ifc.create_entity(
+                        "IfcGeometricRepresentationContext",
+                        ContextType="Model",
+                        CoordinateSpaceDimension=3,
+                        Precision=1e-05,
+                        WorldCoordinateSystem=self.ifc.create_entity(
+                            "IfcAxis2Placement3D",
+                            Location=self.ifc.create_entity(
+                                "IfcCartesianPoint", Coordinates=[0.0, 0.0, 0.0]
+                            ),
                         ),
-                    ),
+                    )
+
+                # Создаём субконтекст
+                self._context = self.ifc.create_entity(
+                    "IfcGeometricRepresentationSubContext",
+                    ContextIdentifier="Body",
+                    TargetView="MODEL_VIEW",
+                    ParentContext=main_context,
+                    TargetScale=1.0,
                 )
 
         return self._context

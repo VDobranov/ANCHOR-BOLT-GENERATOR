@@ -290,6 +290,19 @@ class TestExportSettings:
         assert len(ifc_doc.by_type("IfcBuildingStorey")) > 0, "IfcBuildingStorey не найден"
         assert len(ifc_doc.by_type("IfcMechanicalFastener")) > 0, "IfcMechanicalFastener не найден"
 
+    def test_geometric_subcontext_exists(self, ifc_doc):
+        """IfcGeometricRepresentationSubContext существует"""
+        # Проверяем наличие субконтекста
+        subcontexts = ifc_doc.by_type("IfcGeometricRepresentationSubContext")
+        assert len(subcontexts) > 0, "IfcGeometricRepresentationSubContext не найден"
+
+        # Проверяем параметры субконтекста
+        subcontext = subcontexts[0]
+        assert subcontext.ContextIdentifier == "Body", "ContextIdentifier должен быть 'Body'"
+        assert subcontext.TargetView == "MODEL_VIEW", "TargetView должен быть 'MODEL_VIEW'"
+        assert subcontext.ParentContext is not None, "ParentContext не должен быть None"
+        assert subcontext.TargetScale == 1.0, "TargetScale должен быть 1.0"
+
     def test_spatial_structure_valid(self, factory, bolt_params):
         """Пространственная структура корректна"""
         result = factory.create_bolt_assembly(
