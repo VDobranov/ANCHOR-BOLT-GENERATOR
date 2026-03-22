@@ -1,0 +1,93 @@
+name: IFC Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-ifc:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ifcopenshell behave
+        pip install -r external/ifc-gherkin-rules/requirements.txt
+
+    - name: Generate test IFC file
+      run: |
+        PYTHONPATH=python:$PYTHONPATH python -c "
+        from main import initialize_base_document, reset_doc_manager
+        from instance_factory import InstanceFactory
+        
+        reset_doc_manager()
+        ifc_doc = initialize_base_document('test')
+        
+        builder = InstanceFactory(ifc_doc, geometry_type='solid')
+        result = builder.create_bolt_assembly(
+            bolt_type='1.1',
+            diameter=20,
+            length=800,
+            material='09Г2С',
+            assembly_class='IfcMechanicalFastener',
+            assembly_mode='separate',
+            geometry_type='solid'
+        )
+        
+        ifc_doc.write('test_bolt.ifc')
+        print('Generated test_bolt.ifc')
+        "
+
+    - name: Run buildingSMART Gherkin Validation
+      run: |
+        cd external/ifc-gherkin-rules
+        python -m behave \
+          --define input=../../test_bolt.ifc \
+          --tags="-@disabled" \
+          --tags="-@IFC2X3" \
+          --tags="-@IFC4.3" \
+          --tags="-@critical" \
+          --format pretty \
+          features/rules/
+
+    - name: Upload validation report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: validation-report
+        path: external/ifc-gherkin-rules/*.json
+        if-no-files-found: ignore
+
+  pytest:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest
+
+    - name: Run pytest
+      run: |
+        python -m pytest tests/ -v --tb=short
