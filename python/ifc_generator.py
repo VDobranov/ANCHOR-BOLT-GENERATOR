@@ -40,14 +40,17 @@ class IFCGenerator:
             WorldCoordinateSystem=world_coordinate_system,
         )
 
-        # Создаём субконтекст для 3D Body representation
+        # Создаём субконтекст для 3D Body representation через API
         # Улучшает совместимость с Tekla, Revit, Solibri
-        body_subcontext = f.create_entity(
-            "IfcGeometricRepresentationSubContext",
-            ContextIdentifier="Body",
-            TargetView="MODEL_VIEW",
-            ParentContext=geometric_context,
-            TargetScale=1.0,
+        from ifcopenshell.api import context
+
+        body_subcontext = context.add_context(
+            f,
+            context_type="Model",
+            context_identifier="Body",
+            target_view="MODEL_VIEW",
+            parent=geometric_context,
+            target_scale=1.0,
         )
 
         # Привязка к проекту
