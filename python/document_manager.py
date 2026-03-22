@@ -220,10 +220,14 @@ END-ISO-10303-21;
             # GRF005: Scale должен быть указан явно
             # Проект использует миллиметры (IfcSIUnit ... .MILLI..METRE), CRS использует метры
             # Scale = 1.0 / 0.001 = 1000.0 (коэффициент преобразования мм в м для координат)
+            # Eastings/Northings/OrthogonalHeight = 0.0 (начало координат в точке отсчёта)
             coord_operation = f.create_entity(
                 "IfcMapConversion",
                 SourceCRS=context,
                 TargetCRS=projected_crs,
+                Eastings=0.0,
+                Northings=0.0,
+                OrthogonalHeight=0.0,
                 Scale=1000.0,  # Миллиметры в метры (координаты * 1000)
             )
             
