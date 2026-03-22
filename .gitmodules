@@ -1,0 +1,3 @@
+[submodule "external/ifc-gherkin-rules"]
+	path = external/ifc-gherkin-rules
+	url = https://github.com/buildingSMART/ifc-gherkin-rules.git
