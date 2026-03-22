@@ -368,11 +368,13 @@ class TypeFactory:
         """
         Создание IfcFacetedBrep из solid representation
 
+        Заменяет solid геометрию в RepresentationMaps на faceted.
+
         Args:
             solid_representation: IfcShapeRepresentation с solid геометрией
 
         Returns:
-            IfcShapeRepresentation с IfcFacetedBrep
+            IfcShapeRepresentation с IfcFacetedBrep (тот же объект что и solid_representation)
         """
         import ifcopenshell
         import ifcopenshell.geom
@@ -431,15 +433,20 @@ class TypeFactory:
 
             faceted_brep = shape_builder.faceted_brep(points, triangles)
 
-            shape_rep = self.ifc.create_entity(
-                "IfcShapeRepresentation",
-                ContextOfItems=context,
-                RepresentationIdentifier="Body",
-                RepresentationType="Brep",
-                Items=[faceted_brep],
-            )
+            # Заменяем Items в оригинальном RepresentationMaps на faceted_brep
+            # Это важно чтобы solid геометрия не оставалась в файле
+            old_items = list(solid_representation.Items)
+            solid_representation.Items = [faceted_brep]
+            solid_representation.RepresentationType = "Brep"
+            
+            # Удаляем неиспользуемые solid сущности
+            for item in old_items:
+                try:
+                    self.ifc.remove(item)
+                except Exception:
+                    pass  # Некоторые сущности могут использоваться в других местах
 
-            return shape_rep
+            return solid_representation
 
         # Fallback: возвращаем оригинальную solid геометрию
         return solid_representation
