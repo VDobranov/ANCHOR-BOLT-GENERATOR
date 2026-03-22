@@ -186,16 +186,7 @@ END-ISO-10303-21;
         )
 
         # World coordinate system
-        f.create_entity(
-            "IfcAxis2Placement2D",
-            Location=f.create_entity("IfcCartesianPoint", Coordinates=[0.0, 0.0]),
-        )
-        f.create_entity(
-            "IfcAxis2Placement3D",
-            Location=f.create_entity("IfcCartesianPoint", Coordinates=[0.0, 0.0, 0.0]),
-            Axis=f.create_entity("IfcDirection", DirectionRatios=[0.0, 0.0, 1.0]),
-            RefDirection=f.create_entity("IfcDirection", DirectionRatios=[1.0, 0.0, 0.0]),
-        )
+        # IfcAxis2Placement3D создаётся в setup_units_and_contexts() для WorldCoordinateSystem
 
         # Units and contexts
         from ifc_generator import IFCGenerator

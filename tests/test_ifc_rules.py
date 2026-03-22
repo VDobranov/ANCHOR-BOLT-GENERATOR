@@ -308,7 +308,12 @@ class TestIFCRules:
         """
         IFC105: Ресурсные сущности должны быть сосланы корневой сущностью
         
-        Требование: Материалы, профили и другие ресурсы должны использоваться
+        Требование: Ресурсные сущности должны быть сосланы хотя бы одной корневой
+        сущностью (IfcRoot с GlobalId) напрямую или через цепочку других сущностей.
+        
+        Проверяем:
+        1. Материалы ассоциированы через IfcRelAssociatesMaterial
+        2. Геометрия используется через RepresentationMaps типов
         """
         result = factory.create_bolt_assembly(
             assembly_class="IfcMechanicalFastener",
@@ -318,13 +323,76 @@ class TestIFCRules:
         )
         ifc_doc = result["ifc_doc"]
 
-        # Проверяем что материалы используются
+        # 1. Проверяем что все материалы ассоциированы
         materials = ifc_doc.by_type("IfcMaterial")
         mat_assoc = ifc_doc.by_type("IfcRelAssociatesMaterial")
+        
+        for material in materials:
+            is_used = False
+            for assoc in mat_assoc:
+                if assoc.RelatingMaterial == material:
+                    is_used = True
+                    break
+            assert is_used, f"Материал #{material.id()} не ассоциирован (IFC105)"
 
-        if materials:
-            assert len(mat_assoc) > 0, \
-                "Материалы должны быть ассоциированы с элементами (IFC105)"
+        # 2. Проверяем что геометрия используется через RepresentationMaps
+        # IfcExtrudedAreaSolid, IfcArbitraryProfileDefWithVoids, IfcCircle используются
+        # в IfcShapeRepresentation который используется в IfcRepresentationMap
+        swept_solids = ifc_doc.by_type("IfcExtrudedAreaSolid")
+        profile_defs = ifc_doc.by_type("IfcArbitraryProfileDefWithVoids")
+        circles = ifc_doc.by_type("IfcCircle")
+        
+        representation_maps = ifc_doc.by_type("IfcRepresentationMap")
+        shape_reps = ifc_doc.by_type("IfcShapeRepresentation")
+        
+        # Проверяем что каждый SweptSolid используется в ShapeRepresentation
+        for solid in swept_solids:
+            is_used = False
+            for rep in shape_reps:
+                if solid in (rep.Items or []):
+                    is_used = True
+                    break
+            assert is_used, f"IfcExtrudedAreaSolid #{solid.id()} не используется (IFC105)"
+        
+        # Проверяем что каждый ProfileDef используется в ExtrudedAreaSolid
+        for profile in profile_defs:
+            is_used = False
+            for solid in swept_solids:
+                if getattr(solid, 'SweptArea', None) == profile:
+                    is_used = True
+                    break
+            assert is_used, f"IfcArbitraryProfileDefWithVoids #{profile.id()} не используется (IFC105)"
+        
+        # Проверяем что каждый Circle используется в ProfileDef или ShapeRepresentation
+        for circle in circles:
+            is_used = False
+            # Circle может использоваться в ArbitraryProfileDefWithVoids (OuterCurve или InnerCurves)
+            for profile in profile_defs:
+                if getattr(profile, 'OuterCurve', None) == circle:
+                    is_used = True
+                    break
+                # Проверяем InnerCurves (список)
+                inner_curves = getattr(profile, 'InnerCurves', None) or []
+                if circle in inner_curves:
+                    is_used = True
+                    break
+            # Или напрямую в ShapeRepresentation
+            if not is_used:
+                for rep in shape_reps:
+                    if circle in (rep.Items or []):
+                        is_used = True
+                        break
+            assert is_used, f"IfcCircle #{circle.id()} не используется (IFC105)"
+        
+        # 3. Проверяем что RepresentationMaps используются через MappedItem
+        mapped_items = ifc_doc.by_type("IfcMappedItem")
+        for rep_map in representation_maps:
+            is_used = False
+            for mapped_item in mapped_items:
+                if getattr(mapped_item, 'MappingSource', None) == rep_map:
+                    is_used = True
+                    break
+            assert is_used, f"IfcRepresentationMap #{rep_map.id()} не используется (IFC105)"
 
     # =============================================================================
     # MPD001: Correct use of RepresentationType and RepresentationIdentifier - v1
