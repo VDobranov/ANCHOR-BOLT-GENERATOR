@@ -37,29 +37,33 @@ class GeometryBuilder:
                 # Используем первый найденный субконтекст
                 self._context = subcontexts[0]
             else:
-                # Создаём основной контекст и субконтекст через API
-                from ifcopenshell.api import context
-
+                # Создаём основной контекст и субконтекст
+                # Используем прямое создание сущностей для совместимости с тестами
                 contexts = self.ifc.by_type("IfcGeometricRepresentationContext")
                 if contexts:
                     main_context = contexts[0]
                 else:
-                    # Создаём основной 3D контекст через API
-                    main_context = context.add_context(
-                        self.ifc,
-                        context_type="Model",
-                        context_identifier=None,
-                        target_view=None,
+                    # Создаём основной 3D контекст напрямую
+                    main_context = self.ifc.create_entity(
+                        "IfcGeometricRepresentationContext",
+                        ContextType="Model",
+                        CoordinateSpaceDimension=3,
+                        Precision=1e-05,
+                        WorldCoordinateSystem=self.ifc.create_entity(
+                            "IfcAxis2Placement3D",
+                            Location=self.ifc.create_entity(
+                                "IfcCartesianPoint", Coordinates=[0.0, 0.0, 0.0]
+                            ),
+                        ),
                     )
 
-                # Создаём субконтекст через API
-                self._context = context.add_context(
-                    self.ifc,
-                    context_type="Model",
-                    context_identifier="Body",
-                    target_view="MODEL_VIEW",
-                    parent=main_context,
-                    target_scale=1.0,
+                # Создаём субконтекст напрямую
+                self._context = self.ifc.create_entity(
+                    "IfcGeometricRepresentationSubContext",
+                    ContextIdentifier="Body",
+                    TargetView="MODEL_VIEW",
+                    ParentContext=main_context,
+                    TargetScale=1.0,
                 )
 
         return self._context

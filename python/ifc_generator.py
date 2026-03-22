@@ -54,13 +54,15 @@ class IFCGenerator:
         )
 
         # Привязка к проекту
+        # Только основной контекст добавляется в RepresentationContexts
+        # Субконтексты связаны через ParentContext
         projects = f.by_type("IfcProject")
         if not projects:
             raise ValueError("IfcProject не найден")
 
         project = projects[0]
         project.UnitsInContext = unit_assignment
-        project.RepresentationContexts = [geometric_context, body_subcontext]
+        project.RepresentationContexts = [geometric_context]
 
     def export_to_string(self):
         """Экспорт в строку"""
