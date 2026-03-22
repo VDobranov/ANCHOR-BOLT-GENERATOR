@@ -720,11 +720,42 @@ class InstanceFactory:
 
                         # Создаём представление с Brep
                         shape_rep = builder.create_shape_representation_from_brep(faceted_brep)
+                        old_representation = assembly.Representation
                         assembly.Representation = self.ifc.create_entity(
                             "IfcProductDefinitionShape", Representations=[shape_rep]
                         )
-                        # unified_shape и all_solids остаются в файле но не используются
-                        # Их удаление через remove_deep2 может вызвать segfault из-за сложных связей
+                        
+                        # Теперь unified_shape и all_solids не используются — можно удалять
+                        # Используем ifcopenshell.util.element.remove_deep2() для правильного удаления
+                        import ifcopenshell.util.element
+                        
+                        # Сначала удаляем BooleanResult цепочку (если есть)
+                        # Они ссылаются друг на друга, поэтому удаляем с конца цепочки
+                        for boolean_result in list(self.ifc.by_type("IfcBooleanResult")):
+                            try:
+                                ifcopenshell.util.element.remove_deep2(self.ifc, boolean_result)
+                            except Exception:
+                                pass
+                        
+                        # Потом удаляем all_solids (IfcExtrudedAreaSolid, IfcSweptDiskSolid, IfcCSGSolid)
+                        for solid in all_solids:
+                            try:
+                                ifcopenshell.util.element.remove_deep2(self.ifc, solid)
+                            except Exception:
+                                pass
+                        
+                        # Потом удаляем unified_shape (IfcCSGSolid или IfcBooleanResult)
+                        try:
+                            ifcopenshell.util.element.remove_deep2(self.ifc, unified_shape)
+                        except Exception:
+                            pass
+                        
+                        # Удаляем старое представление assembly
+                        if old_representation:
+                            try:
+                                ifcopenshell.util.element.remove_deep2(self.ifc, old_representation)
+                            except Exception:
+                                pass
                     else:
                         raise ValueError("Empty mesh from ifcopenshell.geom")
 
