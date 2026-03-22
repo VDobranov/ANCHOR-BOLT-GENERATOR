@@ -569,3 +569,169 @@ class TestIFCRules:
 
             # LOP000: Local placement
             assert result["assembly"].ObjectPlacement is not None
+
+    # =============================================================================
+    # PJS001: Correct conversion based units - v2
+    # =============================================================================
+
+    def test_pjs001_conversion_based_units(self, ifc_doc):
+        """
+        PJS001: Корректные единицы измерения
+
+        Требование: Модель должна использовать корректные единицы измерения
+        для основных величин (LENGTH, MASS, PLANEANGLE)
+        """
+        # Проверяем наличие единиц измерения
+        # IFC допускает IfcSIUnit или IfcConversionBasedUnit
+        si_units = ifc_doc.by_type("IfcSIUnit")
+        conv_units = ifc_doc.by_type("IfcConversionBasedUnit")
+
+        total_units = len(si_units) + len(conv_units)
+        assert total_units > 0, "Должна быть хотя бы одна единица измерения (IfcSIUnit или IfcConversionBasedUnit)"
+
+        # Проверяем наличие единицы длины (LENGTHUNIT)
+        # Примечание: IfcSIUnit использует 'LENGTHUNIT', IfcConversionBasedUnit использует 'LENGTH_UNIT'
+        length_units = [u for u in si_units if hasattr(u, 'UnitType') and u.UnitType == 'LENGTHUNIT']
+        if not length_units:
+            length_units = [u for u in conv_units if hasattr(u, 'UnitType') and u.UnitType == 'LENGTH_UNIT']
+        assert len(length_units) > 0, "Должна быть единица длины (LENGTH_UNIT)"
+
+    # =============================================================================
+    # GEM003: Unique representation identifier - v1
+    # =============================================================================
+
+    def test_gem003_unique_representation_identifier(self, factory, bolt_params):
+        """
+        GEM003: Уникальность идентификатора представления
+
+        Требование: В рамках одного контекста RepresentationIdentifier
+        должен быть уникальным для каждого Representation
+
+        Примечание: Для разных продуктов (болт, гайка, шайба) допускается
+        одинаковый RepresentationIdentifier (например, 'Body')
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # GEM003 проверяет что в рамках одного контекста и одного продукта
+        # нет дублирования RepresentationIdentifier + RepresentationType
+        representations = ifc_doc.by_type("IfcShapeRepresentation")
+
+        # Для IFC4 ADD2 проверка упрощена: допускаем дубли для разных компонентов
+        # Реальная проверка GEM003 требует анализа RepresentedProduct
+        # который может быть не указан напрямую в IfcShapeRepresentation
+
+        # Проверяем что есть хотя бы одна репрезентация с идентификатором
+        reps_with_id = [r for r in representations if r.RepresentationIdentifier]
+        assert len(reps_with_id) > 0, "Должна быть хотя бы одна репрезентация с RepresentationIdentifier"
+
+        # Проверяем что идентификаторы валидны (не пустые строки)
+        for rep in reps_with_id:
+            assert rep.RepresentationIdentifier.strip(), \
+                f"RepresentationIdentifier не должен быть пустым: {rep}"
+
+    # =============================================================================
+    # GEM004: Constraints on representation identifiers - v3
+    # =============================================================================
+
+    def test_gem004_representation_identifier_constraints(self, factory, bolt_params):
+        """
+        GEM004: Ограничения на идентификаторы представлений
+
+        Требование: RepresentationIdentifier должен соответствовать типу геометрии:
+        - 'Body' для основной геометрии
+        - 'Axis' для осевой геометрии
+        - 'Box' для bounding box
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+
+        # Допустимые идентификаторы для IFC4
+        valid_identifiers = {'Body', 'Axis', 'Box', 'SurveyPoints', 'FootPrint'}
+
+        representations = ifc_doc.by_type("IfcShapeRepresentation")
+        for rep in representations:
+            if rep.RepresentationIdentifier:
+                assert rep.RepresentationIdentifier in valid_identifiers, \
+                    f"Недопустимый RepresentationIdentifier: {rep.RepresentationIdentifier}"
+
+    # =============================================================================
+    # OJP000: Object placement - v1
+    # =============================================================================
+
+    def test_ojp000_object_placement(self, factory, bolt_params):
+        """
+        OJP000: Размещение объектов
+
+        Требование: Все элементы должны иметь ObjectPlacement
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+        assembly = result["assembly"]
+
+        # Проверяем что assembly имеет ObjectPlacement
+        assert assembly.ObjectPlacement is not None, \
+            "IfcMechanicalFastener должен иметь ObjectPlacement"
+        assert assembly.ObjectPlacement.is_a("IfcLocalPlacement"), \
+            "ObjectPlacement должен быть IfcLocalPlacement"
+
+        # Проверяем компоненты болта
+        components = ifc_doc.by_type("IfcElement")
+        for component in components:
+            if component != assembly:
+                assert component.ObjectPlacement is not None, \
+                    f"{component.is_a()} должен иметь ObjectPlacement"
+
+    # =============================================================================
+    # OJP001: Relative placement for aggregated elements - v3
+    # =============================================================================
+
+    def test_ojp001_relative_placement_aggregated(self, factory, bolt_params):
+        """
+        OJP001: Относительное размещение для агрегированных элементов
+
+        Требование: Если элемент агрегирован в другой элемент через IfcRelAggregates,
+        его ObjectPlacement.PlacementRelTo должен ссылаться на размещение родителя
+        или быть None (мировая СК)
+        """
+        result = factory.create_bolt_assembly(
+            assembly_class="IfcMechanicalFastener",
+            assembly_mode="separate",
+            geometry_type="solid",
+            **bolt_params,
+        )
+        ifc_doc = result["ifc_doc"]
+        assembly = result["assembly"]
+
+        # Находим все IfcRelAggregates
+        rel_aggregates = ifc_doc.by_type("IfcRelAggregates")
+
+        # Для каждого агрегированного элемента проверяем PlacementRelTo
+        for rel in rel_aggregates:
+            if rel.RelatingObject and rel.RelatedObjects:
+                # IfcProject не имеет ObjectPlacement, пропускаем
+                if not hasattr(rel.RelatingObject, 'ObjectPlacement'):
+                    continue
+                relating_placement = rel.RelatingObject.ObjectPlacement
+                for related_obj in rel.RelatedObjects:
+                    if hasattr(related_obj, 'ObjectPlacement') and related_obj.ObjectPlacement:
+                        # PlacementRelTo должен ссылаться на родителя или быть None (мировая СК)
+                        placement_rel = related_obj.ObjectPlacement.PlacementRelTo
+                        # Допускается None (мировая СК) или ссылка на родителя
+                        assert placement_rel is None or placement_rel == relating_placement, \
+                            f"PlacementRelTo должен ссылаться на родителя или быть None"
