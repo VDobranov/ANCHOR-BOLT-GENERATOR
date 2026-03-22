@@ -723,27 +723,8 @@ class InstanceFactory:
                         assembly.Representation = self.ifc.create_entity(
                             "IfcProductDefinitionShape", Representations=[shape_rep]
                         )
-                        
-                        # Удаляем неиспользуемую solid геометрию
-                        # all_solids, unified_shape и BooleanResult больше не нужны
-                        try:
-                            self.ifc.remove(unified_shape)
-                        except Exception:
-                            pass
-                        for solid in all_solids:
-                            try:
-                                self.ifc.remove(solid)
-                            except Exception:
-                                pass
-                        # Удаляем цепочку BooleanResult которые могут остаться
-                        # BooleanResult используются только для создания unified_shape
-                        # После создания faceted они больше не нужны
-                        # Удаляем все BooleanResult которые не используются напрямую в assembly
-                        for boolean_result in list(self.ifc.by_type("IfcBooleanResult")):
-                            try:
-                                self.ifc.remove(boolean_result)
-                            except Exception:
-                                pass  # Если BooleanResult ещё используется, не удаляем
+                        # unified_shape и all_solids остаются в файле но не используются
+                        # Их удаление через remove_deep2 может вызвать segfault из-за сложных связей
                     else:
                         raise ValueError("Empty mesh from ifcopenshell.geom")
 

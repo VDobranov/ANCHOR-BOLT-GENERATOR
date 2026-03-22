@@ -438,15 +438,18 @@ class TypeFactory:
             old_items = list(solid_representation.Items)
             solid_representation.Items = [faceted_brep]
             solid_representation.RepresentationType = "Brep"
+
+            # Удаляем неиспользуемые solid сущности и всю их геометрию
+            # Используем ifcopenshell.util.element.remove_deep2() с also_consider
+            # also_consider=[solid_representation] чтобы traverse() не шёл через него на faceted_brep
+            import ifcopenshell.util.element
             
-            # Удаляем неиспользуемые solid сущности
             for item in old_items:
                 try:
-                    self.ifc.remove(item)
+                    # also_consider включает solid_representation в подграф
+                    # Это предотвращает переход traverse() на faceted_brep через solid_representation
+                    ifcopenshell.util.element.remove_deep2(self.ifc, item, also_consider=[solid_representation])
                 except Exception:
                     pass  # Некоторые сущности могут использоваться в других местах
 
             return solid_representation
-
-        # Fallback: возвращаем оригинальную solid геометрию
-        return solid_representation
