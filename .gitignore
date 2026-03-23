@@ -208,15 +208,11 @@ __marimo__/
 
 .DS_Store
 
-.qwen/
-
 # Node.js
 node_modules/
 package-lock.json
 
 # Project temp files
-refactoring/
-FULL_PROJECT_ANALYSIS.md
 pretty.output
 behave.ini
 validate_ifc.py
