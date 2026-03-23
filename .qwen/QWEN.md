@@ -107,17 +107,7 @@ ANCHOR-BOLT-GENERATOR/
 │   ├── test_utils.py
 │   └── test_validate_utils.py
 │
-├── docs/                   # Sphinx документация
-│   ├── conf.py             # Конфигурация Sphinx
-│   ├── index.rst           # Главная страница
-│   ├── README.md           # Инструкция по использованию
-│   ├── api/modules.rst     # Python модули
-│   └── python/             # Автогенерированные RST файлы
-│
-├── refactoring/            # Документация рефакторинга (Phase 0-8)
-│   ├── README.md           # Индекс всех фаз с прогрессом
-│   ├── PHASE_0_TODO.md — PHASE_8_TODO.md  # Детальные планы фаз
-│   └── REFACTORING_PLAN_FINAL.md  # Итоговый план
+├── docs/
 │
 ├── data/
 │   └── dim.csv             # Исходные данные размеров болтов
@@ -146,7 +136,6 @@ ANCHOR-BOLT-GENERATOR/
 | **IFC-стандарт** | IFC4 ADD2 TC1 | Российский BIM-стандарт |
 | **Материалы** | ГОСТ 19281-2014, ГОСТ 535-88 | Марки стали |
 | **Тестирование** | pytest 9.0+, Jest 29+ | Python + JavaScript тесты |
-| **Документация** | Sphinx 8+ | Python API документация |
 | **CI/CD** | pre-commit, GitHub Actions | Автоматические проверки |
 
 ### Доступные материалы
@@ -281,38 +270,6 @@ IfcProject
 | `data/materials.py` | `MATERIALS`: свойства материалов (σ_в, ГОСТ, плотность) |
 | `data/validation.py` | `AVAILABLE_LENGTHS`, `validate_parameters`: валидация по ГОСТ |
 | `services/dimension_service.py` | `DimensionService`: сервис для получения размеров болтов |
-
-### Ключевые улучшения архитектуры (рефакторинг Phase 0-8)
-
-#### Phase 3: RepresentationMaps
-- **До:** Геометрия дублировалась для каждого экземпляра
-- **После:** Geometry кэшируется в `RepresentationMap`, экземпляры используют `IfcMappedItem`
-- **Результат:** -20% размер IFC файла, лучшая производительность
-
-#### Phase 4: Protocol интерфейсы и DI
-- **До:** Прямые зависимости между модулями
-- **После:** Protocol интерфейсы (PEP 544) + DI контейнер
-- **Результат:** Устранение циклических зависимостей, улучшенная тестируемость
-
-#### Phase 5: Удаление Singleton
-- **До:** `IFCDocument` как Singleton (глобальное состояние)
-- **После:** `IFCDocumentManager` с поддержкой множественных документов
-- **Результат:** Изоляция тестов, поддержка нескольких документов
-
-#### Phase 6: Type hints и документация
-- **До:** Частичные type hints
-- **После:** Полные type hints + Sphinx документация
-- **Результат:** 100% mypy passing, автогенерация API документации
-
-#### Phase 7: Улучшение тестов
-- **До:** 107 тестов, Mock классы дублировались в 5 файлах
-- **После:** 152 теста, Mock классы в `conftest.py`, покрытие 82%
-- **Результат:** Лучшая поддерживаемость, +45 тестов
-
-#### Phase 8: JavaScript рефакторинг
-- **До:** Глобальные переменные, порядок загрузки важен
-- **После:** ES6 modules, модульная структура, Jest тесты
-- **Результат:** 38 JS тестов, лучшая тестируемость
 
 ### Подход к геометрии
 Геометрия строится **один раз** в IFC-модели через `type_factory.py` с использованием `IfcSweptDiskSolid` и `IfcExtrudedAreaSolid`, затем конвертируется в меши Three.js через `geometry_converter.py` с помощью `ifcopenshell.geom.create_shape()`. Это обеспечивает:

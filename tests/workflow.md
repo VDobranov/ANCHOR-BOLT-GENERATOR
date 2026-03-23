@@ -256,12 +256,6 @@ def test_with_fixture(mock_ifc_doc, valid_bolt_params):
 - ✅ JavaScript сервисы (js/services/*.js)
 - ✅ JavaScript константы (js/core/constants.js)
 
-### Не покрывается тестами:
-- ❌ Интеграция с ifcopenshell.geom (требуется Pyodide)
-- ❌ Генерация IFC файлов в браузере (интеграционное тестирование)
-- ❌ Three.js визуализация (JavaScript integration)
-- ❌ geometry_converter.py (требует реальный ifcopenshell)
-
 ## CI/CD Интеграция
 
 ### Python тесты в CI/CD
