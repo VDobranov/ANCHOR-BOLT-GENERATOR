@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Как работает ANCHOR-BOLT-GENERATOR — Интерактивный курс</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;600;700&family=DM+Sans:opsz,wght@9..40,400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-bg-primary: #FDFBF9;
+            --color-bg-secondary: #F5F1ED;
+            --color-bg-tertiary: #EBE5DE;
+            --color-text-primary: #2D2A26;
+            --color-text-secondary: #5C5550;
+            --color-text-muted: #8B8279;
+            --color-accent: #E85D3F;
+            --color-accent-hover: #D14A2E;
+            --color-accent-light: #FDECE6;
+            --color-code-bg: #1E1E2E;
+            --color-code-text: #CDD6F4;
+            --color-success: #2D8B5C;
+            --color-success-bg: #E8F5E9;
+            --color-warning: #B57D1B;
+            --color-warning-bg: #FFF8E1;
+            --color-info: #2563EB;
+            --color-info-bg: #E3F2FD;
+            --color-border: #DCD5CE;
+            --font-display: 'Bricolage Grotesque', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem;
+            --space-4: 1rem; --space-5: 1.25rem; --space-6: 1.5rem;
+            --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem;
+            --space-16: 4rem; --shadow-md: 0 4px 12px rgba(45,42,38,0.08);
+            --shadow-lg: 0 8px 24px rgba(45,42,38,0.12);
+            --radius-md: 8px; --radius-lg: 12px; --radius-xl: 16px;
+            --transition-base: 250ms ease;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; scroll-padding-top: var(--space-16); }
+        body {
+            font-family: var(--font-body); font-size: 1rem; line-height: 1.7;
+            color: var(--color-text-primary); background-color: var(--color-bg-primary);
+        }
+        .nav {
+            position: fixed; top: 0; left: 0; right: 0; height: 64px;
+            background: rgba(253,251,249,0.95); backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--color-border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 var(--space-6); z-index: 1000;
+        }
+        .nav-brand {
+            font-family: var(--font-display); font-weight: 700; font-size: 1.125rem;
+            display: flex; align-items: center; gap: var(--space-3);
+        }
+        .nav-brand-icon {
+            width: 32px; height: 32px; background: var(--color-accent);
+            border-radius: var(--radius-md); display: flex; align-items: center;
+            justify-content: center; color: white; font-size: 1.125rem;
+        }
+        .nav-progress { display: flex; align-items: center; gap: var(--space-4); }
+        .nav-progress-bar {
+            width: 200px; height: 6px; background: var(--color-bg-tertiary);
+            border-radius: 9999px; overflow: hidden;
+        }
+        .nav-progress-fill {
+            height: 100%; background: var(--color-accent);
+            transition: width var(--transition-base); width: 0%;
+        }
+        .nav-progress-text { font-size: 0.875rem; color: var(--color-text-muted); font-weight: 500; }
+        .nav-menu { display: flex; gap: var(--space-2); }
+        .nav-btn {
+            padding: var(--space-2) var(--space-3); border: none; background: transparent;
+            color: var(--color-text-secondary); font-family: var(--font-body);
+            font-size: 0.875rem; font-weight: 500; border-radius: var(--radius-md);
+            cursor: pointer; transition: all 150ms ease;
+        }
+        .nav-btn:hover { background: var(--color-bg-secondary); color: var(--color-accent); }
+        .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .module {
+            min-height: 100dvh; min-height: 100vh; scroll-snap-align: start;
+            display: flex; flex-direction: column; justify-content: center;
+            padding: var(--space-16) var(--space-6); position: relative;
+        }
+        .module:nth-child(odd) { background: var(--color-bg-primary); }
+        .module:nth-child(even) { background: var(--color-bg-secondary); }
+        .module-header { max-width: 800px; margin-bottom: var(--space-12); }
+        .module-number {
+            display: inline-flex; align-items: center; gap: var(--space-2);
+            font-family: var(--font-display); font-size: 0.875rem; font-weight: 600;
+            color: var(--color-accent); text-transform: uppercase; letter-spacing: 0.05em;
+            margin-bottom: var(--space-4);
+        }
+        .module-number-line { width: 40px; height: 2px; background: var(--color-accent); }
+        .module-title {
+            font-family: var(--font-display); font-size: 2.25rem; font-weight: 700;
+            line-height: 1.2; color: var(--color-text-primary); margin-bottom: var(--space-4);
+        }
+        .module-subtitle {
+            font-size: 1.25rem; color: var(--color-text-secondary); line-height: 1.5;
+        }
+        .content { max-width: 900px; width: 100%; }
+        .screen {
+            margin-bottom: var(--space-12); opacity: 0; transform: translateY(30px);
+            transition: opacity 400ms ease, transform 400ms ease;
+        }
+        .screen.visible { opacity: 1; transform: translateY(0); }
+        .text-block { max-width: 65ch; margin-bottom: var(--space-6); }
+        .text-block p { margin-bottom: var(--space-4); font-size: 1.125rem; color: var(--color-text-secondary); }
+        .text-block p:last-child { margin-bottom: 0; }
+        .code-translation {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+            border-radius: var(--radius-lg); overflow: hidden;
+            box-shadow: var(--shadow-lg); margin: var(--space-8) 0;
+        }
+        .code-panel { background: var(--color-code-bg); padding: var(--space-6); overflow-x: auto; }
+        .code-panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: var(--space-4); padding-bottom: var(--space-3);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .code-panel-title { font-family: var(--font-mono); font-size: 0.875rem; color: #A6ADC8; }
+        .code-panel pre {
+            font-family: var(--font-mono); font-size: 0.875rem; line-height: 1.6;
+            color: var(--color-code-text); white-space: pre-wrap; word-wrap: break-word;
+        }
+        .translation-panel {
+            background: #F8F5F2; padding: var(--space-6);
+            border-left: 1px solid var(--color-border);
+        }
+        .translation-panel h4 {
+            font-family: var(--font-display); font-size: 0.875rem; font-weight: 600;
+            color: var(--color-accent); margin-bottom: var(--space-4);
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .translation-item {
+            margin-bottom: var(--space-4); padding: var(--space-3); background: white;
+            border-radius: var(--radius-md); border-left: 3px solid var(--color-accent);
+        }
+        .translation-item:last-child { margin-bottom: 0; }
+        .translation-item code {
+            font-family: var(--font-mono); font-size: 0.75rem;
+            background: var(--color-accent-light); padding: 2px 6px;
+            border-radius: var(--radius-md); color: var(--color-accent);
+        }
+        .cards-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-6); margin: var(--space-8) 0;
+        }
+        .card {
+            background: white; border-radius: var(--radius-lg); padding: var(--space-6);
+            box-shadow: var(--shadow-md); border: 1px solid var(--color-border);
+            transition: transform var(--transition-base), box-shadow var(--transition-base);
+        }
+        .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .card-icon {
+            width: 48px; height: 48px; background: var(--color-accent-light);
+            border-radius: var(--radius-md); display: flex; align-items: center;
+            justify-content: center; font-size: 1.5rem; margin-bottom: var(--space-4);
+        }
+        .card-title {
+            font-family: var(--font-display); font-size: 1.125rem; font-weight: 600;
+            color: var(--color-text-primary); margin-bottom: var(--space-2);
+        }
+        .card-description { font-size: 0.875rem; color: var(--color-text-secondary); line-height: 1.6; }
+        .callout {
+            padding: var(--space-6); border-radius: var(--radius-lg); margin: var(--space-8) 0;
+            display: flex; gap: var(--space-4); align-items: flex-start;
+        }
+        .callout-aha { background: var(--color-info-bg); border-left: 4px solid var(--color-info); }
+        .callout-warning { background: var(--color-warning-bg); border-left: 4px solid var(--color-warning); }
+        .callout-icon { font-size: 2rem; flex-shrink: 0; }
+        .callout-content { flex: 1; }
+        .callout-title {
+            font-family: var(--font-display); font-weight: 600;
+            color: var(--color-text-primary); margin-bottom: var(--space-2);
+        }
+        .callout-text { font-size: 1rem; color: var(--color-text-secondary); line-height: 1.6; }
+        .diagram {
+            background: white; border-radius: var(--radius-lg); padding: var(--space-8);
+            box-shadow: var(--shadow-md); margin: var(--space-8) 0;
+        }
+        .diagram-title {
+            font-family: var(--font-display); font-weight: 600; text-align: center;
+            margin-bottom: var(--space-6); color: var(--color-text-primary);
+        }
+        .flow-diagram { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); }
+        .flow-step {
+            display: flex; align-items: center; gap: var(--space-4);
+            padding: var(--space-4) var(--space-6); background: var(--color-bg-secondary);
+            border-radius: var(--radius-lg); border: 2px solid var(--color-border);
+            min-width: 280px; justify-content: center;
+        }
+        .flow-step-icon {
+            width: 40px; height: 40px; background: var(--color-accent);
+            border-radius: 9999px; display: flex; align-items: center;
+            justify-content: center; color: white; font-size: 1.125rem; flex-shrink: 0;
+        }
+        .flow-step-text { font-family: var(--font-display); font-weight: 600; color: var(--color-text-primary); }
+        .flow-arrow { font-size: 1.5rem; color: var(--color-accent); }
+        .quiz-container {
+            background: white; border-radius: var(--radius-xl); padding: var(--space-8);
+            box-shadow: var(--shadow-lg); margin: var(--space-12) 0;
+        }
+        .quiz-question {
+            font-family: var(--font-display); font-size: 1.25rem; font-weight: 600;
+            color: var(--color-text-primary); margin-bottom: var(--space-6);
+        }
+        .quiz-options { display: flex; flex-direction: column; gap: var(--space-3); }
+        .quiz-option {
+            display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-4);
+            background: var(--color-bg-secondary); border: 2px solid transparent;
+            border-radius: var(--radius-lg); cursor: pointer; transition: all 150ms ease;
+        }
+        .quiz-option:hover { border-color: var(--color-accent); background: var(--color-accent-light); }
+        .quiz-option.selected { border-color: var(--color-accent); background: var(--color-accent-light); }
+        .quiz-option.correct { border-color: var(--color-success); background: var(--color-success-bg); }
+        .quiz-option.incorrect { border-color: #EF4444; background: #FEF2F2; }
+        .quiz-option-letter {
+            width: 32px; height: 32px; background: var(--color-bg-tertiary);
+            border-radius: 9999px; display: flex; align-items: center;
+            justify-content: center; font-weight: 600; font-size: 0.875rem; flex-shrink: 0;
+        }
+        .quiz-option.selected .quiz-option-letter { background: var(--color-accent); color: white; }
+        .quiz-option-text { flex: 1; font-size: 1rem; color: var(--color-text-secondary); }
+        .quiz-feedback { margin-top: var(--space-4); padding: var(--space-4); border-radius: var(--radius-md); display: none; }
+        .quiz-feedback.show { display: block; }
+        .quiz-feedback.correct { background: var(--color-success-bg); color: var(--color-success); }
+        .quiz-feedback.incorrect { background: #FEF2F2; color: var(--color-text-secondary); }
+        .tooltip-term {
+            border-bottom: 2px dashed var(--color-accent); cursor: pointer;
+            position: relative; color: var(--color-accent); font-weight: 500;
+        }
+        .tooltip-term:hover { background: var(--color-accent-light); }
+        .tooltip-popup {
+            position: fixed; background: var(--color-code-bg); color: var(--color-code-text);
+            padding: var(--space-3) var(--space-4); border-radius: var(--radius-md);
+            font-size: 0.875rem; max-width: 320px; z-index: 10000;
+            box-shadow: var(--shadow-lg); pointer-events: none; display: none; line-height: 1.5;
+        }
+        .tooltip-popup.show { display: block; }
+        .tooltip-popup:after {
+            content: ''; position: absolute; bottom: -6px; left: 20px;
+            width: 12px; height: 12px; background: var(--color-code-bg); transform: rotate(45deg);
+        }
+        .architecture-diagram {
+            background: white; border-radius: var(--radius-lg); padding: var(--space-8);
+            box-shadow: var(--shadow-md); margin: var(--space-8) 0;
+        }
+        .arch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-6); position: relative; }
+        .arch-layer {
+            display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4);
+            background: var(--color-bg-secondary); border-radius: var(--radius-lg);
+            border: 2px solid var(--color-border);
+        }
+        .arch-layer-title {
+            font-family: var(--font-display); font-weight: 600; text-align: center;
+            color: var(--color-text-primary); padding-bottom: var(--space-3);
+            border-bottom: 2px solid var(--color-border);
+        }
+        .arch-component {
+            padding: var(--space-3); background: white; border-radius: var(--radius-md);
+            text-align: center; font-size: 0.875rem; font-weight: 500; cursor: pointer;
+            transition: all 150ms ease; border: 2px solid transparent;
+        }
+        .arch-component:hover { border-color: var(--color-accent); box-shadow: var(--shadow-md); }
+        .arch-component.active { background: var(--color-accent-light); border-color: var(--color-accent); }
+        .course-footer {
+            background: var(--color-code-bg); color: var(--color-code-text);
+            padding: var(--space-12) var(--space-6); text-align: center;
+        }
+        .course-footer h2 { font-family: var(--font-display); font-size: 1.875rem; margin-bottom: var(--space-4); }
+        .course-footer p { font-size: 1.125rem; opacity: 0.8; max-width: 60ch; margin: 0 auto var(--space-8); }
+        .footer-links { display: flex; justify-content: center; gap: var(--space-6); flex-wrap: wrap; }
+        .footer-link { color: var(--color-accent); text-decoration: none; font-weight: 500; }
+        .footer-link:hover { opacity: 0.8; }
+        .scroll-indicator {
+            position: fixed; right: var(--space-4); top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: var(--space-2); z-index: 100;
+        }
+        .scroll-dot {
+            width: 8px; height: 8px; border-radius: 9999px; background: var(--color-border);
+            cursor: pointer; transition: all 150ms ease;
+        }
+        .scroll-dot.active { background: var(--color-accent); transform: scale(1.3); }
+        .scroll-dot:hover { background: var(--color-accent); }
+        @media (max-width: 768px) {
+            .module { padding: var(--space-12) var(--space-4); }
+            .module-title { font-size: 1.875rem; }
+            .code-translation { grid-template-columns: 1fr; }
+            .translation-panel { border-left: none; border-top: 1px solid var(--color-border); }
+            .arch-grid { grid-template-columns: 1fr; }
+            .nav-progress-bar { display: none; }
+            .scroll-indicator { display: none; }
+        }
+        .kw { color: #CB76E4; } .str { color: #A6E3A1; } .num { color: #FAB387; }
+        .fn { color: #89B4FA; } .cls { color: #F9E2AF; } .cmt { color: #6C7086; }
+        .var { color: #F5C2E7; } .op { color: #89DCEB; }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-brand"><div class="nav-brand-icon">⚙️</div><span>ANCHOR-BOLT-GENERATOR</span></div>
+        <div class="nav-progress">
+            <div class="nav-progress-bar"><div class="nav-progress-fill" id="progressFill"></div></div>
+            <span class="nav-progress-text" id="progressText">0%</span>
+        </div>
+        <div class="nav-menu">
+            <button class="nav-btn" id="prevBtn" disabled>← Назад</button>
+            <button class="nav-btn" id="nextBtn">Вперёд →</button>
+        </div>
+    </nav>
+    <div class="scroll-indicator" id="scrollIndicator"></div>
+    <div class="tooltip-popup" id="tooltipPopup"></div>
+
+    <!-- Module 1 -->
+    <section class="module" id="module1">
+        <div class="content">
+            <header class="module-header">
+                <div class="module-number"><span>Модуль 1</span><div class="module-number-line"></div></div>
+                <h1 class="module-title">Что происходит, когда вы нажимаете «Скачать IFC»?</h1>
+                <p class="module-subtitle">Путешествие данных от клика мыши до BIM-модели</p>
+            </header>
+            <div class="screen visible">
+                <div class="text-block">
+                    <p>Представьте: вы выбираете тип болта <code>1.1</code>, диаметр <code>М20</code>, длину <code>800 мм</code> и нажимаете кнопку <strong>«Скачать IFC»</strong>. Через несколько секунд браузер предлагает сохранить файл <code>bolt_1.1_M20x800.ifc</code>.</p>
+                    <p>Но что произошло <em>на самом деле</em>? Давайте проследим этот путь.</p>
+                </div>
+                <div class="diagram">
+                    <h3 class="diagram-title">Путь данных: от клика до файла</h3>
+                    <div class="flow-diagram">
+                        <div class="flow-step"><div class="flow-step-icon">🖱️</div><span class="flow-step-text">Клик по кнопке</span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">📦</div><span class="flow-step-text">JavaScript собирает параметры</span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">🌉</div><span class="flow-step-text">IFCBridge передаёт в Python</span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">🐍</div><span class="flow-step-text">Python генерирует IFC-сущности</span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">📐</div><span class="flow-step-text">ifcopenshell создаёт геометрию</span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">🔄</div><span class="flow-step-text">Данные возвращаются в JS</span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">🎨</div><span class="flow-step-text">Three.js рисует 3D-модель</span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">💾</div><span class="flow-step-text">Файл скачивается</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="screen">
+                <div class="callout callout-aha">
+                    <div class="callout-icon">💡</div>
+                    <div class="callout-content">
+                        <div class="callout-title">Ключевое открытие</div>
+                        <p class="callout-text">Приложение работает в браузере, но использует <strong>Python внутри браузера</strong> через технологию <span class="tooltip-term" data-tooltip="Pyodide — это WebAssembly-порт Python. Позволяет запускать Python-код прямо в браузере, без сервера.">Pyodide</span>. Вся логика генерации IFC выполняется на вашем компьютере, без отправки данных на сервер.</p>
+                    </div>
+                </div>
+                <div class="code-translation">
+                    <div class="code-panel">
+                        <div class="code-panel-header"><span class="code-panel-title">JavaScript (main.js)</span></div>
+                        <pre><span class="kw">async function</span> <span class="fn">downloadIFCFile</span>() {
+    <span class="cmt">// 1. Получаем текущие параметры</span>
+    <span class="kw">const</span> params = form.<span class="fn">getParams</span>();
+    <span class="cmt">// 2. Перегенерируем болт</span>
+    <span class="kw">await</span> <span class="fn">generateBolt</span>(params);
+    <span class="cmt">// 3. Получаем IFC-данные из моста</span>
+    <span class="kw">const</span> ifcData = bridge.<span class="fn">getIFCData</span>();
+    <span class="cmt">// 4. Скачиваем файл</span>
+    <span class="kw">const</span> filename = <span class="fn">generateFilename</span>(params);
+    UI.<span class="fn">downloadFile</span>(ifcData, filename);
+}</pre>
+                    </div>
+                    <div class="translation-panel">
+                        <h4>Что происходит на каждом шаге:</h4>
+                        <div class="translation-item"><code>form.getParams()</code> — Собирает выбранные вами параметры: тип болта, диаметр, длину, материал</div>
+                        <div class="translation-item"><code>generateBolt(params)</code> — Отправляет параметры в Python через «мост», получает обратно 3D-геометрию</div>
+                        <div class="translation-item"><code>bridge.getIFCData()</code> — Забирает готовый IFC-файл как текст</div>
+                        <div class="translation-item"><code>UI.downloadFile()</code> — Создаёт файл и предлагает браузеру сохранить его</div>
+                    </div>
+                </div>
+            </div>
+            <div class="screen">
+                <h3 style="font-family: var(--font-display); font-size: 1.5rem; margin-bottom: var(--space-6);">Почему это важно для вас?</h3>
+                <div class="cards-grid">
+                    <div class="card"><div class="card-icon">🎯</div><h4 class="card-title">Понимание потока</h4><p class="card-description">Когда вы знаете, как данные движутся через систему, вы можете точнее сказать AI: «Добавь логирование на этапе передачи параметров в Python»</p></div>
+                    <div class="card"><div class="card-icon">🔍</div><h4 class="card-title">Отладка</h4><p class="card-description">Если кнопка не работает, вы знаете где искать: JavaScript (обработчик клика) → Bridge (передача данных) → Python (генерация)</p></div>
+                    <div class="card"><div class="card-icon">🧩</div><h4 class="card-title">Архитектурные решения</h4><p class="card-description">Понимание что где находится помогает решать: «Добавить новую настройку в UI или изменить логику в Python?»</p></div>
+                </div>
+            </div>
+            <div class="screen">
+                <div class="quiz-container">
+                    <div class="quiz-question">Вы нажали «Скачать IFC», но файл не скачивается. В консоли браузера ошибок нет. Где вероятнее всего проблема?</div>
+                    <div class="quiz-options">
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">A</div><div class="quiz-option-text">В Python-коде генератора — он не создал IFC-сущности</div></div>
+                        <div class="quiz-option" data-correct="true"><div class="quiz-option-letter">B</div><div class="quiz-option-text">В JavaScript — обработчик клика не вызывает генерацию или скачивание</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">C</div><div class="quiz-option-text">В Three.js — 3D-модель не отрисовалась</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">D</div><div class="quiz-option-text">В ifcopenshell — не установилась библиотека</div></div>
+                    </div>
+                    <div class="quiz-feedback"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Module 2 -->
+    <section class="module" id="module2">
+        <div class="content">
+            <header class="module-header">
+                <div class="module-number"><span>Модуль 2</span><div class="module-number-line"></div></div>
+                <h1 class="module-title">Главные действующие лица</h1>
+                <p class="module-subtitle">Знакомство с компонентами системы и их ответственностью</p>
+            </header>
+            <div class="screen visible">
+                <div class="text-block">
+                    <p>Приложение состоит из <strong>четырёх основных компонентов</strong>, каждый из которых отвечает за свою часть работы. Понимание их ролей — ключ к тому, чтобы говорить с AI на правильном техническом языке.</p>
+                </div>
+                <div class="cards-grid">
+                    <div class="card"><div class="card-icon">🎨</div><h4 class="card-title">UI Layer (JavaScript)</h4><p class="card-description"><code>form.js</code>, <code>ui.js</code>, <code>main.js</code><br><br>Отвечает за форму с параметрами, кнопки, отображение статуса. Собирает данные от пользователя и передаёт их в «мост».</p></div>
+                    <div class="card"><div class="card-icon">🌉</div><h4 class="card-title">IFC Bridge</h4><p class="card-description"><code>ifcBridge.js</code><br><br>Переводчик между JavaScript и Python. Конвертирует JS-объекты в Python-код, загружает модули, передаёт результаты обратно.</p></div>
+                    <div class="card"><div class="card-icon">🐍</div><h4 class="card-title">Python Core</h4><p class="card-description"><code>instance_factory.py</code>, <code>geometry_builder.py</code>, <code>ifc_generator.py</code><br><br>Создаёт IFC-сущности, строит геометрию по ГОСТ, управляет документами.</p></div>
+                    <div class="card"><div class="card-icon">🖼️</div><h4 class="card-title">3D Viewer</h4><p class="card-description"><code>viewer.js</code> (Three.js)<br><br>Конвертирует IFC-геометрию в mesh, рисует 3D-сцену, обрабатывает вращение камеры и клики по объектам.</p></div>
+                </div>
+            </div>
+            <div class="screen">
+                <div class="architecture-diagram">
+                    <h3 class="diagram-title">Архитектура приложения</h3>
+                    <div class="arch-grid">
+                        <div class="arch-layer"><div class="arch-layer-title">Frontend (JS)</div><div class="arch-component">form.js</div><div class="arch-component">ui.js</div><div class="arch-component">main.js</div><div class="arch-component">viewer.js</div></div>
+                        <div class="arch-layer"><div class="arch-layer-title">Bridge</div><div class="arch-component" style="grid-row: span 4; display: flex; align-items: center; justify-content: center; background: var(--color-accent-light); border-color: var(--color-accent);">ifcBridge.js</div></div>
+                        <div class="arch-layer"><div class="arch-layer-title">Python Core</div><div class="arch-component">instance_factory.py</div><div class="arch-component">geometry_builder.py</div><div class="arch-component">ifc_generator.py</div><div class="arch-component">gost_data.py</div></div>
+                    </div>
+                </div>
+                <div class="callout callout-aha">
+                    <div class="callout-icon">💡</div>
+                    <div class="callout-content">
+                        <div class="callout-title">Словарь разработчика</div>
+                        <p class="callout-text"><strong>Layer (слой)</strong> — группа компонентов с общей ответственностью. <strong>Bridge (мост)</strong> — код, который соединяет два разных мира (JS и Python). <strong>Core (ядро)</strong> — основная бизнес-логика приложения.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="screen">
+                <div class="quiz-container">
+                    <div class="quiz-question">Вы хотите добавить новую настройку «Цвет болта» в форму. В какой файл нужно внести изменения в первую очередь?</div>
+                    <div class="quiz-options">
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">A</div><div class="quiz-option-text">В <code>instance_factory.py</code> — чтобы изменить цвет в Python</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">B</div><div class="quiz-option-text">В <code>ifcBridge.js</code> — чтобы передать цвет в Python</div></div>
+                        <div class="quiz-option" data-correct="true"><div class="quiz-option-letter">C</div><div class="quiz-option-text">В <code>form.js</code> и <code>ui.js</code> — чтобы добавить элемент управления в форму</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">D</div><div class="quiz-option-text">В <code>viewer.js</code> — чтобы изменить цвет в Three.js</div></div>
+                    </div>
+                    <div class="quiz-feedback"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Module 3 -->
+    <section class="module" id="module3">
+        <div class="content">
+            <header class="module-header">
+                <div class="module-number"><span>Модуль 3</span><div class="module-number-line"></div></div>
+                <h1 class="module-title">Как части общаются: JS ↔ Python</h1>
+                <p class="module-subtitle">Магия Pyodide и моста между мирами</p>
+            </header>
+            <div class="screen visible">
+                <div class="text-block">
+                    <p>JavaScript и Python — два разных языка, которые работают в разных «вселенных». <span class="tooltip-term" data-tooltip="Pyodide — это порт Python на WebAssembly. WebAssembly (Wasm) — бинарный формат, который браузеры понимают «из коробки». Pyodide позволяет запускать Python-код прямо в браузере, без сервера.">Pyodide</span> создаёт мост между ними, но для общения нужен «переводчик» — <code>ifcBridge.js</code>.</p>
+                </div>
+                <div class="diagram">
+                    <h3 class="diagram-title">Цикл вызова функции Python из JavaScript</h3>
+                    <div class="flow-diagram">
+                        <div class="flow-step" style="background: var(--color-accent-light); border-color: var(--color-accent);"><div class="flow-step-icon">1</div><span class="flow-step-text">JS: <code>bridge.generateBolt(params)</code></span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">2</div><span class="flow-step-text">Конвертация JS-объекта в JSON</span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">3</div><span class="flow-step-text">Создание Python-кода: <code>params = {...}</code></span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">4</div><span class="flow-step-text">Вызов: <code>pyodide.runPythonAsync(...)</code></span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">5</div><span class="flow-step-text">Python возвращает результат (Proxy)</span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">6</div><span class="flow-step-text">Конвертация Proxy → JS-объект</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="screen">
+                <div class="callout callout-warning">
+                    <div class="callout-icon">⚠️</div>
+                    <div class="callout-content">
+                        <div class="callout-title">Тонкий момент: Proxy-объекты</div>
+                        <p class="callout-text">Когда Python возвращает данные в JavaScript, они приходят в специальной «обёртке» — <span class="tooltip-term" data-tooltip="Proxy — это объект-посредник. В случае Pyodide, Python-словари и списки оборачиваются в Proxy, чтобы JS мог обращаться к ним как к обычным объектам. Но для серьёзной работы их нужно конвертировать через .toJs()">Proxy</span>. Мост автоматически конвертирует их обратно в обычные JS-объекты через метод <code>toJs()</code>.</p>
+                    </div>
+                </div>
+                <div class="code-translation">
+                    <div class="code-panel">
+                        <div class="code-panel-header"><span class="code-panel-title">ifcBridge.js — вызов Python</span></div>
+                        <pre><span class="kw">async</span> <span class="fn">generateBolt</span>(params, exportSettings) {
+    <span class="cmt">// 1. Конвертация JS → Python-синтаксис</span>
+    <span class="kw">const</span> paramsJson = JSON.<span class="fn">stringify</span>(params)
+        .<span class="fn">replace</span>(<span class="str">/false/g</span>, <span class="str">'False'</span>)
+        .<span class="fn">replace</span>(<span class="str">/true/g</span>, <span class="str">'True'</span>);
+    <span class="cmt">// 2. Создание Python-кода</span>
+    <span class="kw">const</span> result = <span class="kw">await this</span>.pyodide.<span class="fn">runPythonAsync</span>(`
+        <span class="kw">from</span> instance_factory <span class="kw">import</span> generate_bolt_assembly
+        params = ${paramsJson}
+        ifc_str, mesh_data = <span class="fn">generate_bolt_assembly</span>(params)
+        (ifc_str, mesh_data)
+    `);
+    <span class="cmt">// 3. Конвертация Proxy → JS</span>
+    <span class="kw">const</span> meshData = <span class="kw">this</span>.<span class="fn">convertPyodideObject</span>(result[<span class="num">1</span>]);
+    <span class="kw">return</span> { ifcData: result[<span class="num">0</span>], meshData, status: <span class="str">'success'</span> };
+}</pre>
+                    </div>
+                    <div class="translation-panel">
+                        <h4>Три ключевых шага:</h4>
+                        <div class="translation-item"><code>JSON.stringify + replace</code> — Превращает JS-объект в строку, заменяя <code>true/false</code> на <code>True/False</code> (Python-синтаксис)</div>
+                        <div class="translation-item"><code>pyodide.runPythonAsync()</code> — Выполняет Python-код внутри браузера, возвращает результат</div>
+                        <div class="translation-item"><code>convertPyodideObject()</code> — Рекурсивно обходит Proxy, превращает его в обычный JS-объект</div>
+                    </div>
+                </div>
+            </div>
+            <div class="screen">
+                <div class="quiz-container">
+                    <div class="quiz-question">Вы передаёте в Python объект <code>{ diameter: 20, length: 800 }</code>. Что произойдёт, если забыть заменить <code>true/false</code> на <code>True/False</code>?</div>
+                    <div class="quiz-options">
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">A</div><div class="quiz-option-text">Python автоматически поймёт JS-булевы значения</div></div>
+                        <div class="quiz-option" data-correct="true"><div class="quiz-option-letter">B</div><div class="quiz-option-text">Python выбросит ошибку: <code>NameError: name 'true' is not defined</code></div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">C</div><div class="quiz-option-text">Pyodide автоматически сконвертирует значения</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">D</div><div class="quiz-option-text">Ничего, Python проигнорирует неверные значения</div></div>
+                    </div>
+                    <div class="quiz-feedback"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Module 4 -->
+    <section class="module" id="module4">
+        <div class="content">
+            <header class="module-header">
+                <div class="module-number"><span>Модуль 4</span><div class="module-number-line"></div></div>
+                <h1 class="module-title">IFC: язык BIM-моделей</h1>
+                <p class="module-subtitle">Как код становится строительной моделью</p>
+            </header>
+            <div class="screen visible">
+                <div class="text-block">
+                    <p><span class="tooltip-term" data-tooltip="IFC (Industry Foundation Classes) — открытый стандарт для обмена данными BIM-моделей. Представьте его как «PDF для зданий»: описывает стены, колонны, болты, их геометрию, материалы, связи.">IFC</span> — это не просто 3D-модель. Это структурированное описание здания со всеми компонентами, материалами и связями между ними. Файл .ifc содержит сотни сущностей вроде <code>IfcMechanicalFastener</code> (болт) и <code>IfcExtrudedAreaSolid</code> (геометрия).</p>
+                </div>
+                <div class="cards-grid">
+                    <div class="card"><div class="card-icon">🏗️</div><h4 class="card-title">IfcProject</h4><p class="card-description">Корневой объект. Представляет весь строительный проект. Содержит единицы измерения, систему координат, контекст.</p></div>
+                    <div class="card"><div class="card-icon">🏢</div><h4 class="card-title">IfcBuildingStorey</h4><p class="card-description">Этаж здания. Все элементы (включая болты) «прикреплены» к этажу через <code>IfcRelContainedInSpatialStructure</code>.</p></div>
+                    <div class="card"><div class="card-icon">🔩</div><h4 class="card-title">IfcMechanicalFastener</h4><p class="card-description">Крепёжный элемент (болт, гайка, шайба). Имеет тип, материал, позицию в пространстве.</p></div>
+                    <div class="card"><div class="card-icon">📐</div><h4 class="card-title">IfcExtrudedAreaSolid</h4><p class="card-description">Геометрия: 2D-профиль, «выдавленный» вдоль оси. Так создаются гайки, шайбы, плиты.</p></div>
+                    <div class="card"><div class="card-icon">🌀</div><h4 class="card-title">IfcSweptDiskSolid</h4><p class="card-description">Геометрия: кривая, «протянутая» с круглым сечением. Так создаются изогнутые шпильки.</p></div>
+                    <div class="card"><div class="card-icon">🔗</div><h4 class="card-title">IfcRelAggregates</h4><p class="card-description">Связь «состоит из». Assembly (сборка) → Components (компоненты: шпилька, гайки, шайба).</p></div>
+                </div>
+            </div>
+            <div class="screen">
+                <div class="callout callout-aha">
+                    <div class="callout-icon">💡</div>
+                    <div class="callout-content">
+                        <div class="callout-title">Иерархия IFC-документа</div>
+                        <p class="callout-text"><strong>IfcProject</strong> → <strong>IfcBuildingStorey</strong> → <strong>IfcMechanicalFastener</strong> (сборка) → <strong>IfcRelAggregates</strong> → компоненты (шпилька, гайки, шайба). Каждый уровень добавляет детали: от общего контекста к конкретной геометрии.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="screen">
+                <div class="quiz-container">
+                    <div class="quiz-question">Вы открываете IFC-файл в текстовом редакторе и видите строку: <code>#1234=IFCMECHANICALFASTENER(...,NAME='bolt_1.1_M20x800',...)</code>. Что это означает?</div>
+                    <div class="quiz-options">
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">A</div><div class="quiz-option-text">Это геометрия болта — цилиндр диаметром 20 мм</div></div>
+                        <div class="quiz-option" data-correct="true"><div class="quiz-option-letter">B</div><div class="quiz-option-text">Это сущность «крепёжный элемент» с именем сборки, содержащим тип и размеры</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">C</div><div class="quiz-option-text">Это материал болта — сталь 09Г2С</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">D</div><div class="quiz-option-text">Это связь между болтом и фундаментом</div></div>
+                    </div>
+                    <div class="quiz-feedback"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Module 5 -->
+    <section class="module" id="module5">
+        <div class="content">
+            <header class="module-header">
+                <div class="module-number"><span>Модуль 5</span><div class="module-number-line"></div></div>
+                <h1 class="module-title">ГОСТ в коде: данные и геометрия</h1>
+                <p class="module-subtitle">Как нормативный документ становится программой</p>
+            </header>
+            <div class="screen visible">
+                <div class="text-block">
+                    <p><span class="tooltip-term" data-tooltip="ГОСТ 24379.1-2012 — российский стандарт на фундаментные болты. Определяет типы болтов (1.1, 1.2, 2.1, 5), размеры (диаметры, длины), формы (прямые, изогнутые), материалы.">ГОСТ 24379.1-2012</span> — это 50+ страниц таблиц, формул и чертежей. Приложение превращает их в Python-данные: словари с размерами, функции для расчёта массы, валидацию параметров.</p>
+                </div>
+                <div class="cards-grid" style="margin-top: var(--space-8);">
+                    <div class="card" style="background: var(--color-accent-light); border-color: var(--color-accent);"><div class="card-icon">📊</div><h4 class="card-title">Уровень 1: CSV</h4><p class="card-description"><code>data/dim.csv</code> — сырые данные из ГОСТ. Одна строка = один диаметр+длина. Пример: <code>20_800: [800, 60, 20, 20, 100, 2.31, ...]</code></p></div>
+                    <div class="card"><div class="card-icon">🐍</div><h4 class="card-title">Уровень 2: Python-модули</h4><p class="card-description"><code>bolt_dimensions.py</code> — преобразует CSV в словари. <code>get_bolt_dimensions(20, 800)</code> возвращает <code>{L: 800, l: 60, R: 20, ...}</code></p></div>
+                    <div class="card"><div class="card-icon">🔧</div><h4 class="card-title">Уровень 3: Геометрия</h4><p class="card-description"><code>geometry_builder.py</code> — использует данные для построения 3D-кривых. Тип 1.1: дуга радиусом R, тип 5: прямая линия</p></div>
+                </div>
+            </div>
+            <div class="screen">
+                <div class="callout callout-aha">
+                    <div class="callout-icon">💡</div>
+                    <div class="callout-content">
+                        <div class="callout-title">Геометрия по ГОСТ</div>
+                        <p class="callout-text">Тип 1.1: шпилька с крюком (загиб 90°). Тип 1.2: шпилька с двойным загибом. Тип 5: прямая шпилька. <code>geometry_builder.py</code> строит кривые через <code>IfcIndexedPolyCurve</code> с <code>IfcArcIndex</code> для дуг.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="screen">
+                <div class="quiz-container">
+                    <div class="quiz-question">Вы хотите добавить новый тип болта «6» с уникальной формой. Какие файлы нужно изменить?</div>
+                    <div class="quiz-options">
+                        <div class="quiz-option" data-correct="true"><div class="quiz-option-letter">A</div><div class="quiz-option-text"><code>bolt_dimensions.py</code> (данные), <code>geometry_builder.py</code> (геометрия), <code>validation.py</code> (валидация)</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">B</div><div class="quiz-option-text">Только <code>ifc_generator.py</code> — для создания IFC-сущности</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">C</div><div class="quiz-option-text">Только <code>form.js</code> — чтобы добавить опцию в форму</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">D</div><div class="quiz-option-text">Только <code>dim.csv</code> — добавить строки с размерами</div></div>
+                    </div>
+                    <div class="quiz-feedback"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Module 6 -->
+    <section class="module" id="module6">
+        <div class="content">
+            <header class="module-header">
+                <div class="module-number"><span>Модуль 6</span><div class="module-number-line"></div></div>
+                <h1 class="module-title">3D в браузере: от IFC к Three.js</h1>
+                <p class="module-subtitle">Конвертация BIM-модели в интерактивную визуализацию</p>
+            </header>
+            <div class="screen visible">
+                <div class="text-block">
+                    <p>IFC-файл содержит точную параметрическую геометрию, но браузер не умеет её рисовать напрямую. <code>geometry_converter.py</code> использует <span class="tooltip-term" data-tooltip="ifcopenshell.geom — модуль для «извлечения» геометрии из IFC. Превращает параметрические сущности (IfcExtrudedAreaSolid) в полигональную сетку (вершины, грани).">ifcopenshell.geom</span>, чтобы получить вершины и грани, а <code>viewer.js</code> создаёт из них <span class="tooltip-term" data-tooltip="Mesh (сетка) — коллекция вершин и граней, описывающая 3D-объект. Three.js использует BufferGeometry с атрибутами: position (вершины), normal (нормали), index (грани).">mesh</span> для Three.js.</p>
+                </div>
+                <div class="diagram">
+                    <h3 class="diagram-title">Пайплайн конвертации геометрии</h3>
+                    <div class="flow-diagram">
+                        <div class="flow-step"><div class="flow-step-icon">📄</div><span class="flow-step-text">IFC: IfcMechanicalFastener</span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">⚙️</div><span class="flow-step-text">ifcopenshell.geom.create_shape()</span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">📐</div><span class="flow-step-text">Вершины [x,y,z, ...] + Грани [0,1,2, ...]</span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">🔄</div><span class="flow-step-text">Трансформация: Z-up → Y-up</span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">🎨</div><span class="flow-step-text">Three.js: BufferGeometry + MeshPhongMaterial</span></div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-step"><div class="flow-step-icon">🖼️</div><span class="flow-step-text">Рендер в canvas</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="screen">
+                <div class="callout callout-warning">
+                    <div class="callout-icon">⚠️</div>
+                    <div class="callout-content">
+                        <div class="callout-title">Проблема систем координат</div>
+                        <p class="callout-text">IFC использует <strong>Z-up</strong> (вертикаль — ось Z), Three.js — <strong>Y-up</strong> (вертикаль — ось Y). <code>viewer.js</code> трансформирует вершины: <code>(x, y, z) → (x, -z, -y)</code>. Без этого болт лежал бы «на боку».</p>
+                    </div>
+                </div>
+                <div class="code-translation">
+                    <div class="code-panel">
+                        <div class="code-panel-header"><span class="code-panel-title">viewer.js — трансформация вершин</span></div>
+                        <pre><span class="fn">transformVerticesForThreeJS</span>(vertices) {
+    <span class="kw">const</span> transformed = [];
+    <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i < vertices.length; i += <span class="num">3</span>) {
+        <span class="cmt">// IFC: Z-вертикаль, метры</span>
+        <span class="cmt">// Three.js: Y-вертикаль, миллиметры</span>
+        transformed.<span class="fn">push</span>(
+            vertices[i] * <span class="num">1000</span>,       <span class="cmt">// x (м → мм)</span>
+            -vertices[i + <span class="num">2</span>] * <span class="num">1000</span>,  <span class="cmt">// -z → y</span>
+            -vertices[i + <span class="num">1</span>] * <span class="num">1000</span>  <span class="cmt">// -y → z</span>
+        );
+    }
+    <span class="kw">return</span> transformed;
+}</pre>
+                    </div>
+                    <div class="translation-panel">
+                        <h4>Три преобразования:</h4>
+                        <div class="translation-item"><code>* 1000</code> — Конвертация метров (IFC) в миллиметры (Three.js). IFC хранит в метрах, даже если указаны мм</div>
+                        <div class="translation-item"><code>-z → y</code> — Ось Z из IFC становится осью Y в Three.js с инверсией (чтобы вид сверху совпадал)</div>
+                        <div class="translation-item"><code>-y → z</code> — Ось Y из IFC становится осью Z в Three.js с инверсией для правильной ориентации</div>
+                    </div>
+                </div>
+            </div>
+            <div class="screen">
+                <div class="quiz-container">
+                    <div class="quiz-question">После генерации болта вы видите в консоли: вершины [0, 0, 0], [0, 0, -0.8], ... (в метрах). Какими они станут после трансформации для Three.js?</div>
+                    <div class="quiz-options">
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">A</div><div class="quiz-option-text">[0, 0, 0], [0, 0, -800] — просто умножение на 1000</div></div>
+                        <div class="quiz-option" data-correct="true"><div class="quiz-option-letter">B</div><div class="quiz-option-text">[0, 0, 0], [0, 800, 0] — Z становится Y с инверсией</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">C</div><div class="quiz-option-text">[0, 0, 0], [-800, 0, 0] — Z становится X</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">D</div><div class="quiz-option-text">[0, -800, 0], [0, 0, 0] — инверсия Y</div></div>
+                    </div>
+                    <div class="quiz-feedback"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Module 7 -->
+    <section class="module" id="module7">
+        <div class="content">
+            <header class="module-header">
+                <div class="module-number"><span>Модуль 7</span><div class="module-number-line"></div></div>
+                <h1 class="module-title">Полная картина: архитектура приложения</h1>
+                <p class="module-subtitle">Собираем все компоненты в единую систему</p>
+            </header>
+            <div class="screen visible">
+                <div class="text-block">
+                    <p>Теперь, когда вы знаете каждый компонент, посмотрим на систему целиком. Это поможет принимать архитектурные решения: «Где добавить новую функцию?», «Как изменить экспорт в другой формат?», «Почему тормозит при больших диаметрах?».</p>
+                </div>
+                <div class="architecture-diagram" style="max-width: 1000px; margin: var(--space-8) auto;">
+                    <h3 class="diagram-title">Полная архитектура ANCHOR-BOLT-GENERATOR</h3>
+                    <div class="arch-grid" style="grid-template-columns: repeat(4, 1fr);">
+                        <div class="arch-layer"><div class="arch-layer-title">UI Layer</div><div class="arch-component">form.js</div><div class="arch-component">ui.js</div><div class="arch-component">main.js</div></div>
+                        <div class="arch-layer"><div class="arch-layer-title">Bridge</div><div class="arch-component" style="grid-row: span 3; display: flex; align-items: center; justify-content: center; background: var(--color-accent-light); border-color: var(--color-accent);">ifcBridge.js<br><small>Pyodide</small></div></div>
+                        <div class="arch-layer"><div class="arch-layer-title">Python Core</div><div class="arch-component">instance_factory.py</div><div class="arch-component">geometry_builder.py</div><div class="arch-component">ifc_generator.py</div></div>
+                        <div class="arch-layer"><div class="arch-layer-title">3D Viewer</div><div class="arch-component">viewer.js</div><div class="arch-component">geometry_converter.py</div><div class="arch-component">Three.js</div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="screen">
+                <div class="callout callout-aha">
+                    <div class="callout-icon">💡</div>
+                    <div class="callout-content">
+                        <div class="callout-title">Ключевые принципы архитектуры</div>
+                        <p class="callout-text"><strong>Разделение ответственности:</strong> UI не знает про IFC, Python не знает про Three.js. <strong>Мост — единственный посредник:</strong> все вызовы Python через bridge. <strong>Данные движутся в одну сторону:</strong> UI → Bridge → Python → IFC → Mesh → Viewer → UI.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="screen">
+                <div class="quiz-container">
+                    <div class="quiz-question">Вы хотите добавить экспорт в формат STEP (другой BIM-формат). Какой подход правильный?</div>
+                    <div class="quiz-options">
+                        <div class="quiz-option" data-correct="true"><div class="quiz-option-letter">A</div><div class="quiz-option-text">Создать <code>step_generator.py</code> по аналогии с <code>ifc_generator.py</code>, добавить метод в bridge</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">B</div><div class="quiz-option-text">Изменить <code>ifc_generator.py</code> — добавить поддержку STEP там</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">C</div><div class="quiz-option-text">Переписать <code>viewer.js</code> — пусть он сохраняет в STEP</div></div>
+                        <div class="quiz-option" data-correct="false"><div class="quiz-option-letter">D</div><div class="quiz-option-text">Попросить AI переделать всё приложение с нуля</div></div>
+                    </div>
+                    <div class="quiz-feedback"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="course-footer">
+        <h2>🎉 Поздравляем с завершением курса!</h2>
+        <p>Теперь вы понимаете, как работает ANCHOR-BOLT-GENERATOR — от клика мыши до IFC-файла и 3D-визуализации. Используйте эти знания, чтобы эффективно работать с AI-ассистентами, отлаживать проблемы и расширять функционал.</p>
+        <div class="footer-links">
+            <a class="footer-link" href="index.html">← Вернуться к генератору</a>
+            <a class="footer-link" href="README.md">Документация проекта</a>
+            <a class="footer-link" href="https://github.com/vdobranov/anchor-bolt-generator" target="_blank">GitHub репозиторий</a>
+        </div>
+    </footer>
+
+    <script>
+    (function() {
+        const modules = document.querySelectorAll('.module');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const scrollIndicator = document.getElementById('scrollIndicator');
+        const tooltipPopup = document.getElementById('tooltipPopup');
+        let currentModule = 0;
+
+        // Scroll indicator dots
+        modules.forEach((_, i) => {
+            const dot = document.createElement('div');
+            dot.className = 'scroll-dot' + (i === 0 ? ' active' : '');
+            dot.addEventListener('click', () => {
+                modules[i].scrollIntoView({ behavior: 'smooth' });
+            });
+            scrollIndicator.appendChild(dot);
+        });
+
+        const dots = scrollIndicator.querySelectorAll('.scroll-dot');
+
+        // Intersection Observer for modules
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const index = Array.from(modules).indexOf(entry.target);
+                    currentModule = index;
+                    
+                    // Update progress
+                    const progress = ((index + 1) / modules.length) * 100;
+                    progressFill.style.width = progress + '%';
+                    progressText.textContent = Math.round(progress) + '%';
+                    
+                    // Update dots
+                    dots.forEach((dot, i) => {
+                        dot.classList.toggle('active', i === index);
+                    });
+                    
+                    // Update buttons
+                    prevBtn.disabled = index === 0;
+                    nextBtn.disabled = index === modules.length - 1;
+                    
+                    // Animate screens
+                    entry.target.querySelectorAll('.screen').forEach((screen, i) => {
+                        setTimeout(() => screen.classList.add('visible'), i * 150);
+                    });
+                }
+            });
+        }, { threshold: 0.3 });
+
+        modules.forEach(module => observer.observe(module));
+
+        // Navigation buttons
+        prevBtn.addEventListener('click', () => {
+            if (currentModule > 0) modules[currentModule - 1].scrollIntoView({ behavior: 'smooth' });
+        });
+        nextBtn.addEventListener('click', () => {
+            if (currentModule < modules.length - 1) modules[currentModule + 1].scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                if (currentModule < modules.length - 1) modules[currentModule + 1].scrollIntoView({ behavior: 'smooth' });
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                if (currentModule > 0) modules[currentModule - 1].scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+
+        // Tooltips
+        const tooltipTerms = document.querySelectorAll('.tooltip-term');
+        tooltipTerms.forEach(term => {
+            term.addEventListener('mouseenter', (e) => {
+                const text = term.getAttribute('data-tooltip');
+                tooltipPopup.textContent = text;
+                tooltipPopup.classList.add('show');
+                const rect = term.getBoundingClientRect();
+                tooltipPopup.style.left = rect.left + 'px';
+                tooltipPopup.style.top = (rect.bottom + 10) + 'px';
+            });
+            term.addEventListener('mouseleave', () => {
+                tooltipPopup.classList.remove('show');
+            });
+        });
+
+        // Quiz interactions
+        const quizOptions = document.querySelectorAll('.quiz-option');
+        quizOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                const parent = option.closest('.quiz-options');
+                parent.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('selected', 'correct', 'incorrect'));
+                option.classList.add('selected');
+                
+                const feedback = parent.nextElementSibling;
+                const isCorrect = option.getAttribute('data-correct') === 'true';
+                
+                setTimeout(() => {
+                    option.classList.remove('selected');
+                    option.classList.add(isCorrect ? 'correct' : 'incorrect');
+                    feedback.textContent = isCorrect ? '✓ Верно! Вы поняли принцип работы системы.' : '✗ Не совсем. Подумайте ещё о разделении ответственности между компонентами.';
+                    feedback.className = 'quiz-feedback show ' + (isCorrect ? 'correct' : 'incorrect');
+                }, 150);
+            });
+        });
+    })();
+    </script>
+</body>
+</html>
