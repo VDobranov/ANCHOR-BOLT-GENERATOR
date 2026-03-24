@@ -6,7 +6,7 @@ class BoltForm {
     constructor(options = {}) {
         this.onParamsChange = options.onParamsChange || null;
         this.pyodide = options.pyodide || null;
-        
+
         this.elements = {
             boltType: document.getElementById('boltType'),
             execution: document.getElementById('execution'),
@@ -15,7 +15,7 @@ class BoltForm {
             length: document.getElementById('length'),
             material: document.getElementById('material')
         };
-        
+
         this.debounceTimer = null;
         this.debounceDelay = 300;
     }
@@ -25,10 +25,10 @@ class BoltForm {
      */
     async init() {
         this.updateExecutionOptions();
-        
+
         // Установить диаметр по умолчанию (М20) перед загрузкой опций
         this.elements.diameter.value = '20';
-        
+
         await this.updateDiameterOptions();
         await this.updateLengthOptions();
         this.setupListeners();
@@ -97,7 +97,7 @@ class BoltForm {
             diameter.innerHTML = '';
 
             if (diameters.length > 0) {
-                diameters.forEach(d => {
+                diameters.forEach((d) => {
                     const option = document.createElement('option');
                     option.value = d;
                     option.textContent = `M${d}`;
@@ -158,7 +158,7 @@ class BoltForm {
             const lengths = await this.getAvailableLengths(type, diam);
 
             if (lengths.length > 0) {
-                lengths.forEach(l => {
+                lengths.forEach((l) => {
                     const option = document.createElement('option');
                     option.value = l;
                     option.textContent = `${l}`;
@@ -219,10 +219,7 @@ class BoltForm {
      * Валидация параметров
      */
     validateParams(params) {
-        return params.bolt_type &&
-               params.diameter > 0 &&
-               params.length > 0 &&
-               params.material;
+        return params.bolt_type && params.diameter > 0 && params.length > 0 && params.material;
     }
 
     /**
@@ -282,13 +279,13 @@ class IFCExportSettings {
         // Добавляем обработчики изменений
         this.setupListeners();
     }
-    
+
     /**
      * Настройка обработчиков событий
      */
     setupListeners() {
         const { assemblyClass, assemblyMode, geometryType } = this.elements;
-        
+
         // При изменении настроек — перегенерировать болт
         if (assemblyClass) {
             assemblyClass.addEventListener('change', () => this.triggerChange());
@@ -300,7 +297,7 @@ class IFCExportSettings {
             geometryType.addEventListener('change', () => this.triggerChange());
         }
     }
-    
+
     /**
      * Триггер изменения настроек
      */
@@ -353,7 +350,10 @@ class IFCExportSettings {
     }
 }
 
-// Export
+// ES6 exports
+export { BoltForm, IFCExportSettings };
+
+// CommonJS export для обратной совместимости
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { BoltForm, IFCExportSettings };
 }

@@ -8,8 +8,10 @@ import {
     isDefined,
     isEmpty,
     deepClone,
+    getISODate,
     sleep,
-    debounce
+    debounce,
+    throttle
 } from '../utils/helpers.js';
 
 describe('helpers', () => {
@@ -99,6 +101,23 @@ describe('helpers', () => {
         });
     });
 
+    describe('getISODate', () => {
+        test('должен возвращать дату в формате ISO', () => {
+            const date = getISODate();
+            expect(typeof date).toBe('string');
+            expect(date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/);
+        });
+
+        test('должен возвращать текущую дату', () => {
+            const before = new Date().toISOString();
+            const result = getISODate();
+            const after = new Date().toISOString();
+
+            expect(result >= before).toBe(true);
+            expect(result <= after).toBe(true);
+        });
+    });
+
     describe('sleep', () => {
         test('должен ждать указанное время', async () => {
             const start = Date.now();
@@ -106,6 +125,11 @@ describe('helpers', () => {
             const end = Date.now();
 
             expect(end - start).toBeGreaterThanOrEqual(90);
+        });
+
+        test('должен возвращать Promise', () => {
+            const result = sleep(10);
+            expect(result).toBeInstanceOf(Promise);
         });
     });
 
@@ -125,6 +149,93 @@ describe('helpers', () => {
                 expect(callCount).toBe(1);
                 done();
             }, 100);
+        });
+
+        test('должен сбрасывать таймер при повторных вызовах', (done) => {
+            let callCount = 0;
+            const fn = () => callCount++;
+            const debounced = debounce(fn, 50);
+
+            debounced();
+
+            setTimeout(() => {
+                debounced();
+            }, 25);
+
+            setTimeout(() => {
+                expect(callCount).toBe(1);
+                done();
+            }, 100);
+        });
+
+        test('должен передавать аргументы в функцию', (done) => {
+            let lastArg = null;
+            const fn = (arg) => {
+                lastArg = arg;
+            };
+            const debounced = debounce(fn, 50);
+
+            debounced('test-value');
+
+            setTimeout(() => {
+                expect(lastArg).toBe('test-value');
+                done();
+            }, 100);
+        });
+    });
+
+    describe('throttle', () => {
+        test('должен ограничивать частоту вызовов функции', (done) => {
+            let callCount = 0;
+            const fn = () => callCount++;
+            const throttled = throttle(fn, 100);
+
+            throttled();
+            throttled();
+            throttled();
+
+            expect(callCount).toBe(1);
+
+            setTimeout(() => {
+                throttled();
+                expect(callCount).toBe(2);
+                done();
+            }, 150);
+        });
+
+        test('должен передавать контекст и аргументы', (done) => {
+            let receivedArgs = null;
+            const fn = function (...args) {
+                receivedArgs = args;
+            };
+            const throttled = throttle(fn, 100);
+
+            throttled('arg1', 'arg2');
+
+            setTimeout(() => {
+                expect(receivedArgs).toEqual(['arg1', 'arg2']);
+                done();
+            }, 150);
+        });
+
+        test('должен ждать указанный лимит перед следующим вызовом', (done) => {
+            let callCount = 0;
+            const fn = () => callCount++;
+            const throttled = throttle(fn, 50);
+
+            throttled();
+            expect(callCount).toBe(1);
+
+            setTimeout(() => {
+                throttled();
+                expect(callCount).toBe(1); // Ещё рано
+            }, 25);
+
+            setTimeout(() => {
+                throttled();
+                expect(callCount).toBe(2); // Теперь можно
+                done();
+            }, 75);
         });
     });
 });

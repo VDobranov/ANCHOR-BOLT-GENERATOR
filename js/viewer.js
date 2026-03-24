@@ -14,9 +14,12 @@ class IFCViewer {
         const frustumSize = 800;
 
         this.camera = new THREE.OrthographicCamera(
-            -frustumSize * aspect, frustumSize * aspect,
-            -frustumSize, frustumSize,
-            0.1, 10000
+            -frustumSize * aspect,
+            frustumSize * aspect,
+            -frustumSize,
+            frustumSize,
+            0.1,
+            10000
         );
         this.camera.position.set(0, 0, 1000);
         this.camera.up.set(0, 1, 0);
@@ -75,7 +78,7 @@ class IFCViewer {
             panSpeed: 2.0,
             rotationSpeed: 0.005,
             currentRotationX: 0,
-            currentRotationY: 0,
+            currentRotationY: 0
         };
 
         this.canvas.addEventListener('mousedown', (e) => {
@@ -112,10 +115,14 @@ class IFCViewer {
 
         this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        this.canvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            this.zoom(e.deltaY > 0 ? 1.1 : 0.9);
-        }, { passive: false });
+        this.canvas.addEventListener(
+            'wheel',
+            (e) => {
+                e.preventDefault();
+                this.zoom(e.deltaY > 0 ? 1.1 : 0.9);
+            },
+            { passive: false }
+        );
     }
 
     pan(deltaX, deltaY) {
@@ -171,14 +178,16 @@ class IFCViewer {
      * @param {boolean} preserveView — сохранить текущую ориентацию камеры
      */
     updateMeshes(meshData, preserveView = true) {
-        const savedCameraState = preserveView ? {
-            position: this.camera.position.clone(),
-            rotationX: this.controls.currentRotationX,
-            rotationY: this.controls.currentRotationY
-        } : null;
+        const savedCameraState = preserveView
+            ? {
+                  position: this.camera.position.clone(),
+                  rotationX: this.controls.currentRotationX,
+                  rotationY: this.controls.currentRotationY
+              }
+            : null;
 
         // Очистка старых мешей
-        this.meshes.forEach(item => {
+        this.meshes.forEach((item) => {
             this.scene.remove(item.mesh);
             if (item.mesh.geometry) item.mesh.geometry.dispose();
             if (item.mesh.material) item.mesh.material.dispose();
@@ -205,15 +214,18 @@ class IFCViewer {
             const geometry = new THREE.BufferGeometry();
             const transformedVertices = this.transformVerticesForThreeJS(data.vertices);
 
-            geometry.setAttribute('position',
-                new THREE.BufferAttribute(new Float32Array(transformedVertices), 3));
-            geometry.setIndex(
-                new THREE.BufferAttribute(new Uint32Array(data.indices), 1));
+            geometry.setAttribute(
+                'position',
+                new THREE.BufferAttribute(new Float32Array(transformedVertices), 3)
+            );
+            geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(data.indices), 1));
 
             // Используем готовые нормали если есть, иначе вычисляем
             if (data.normals && data.normals.length > 0) {
-                geometry.setAttribute('normal',
-                    new THREE.BufferAttribute(new Float32Array(data.normals), 3));
+                geometry.setAttribute(
+                    'normal',
+                    new THREE.BufferAttribute(new Float32Array(data.normals), 3)
+                );
             } else {
                 geometry.computeVertexNormals();
             }
@@ -244,14 +256,16 @@ class IFCViewer {
 
         // Отправляем событие с данными о сборке для обновления панели свойств
         if (this.assemblyInfo) {
-            window.dispatchEvent(new CustomEvent('meshSelected', {
-                detail: {
-                    id: 'assembly',
-                    name: this.assemblyInfo.name || 'Assembly',
-                    isAssembly: true,
-                    assemblyInfo: this.assemblyInfo
-                }
-            }));
+            window.dispatchEvent(
+                new CustomEvent('meshSelected', {
+                    detail: {
+                        id: 'assembly',
+                        name: this.assemblyInfo.name || 'Assembly',
+                        isAssembly: true,
+                        assemblyInfo: this.assemblyInfo
+                    }
+                })
+            );
         }
     }
 
@@ -302,9 +316,9 @@ class IFCViewer {
             // IFC: Z - вертикаль, Three.js: Y - вертикаль
             // Инверсия Z для правильного вида сверху
             transformed.push(
-                vertices[i] * 1000,       // x (м → мм)
-                -vertices[i + 2] * 1000,  // -z -> y (инверсия для вида сверху)
-                -vertices[i + 1] * 1000   // -y -> z (м → мм)
+                vertices[i] * 1000, // x (м → мм)
+                -vertices[i + 2] * 1000, // -z -> y (инверсия для вида сверху)
+                -vertices[i + 1] * 1000 // -y -> z (м → мм)
             );
         }
         return transformed;
@@ -319,10 +333,10 @@ class IFCViewer {
         this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
         this.raycaster.setFromCamera(this.mouse, this.camera);
-        const intersects = this.raycaster.intersectObjects(this.meshes.map(item => item.mesh));
+        const intersects = this.raycaster.intersectObjects(this.meshes.map((item) => item.mesh));
 
         if (intersects.length > 0) {
-            const meshItem = this.meshes.find(item => item.mesh === intersects[0].object);
+            const meshItem = this.meshes.find((item) => item.mesh === intersects[0].object);
             if (meshItem) {
                 this.selectMesh(meshItem);
                 const boundingBox = new THREE.Box3().setFromObject(meshItem.mesh);
@@ -336,14 +350,16 @@ class IFCViewer {
             this.focusPoint.set(0, 0, 0);
             // Передаём данные о сборке если есть
             if (this.assemblyInfo) {
-                window.dispatchEvent(new CustomEvent('meshSelected', {
-                    detail: {
-                        id: 'assembly',
-                        name: this.assemblyInfo.name || 'Assembly',
-                        isAssembly: true,
-                        assemblyInfo: this.assemblyInfo
-                    }
-                }));
+                window.dispatchEvent(
+                    new CustomEvent('meshSelected', {
+                        detail: {
+                            id: 'assembly',
+                            name: this.assemblyInfo.name || 'Assembly',
+                            isAssembly: true,
+                            assemblyInfo: this.assemblyInfo
+                        }
+                    })
+                );
             }
         }
     }
@@ -376,7 +392,7 @@ class IFCViewer {
         if (this.meshes.length === 0) return;
 
         const box = new THREE.Box3();
-        this.meshes.forEach(item => box.expandByObject(item.mesh));
+        this.meshes.forEach((item) => box.expandByObject(item.mesh));
 
         const center = box.getCenter(new THREE.Vector3());
         const savedRotationX = this.controls.currentRotationX;
@@ -446,6 +462,10 @@ class IFCViewer {
     }
 }
 
+// ES6 export
+export default IFCViewer;
+
+// CommonJS export для обратной совместимости
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = IFCViewer;
 }

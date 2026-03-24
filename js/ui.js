@@ -8,11 +8,9 @@ const UI = {
      * @param {boolean} enabled
      */
     toggle(enabled) {
-        const selectors = [
-            '#boltType', '#diameter', '#length', '#material'
-        ];
+        const selectors = ['#boltType', '#diameter', '#length', '#material'];
 
-        selectors.forEach(selector => {
+        selectors.forEach((selector) => {
             const element = document.querySelector(selector);
             if (element) {
                 element.disabled = !enabled;
@@ -67,12 +65,12 @@ const UI = {
         if (meshItem && meshItem.assemblyInfo) {
             const info = meshItem.assemblyInfo;
             const boltTypeNames = {
-                '1.1': 'Тип 1. Исполнение 1',
-                '1.2': 'Тип 1. Исполнение 2',
-                '2.1': 'Тип 2. Исполнение 1',
-                '5': 'Тип 5'
+                1.1: 'Тип 1. Исполнение 1',
+                1.2: 'Тип 1. Исполнение 2',
+                2.1: 'Тип 2. Исполнение 1',
+                5: 'Тип 5'
             };
-            
+
             panel.innerHTML = `
                 <div class="property-item">
                     <span class="property-key">Имя:</span>
@@ -137,7 +135,10 @@ const UI = {
         if (!ifcData) return;
 
         const element = document.createElement('a');
-        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(ifcData));
+        element.setAttribute(
+            'href',
+            'data:text/plain;charset=utf-8,' + encodeURIComponent(ifcData)
+        );
         element.setAttribute('download', filename);
         element.style.display = 'none';
 
@@ -167,7 +168,10 @@ const UI = {
     }
 };
 
-// Export
+// ES6 export
+export default UI;
+
+// CommonJS export для обратной совместимости
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = UI;
 }

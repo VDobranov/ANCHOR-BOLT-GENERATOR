@@ -7,66 +7,86 @@
 name: IFC Validation
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+    push:
+        branches: [main, develop]
+    pull_request:
+        branches: [main]
 
 jobs:
-  validate-ifc:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install dependencies
-      run: |
-        pip install ifcopenshell behave
-        pip install -r external/ifc-gherkin-rules/requirements.txt
-    - name: Generate test IFC file
-      run: |
-        PYTHONPATH=python:$PYTHONPATH python -c "..."
-    - name: Run buildingSMART Gherkin Validation
-      run: |
-        cd external/ifc-gherkin-rules
-        python -m behave \
-          --define input=../../test_bolt.ifc \
-          --tags="-@disabled" \
-          --tags="-@IFC2X3" \
-          --tags="-@IFC4.3" \
-          --tags="-@critical" \
-          --exclude features/rules/GEM/GEM113*.feature \
-          features/rules/
+    validate-ifc:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: recursive
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: '3.11'
+            - name: Install dependencies
+              run: |
+                  pip install ifcopenshell behave
+                  pip install -r external/ifc-gherkin-rules/requirements.txt
+            - name: Generate test IFC file
+              run: |
+                  PYTHONPATH=python:$PYTHONPATH python -c "..."
+            - name: Run buildingSMART Gherkin Validation
+              run: |
+                  cd external/ifc-gherkin-rules
+                  python -m behave \
+                    --define input=../../test_bolt.ifc \
+                    --tags="-@disabled" \
+                    --tags="-@IFC2X3" \
+                    --tags="-@IFC4.3" \
+                    --tags="-@critical" \
+                    --exclude features/rules/GEM/GEM113*.feature \
+                    features/rules/
 
-  pytest:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install dependencies
-      run: pip install pytest ifcopenshell
-    - name: Run pytest
-      run: |
-        PYTHONPATH=python:$PYTHONPATH python -m pytest tests/ -v --tb=short
+    pytest:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: '3.11'
+            - name: Install dependencies
+              run: pip install pytest ifcopenshell
+            - name: Run pytest
+              run: |
+                  PYTHONPATH=python:$PYTHONPATH python -m pytest tests/ -v --tb=short
+
+    js-tests:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+            - name: Install dependencies
+              run: npm ci
+            - name: Run JS tests
+              run: npm test
+            - name: Run JS tests with coverage
+              run: npm run test:coverage
 ```
 
 ## Этапы CI/CD
 
-| Этап | Описание |
-|------|----------|
-| Checkout | Загрузка кода и подмодулей |
-| Setup Python | Установка Python 3.11 |
-| Dependencies | Установка ifcopenshell, behave, pytest |
-| Generate IFC | Генерация тестового IFC файла |
-| Gherkin Validation | Запуск правил buildingSMART |
-| Pytest | Запуск unit-тестов Python |
+| Этап                  | Описание                                |
+| --------------------- | --------------------------------------- |
+| Checkout              | Загрузка кода и подмодулей              |
+| Setup Python          | Установка Python 3.11                   |
+| Setup Node.js         | Установка Node.js 20 с кэшированием npm |
+| Dependencies (Python) | Установка ifcopenshell, behave, pytest  |
+| Dependencies (JS)     | Установка npm зависимостей              |
+| Generate IFC          | Генерация тестового IFC файла           |
+| Gherkin Validation    | Запуск правил buildingSMART             |
+| Pytest                | Запуск unit-тестов Python               |
+| JS Tests              | Запуск unit-тестов JavaScript           |
+| JS Coverage           | Проверка покрытия кода JS (≥80%)        |
 
 ## Триггеры
 
@@ -75,10 +95,18 @@ jobs:
 
 ## Исключения правил
 
-| Правило | Причина |
-|---------|---------|
-| GEM113 | Баг в валидаторе buildingSMART |
-| @disabled | Отключенные правила |
-| @IFC2X3 | Не применимо к IFC4 |
-| @IFC4.3 | Не применимо к IFC4 ADD2 TC1 |
+| Правило   | Причина                                 |
+| --------- | --------------------------------------- |
+| GEM113    | Баг в валидаторе buildingSMART          |
+| @disabled | Отключенные правила                     |
+| @IFC2X3   | Не применимо к IFC4                     |
+| @IFC4.3   | Не применимо к IFC4 ADD2 TC1            |
 | @critical | Критические правила (требуют доработки) |
+
+## Статусы тестов
+
+| Тип тестов        | Количество | Статус |
+| ----------------- | ---------- | ------ |
+| Python unit       | 276        | ✅     |
+| JavaScript unit   | 97         | ✅     |
+| Gherkin IFC rules | 100+       | ✅     |

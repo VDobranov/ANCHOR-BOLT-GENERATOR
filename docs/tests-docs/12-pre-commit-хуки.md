@@ -17,50 +17,71 @@ pre-commit run --all-files
 
 ## Проверки
 
-| Хук | Назначение |
-|-----|------------|
-| **black** | Форматирование Python кода |
-| **isort** | Сортировка импортов |
-| **flake8** | Линтинг кода |
-| **mypy** | Проверка type hints |
+| Хук          | Назначение                             |
+| ------------ | -------------------------------------- |
+| **black**    | Форматирование Python кода             |
+| **isort**    | Сортировка импортов                    |
+| **flake8**   | Линтинг кода                           |
+| **mypy**     | Проверка type hints                    |
+| **prettier** | Форматирование JavaScript/CSS/Markdown |
+| **eslint**   | Линтинг JavaScript                     |
 
 ## Конфигурация (.pre-commit-config.yaml)
 
 ```yaml
 repos:
-  # Black - форматирование Python кода
-  - repo: https://github.com/psf/black
-    rev: 24.1.0
-    hooks:
-      - id: black
-        language_version: python3.13
-        args: [--line-length=100]
+    # Black - форматирование Python кода
+    - repo: https://github.com/psf/black
+      rev: 24.1.0
+      hooks:
+          - id: black
+            language_version: python3.13
+            args: [--line-length=100]
 
-  # isort - сортировка импортов
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: ["--profile", "black", "--line-length=100"]
+    # isort - сортировка импортов
+    - repo: https://github.com/pycqa/isort
+      rev: 5.13.2
+      hooks:
+          - id: isort
+            args: ['--profile', 'black', '--line-length=100']
 
-  # flake8 - линтер
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.0.0
-    hooks:
-      - id: flake8
-        args: ["--max-line-length=100", "--ignore=E501,W503,F401,F841"]
+    # flake8 - линтер
+    - repo: https://github.com/pycqa/flake8
+      rev: 7.0.0
+      hooks:
+          - id: flake8
+            args: ['--max-line-length=100', '--ignore=E501,W503,F401,F841']
 
-  # mypy - проверка типов
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
-    hooks:
-      - id: mypy
-        args: ["--ignore-missing-imports", "--no-strict-optional"]
+    # mypy - проверка типов
+    - repo: https://github.com/pre-commit/mirrors-mypy
+      rev: v1.8.0
+      hooks:
+          - id: mypy
+            args: ['--ignore-missing-imports', '--no-strict-optional']
+
+    # Prettier - форматирование JavaScript/CSS/Markdown
+    - repo: https://github.com/pre-commit/mirrors-prettier
+      rev: v4.0.0-alpha.8
+      hooks:
+          - id: prettier
+            types_or: [javascript, css, markdown]
+            args: [--write]
+
+    # ESLint - линтер JavaScript
+    - repo: local
+      hooks:
+          - id: eslint
+            name: eslint
+            entry: npm run lint
+            language: system
+            types: [javascript]
+            pass_filenames: false
 ```
 
 ## Исключения
 
 - `tests/` — исключён из flake8 и mypy (Mock классы)
+- `js/tests/` — исключён из eslint
 - Игнорируемые ошибки: E501, W503, F401, F841, E402, E731
 
 ## Запуск перед коммитом

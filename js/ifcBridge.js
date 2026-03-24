@@ -17,14 +17,14 @@ class IFCBridge {
      */
     convertPyodideObject(obj) {
         if (!obj) return obj;
-        
+
         // Если это Pyodide Proxy с методом toJs
         if (obj && typeof obj === 'object' && typeof obj.toJs === 'function') {
             try {
                 const jsObj = obj.toJs({ depth: 1 });
                 // Рекурсивно обрабатываем вложенные объекты
                 if (Array.isArray(jsObj)) {
-                    return jsObj.map(item => this.convertPyodideObject(item));
+                    return jsObj.map((item) => this.convertPyodideObject(item));
                 } else if (typeof jsObj === 'object' && jsObj !== null) {
                     const result = {};
                     for (const [key, value] of Object.entries(jsObj)) {
@@ -38,10 +38,10 @@ class IFCBridge {
                 return this.convertProxyDirectly(obj);
             }
         }
-        
+
         // Если это обычный объект, рекурсивно обрабатываем
         if (Array.isArray(obj)) {
-            return obj.map(item => this.convertPyodideObject(item));
+            return obj.map((item) => this.convertPyodideObject(item));
         } else if (typeof obj === 'object' && obj !== null) {
             const result = {};
             for (const [key, value] of Object.entries(obj)) {
@@ -49,7 +49,7 @@ class IFCBridge {
             }
             return result;
         }
-        
+
         return obj;
     }
 
@@ -98,8 +98,16 @@ class IFCBridge {
         const FS = this.pyodide.FS;
 
         // Создание директорий
-        try { FS.mkdir('/wheels'); } catch (e) { if (e.code !== 'EEXIST') throw e; }
-        try { FS.mkdir('/python'); } catch (e) { if (e.code !== 'EEXIST') throw e; }
+        try {
+            FS.mkdir('/wheels');
+        } catch (e) {
+            if (e.code !== 'EEXIST') throw e;
+        }
+        try {
+            FS.mkdir('/python');
+        } catch (e) {
+            if (e.code !== 'EEXIST') throw e;
+        }
 
         // Загрузка micropip
         UI.showStatus('Загрузка micropip...', 'info');
@@ -148,8 +156,16 @@ class IFCBridge {
         `);
 
         // Создание директорий для пакетов
-        try { FS.mkdir('/python/data'); } catch (e) { if (e.code !== 'EEXIST') throw e; }
-        try { FS.mkdir('/python/services'); } catch (e) { if (e.code !== 'EEXIST') throw e; }
+        try {
+            FS.mkdir('/python/data');
+        } catch (e) {
+            if (e.code !== 'EEXIST') throw e;
+        }
+        try {
+            FS.mkdir('/python/services');
+        } catch (e) {
+            if (e.code !== 'EEXIST') throw e;
+        }
 
         // Получаем базовый URL (для GitHub Pages)
         const baseUrl = window.location.pathname;
@@ -159,11 +175,13 @@ class IFCBridge {
             const fileName = filePath.split('/').pop();
             // Используем абсолютный путь от корня сайта
             const fullPath = baseDir + filePath + cacheBuster;
-            
+
             console.log(`Loading: ${fullPath}`);
             const response = await fetch(fullPath);
             if (!response.ok) {
-                console.error(`Failed to fetch ${fullPath}: ${response.status} ${response.statusText}`);
+                console.error(
+                    `Failed to fetch ${fullPath}: ${response.status} ${response.statusText}`
+                );
                 throw new Error(`Failed to fetch ${filePath}`);
             }
             const content = await response.text();
@@ -283,7 +301,10 @@ async function initializeIFCBridge(pyodide) {
     return ifcBridge;
 }
 
-// Export
+// ES6 exports
+export { IFCBridge, initializeIFCBridge };
+
+// CommonJS export для обратной совместимости
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { IFCBridge, initializeIFCBridge };
 }
