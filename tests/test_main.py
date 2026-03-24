@@ -1,5 +1,5 @@
 """
-Тесты для main.py - управление IFC документом
+Тесты для main.py — управление IFC документом
 """
 
 import os
@@ -7,7 +7,6 @@ import sys
 
 import pytest
 
-# Добавляем python директорию в path для импортов
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
 
 
@@ -67,13 +66,9 @@ class TestSpatialElementsPlacement:
         buildings = ifc_doc.by_type("IfcBuilding")
         storeys = ifc_doc.by_type("IfcBuildingStorey")
 
-        # Все элементы имеют ObjectPlacement
         assert sites[0].ObjectPlacement is not None
         assert buildings[0].ObjectPlacement is not None
         assert storeys[0].ObjectPlacement is not None
-
-        # Примечание: edit_object_placement создаёт размещения относительно мировой СК
-        # Для создания иерархии нужно использовать прямое создание сущностей
 
 
 class TestOwnerHistory:
@@ -148,25 +143,14 @@ class TestOwnerHistory:
 
         assert owner_history.is_a() == "IfcOwnerHistory"
 
-    def test_ifc_document_validation(self):
-        """IFC документ должен проходить валидацию"""
-        from main import initialize_base_document
-        from validate_utils import assert_valid_ifc
-
-        ifc_doc = initialize_base_document()
-
-        # Проверяем валидацию документа
-        assert_valid_ifc(ifc_doc, "Базовый IFC документ не прошёл валидацию")
-
 
 class TestDocumentManagement:
     """Тесты для управления документами"""
 
     def test_get_ifc_document(self):
         """get_ifc_document должен возвращать текущий документ"""
-        from main import get_ifc_document, initialize_base_document, reset_doc_manager
+        from main import get_ifc_document, initialize_base_document
 
-        reset_doc_manager()
         doc = initialize_base_document()
         retrieved_doc = get_ifc_document()
 
@@ -174,40 +158,33 @@ class TestDocumentManagement:
 
     def test_get_ifc_document_with_id(self):
         """get_ifc_document с указанным ID"""
-        from main import get_ifc_document, initialize_base_document, reset_doc_manager
+        from main import get_ifc_document, initialize_base_document
 
-        reset_doc_manager()
         doc = initialize_base_document(doc_id="test_doc")
         retrieved_doc = get_ifc_document("test_doc")
 
         assert retrieved_doc == doc
 
+    def test_get_ifc_document_not_found(self):
+        """get_ifc_document должен вызывать ошибку для несуществующего ID"""
+        from main import get_ifc_document
+
+        with pytest.raises(ValueError, match="не найден"):
+            get_ifc_document("nonexistent")
+
     def test_reset_ifc_document(self):
         """reset_ifc_document должен сбрасывать документ"""
-        from main import (
-            get_ifc_document,
-            initialize_base_document,
-            reset_doc_manager,
-            reset_ifc_document,
-        )
+        from main import get_ifc_document, initialize_base_document, reset_ifc_document
 
-        reset_doc_manager()
         doc1 = initialize_base_document()
         doc2 = reset_ifc_document()
 
-        # Документ должен быть новым
         assert doc1 != doc2
 
     def test_delete_document(self):
         """delete_document должен удалять документ"""
-        from main import (
-            delete_document,
-            initialize_base_document,
-            list_documents,
-            reset_doc_manager,
-        )
+        from main import delete_document, initialize_base_document, list_documents
 
-        reset_doc_manager()
         initialize_base_document(doc_id="test_delete")
 
         assert "test_delete" in list_documents()
@@ -218,9 +195,8 @@ class TestDocumentManagement:
 
     def test_list_documents(self):
         """list_documents должен возвращать список документов"""
-        from main import initialize_base_document, list_documents, reset_doc_manager
+        from main import initialize_base_document, list_documents
 
-        reset_doc_manager()
         initialize_base_document(doc_id="doc1")
         initialize_base_document(doc_id="doc2")
 
@@ -231,14 +207,8 @@ class TestDocumentManagement:
 
     def test_clear_all_documents(self):
         """clear_all_documents должен очищать все документы"""
-        from main import (
-            clear_all_documents,
-            initialize_base_document,
-            list_documents,
-            reset_doc_manager,
-        )
+        from main import clear_all_documents, initialize_base_document, list_documents
 
-        reset_doc_manager()
         initialize_base_document(doc_id="doc1")
         initialize_base_document(doc_id="doc2")
 
@@ -248,12 +218,32 @@ class TestDocumentManagement:
 
         assert len(list_documents()) == 0
 
-    def test_initialize_base_document_default(self):
-        """initialize_base_document создаёт документ по умолчанию"""
-        from main import initialize_base_document, reset_doc_manager
+    def test_initialize_base_document(self):
+        """initialize_base_document создаёт документ"""
+        from main import initialize_base_document
 
-        reset_doc_manager()
         doc = initialize_base_document()
 
         projects = doc.by_type("IfcProject")
         assert len(projects) == 1
+
+    def test_initialize_base_document_with_id(self):
+        """initialize_base_document с указанным ID"""
+        from main import get_doc_manager, initialize_base_document
+
+        doc = initialize_base_document(doc_id="custom_id")
+        manager = get_doc_manager()
+
+        assert manager.get_current_id() == "custom_id"
+
+
+class TestIFCValidation:
+    """Тесты валидации IFC"""
+
+    def test_ifc_document_validation(self):
+        """IFC документ должен проходить валидацию"""
+        from main import initialize_base_document
+        from validate_utils import assert_valid_ifc
+
+        ifc_doc = initialize_base_document()
+        assert_valid_ifc(ifc_doc, "Базовый IFC документ не прошёл валидацию")

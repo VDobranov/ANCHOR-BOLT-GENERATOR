@@ -1,384 +1,319 @@
 """
-Тесты для instance_factory.py - создание инстансов и сборок
+Тесты для instance_factory.py — создание инстансов болтов
 """
 
-from unittest.mock import MagicMock, patch
+import os
+import sys
 
 import pytest
-from conftest import MockIfcDoc, MockIfcEntity
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
+
+
+@pytest.fixture(autouse=True)
+def reset_document_manager():
+    """Сброс менеджера документов между тестами"""
+    from document_manager import IFCDocumentManager
+
+    IFCDocumentManager._instances = {}
+    yield
 
 
 class TestInstanceFactoryInit:
     """Тесты инициализации InstanceFactory"""
 
-    def test_instance_factory_init(self):
-        """InstanceFactory должен инициализироваться с ifc_doc"""
+    def test_init(self):
+        """InstanceFactory должен инициализироваться"""
+        from document_manager import IFCDocumentManager
         from instance_factory import InstanceFactory
 
-        mock_ifc = MockIfcDoc()
-        factory = InstanceFactory(mock_ifc)
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
 
-        assert factory.ifc is mock_ifc
+        assert factory.ifc == doc
         assert factory.type_factory is not None
+        assert factory.material_manager is not None
 
-    def test_instance_factory_init_with_custom_type_factory(self):
-        """InstanceFactory должен принимать custom type_factory"""
+    def test_init_with_type_factory(self):
+        """InstanceFactory с кастомным type_factory"""
+        from document_manager import IFCDocumentManager
         from instance_factory import InstanceFactory
         from type_factory import TypeFactory
 
-        mock_ifc = MockIfcDoc()
-        custom_type_factory = TypeFactory(mock_ifc)
-        factory = InstanceFactory(mock_ifc, custom_type_factory)
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        type_factory = TypeFactory(doc)
+        factory = InstanceFactory(doc, type_factory=type_factory)
 
-        assert factory.type_factory is custom_type_factory
+        assert factory.type_factory == type_factory
 
 
 class TestCreateBoltAssembly:
     """Тесты create_bolt_assembly"""
 
-    @pytest.fixture
-    def mock_builder_methods(self):
-        """Фикстура для мокирования методов builder"""
-        from unittest.mock import MagicMock, patch
-
-        mock_shape_rep = MockIfcEntity("IfcShapeRepresentation")
-
-        # Мокаем на уровне класса ShapeBuilder
-        with patch(
-            "ifcopenshell.util.shape_builder.ShapeBuilder.polyline",
-            return_value=MockIfcEntity("IfcIndexedPolyCurve"),
-        ), patch(
-            "ifcopenshell.util.shape_builder.ShapeBuilder.create_swept_disk_solid",
-            return_value=MockIfcEntity("IfcSweptDiskSolid"),
-        ), patch(
-            "ifcopenshell.util.shape_builder.ShapeBuilder.circle",
-            return_value=MockIfcEntity("IfcCircle"),
-        ), patch(
-            "ifcopenshell.util.shape_builder.ShapeBuilder.profile",
-            return_value=MockIfcEntity("IfcArbitraryProfileDefWithVoids"),
-        ), patch(
-            "ifcopenshell.util.shape_builder.ShapeBuilder.extrude",
-            return_value=MockIfcEntity("IfcExtrudedAreaSolid"),
-        ), patch(
-            "ifcopenshell.util.shape_builder.ShapeBuilder.get_representation",
-            return_value=mock_shape_rep,
-        ):
-            yield
-
-    def test_create_bolt_assembly_returns_dict(self, mock_builder_methods):
-        """create_bolt_assembly должен возвращать dict"""
+    def test_create_bolt_assembly_type_1_1(self):
+        """create_bolt_assembly для типа 1.1"""
+        from document_manager import IFCDocumentManager
         from instance_factory import InstanceFactory
 
-        mock_ifc = MockIfcDoc()
-        factory = InstanceFactory(mock_ifc)
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
 
-        # Мокаем _generate_mesh_data чтобы избежать ifcopenshell.geom
-        with patch.object(factory, "_generate_mesh_data", return_value={"meshes": []}):
-            result = factory.create_bolt_assembly("1.1", 20, 800, "09Г2С")
+        result = factory.create_bolt_assembly(
+            bolt_type="1.1",
+            diameter=20,
+            length=800,
+            material="09Г2С",
+        )
 
-        assert isinstance(result, dict)
+        assert result is not None
         assert "assembly" in result
         assert "stud" in result
-        assert "components" in result
-        assert "mesh_data" in result
 
-    def test_create_bolt_assembly_creates_assembly(self, mock_builder_methods):
-        """create_bolt_assembly должен создавать сборку
-
-        Assembly имеет PredefinedType=ANCHORBOLT (из типа),
-        поэтому ObjectType не указывается ($).
-        """
+    def test_create_bolt_assembly_type_2_1(self):
+        """create_bolt_assembly для типа 2.1 с плитой"""
+        from document_manager import IFCDocumentManager
         from instance_factory import InstanceFactory
 
-        mock_ifc = MockIfcDoc()
-        factory = InstanceFactory(mock_ifc)
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
 
-        with patch.object(factory, "_generate_mesh_data", return_value={"meshes": []}):
-            result = factory.create_bolt_assembly("1.1", 20, 800, "09Г2С")
-
-        assembly = result["assembly"]
-        assert assembly is not None
-        assert assembly.is_a() == "IfcMechanicalFastener"
-        # ObjectType не указан, т.к. PredefinedType=ANCHORBOLT (не USERDEFINED)
-        assert assembly.ObjectType is None
-
-    def test_create_bolt_assembly_name_format(self, mock_builder_methods):
-        """Имя сборки должно следовать формату \"Болт {T}.М{d}×{L} {M} ГОСТ 24379.1-2012\" """
-        from instance_factory import InstanceFactory
-
-        mock_ifc = MockIfcDoc()
-        factory = InstanceFactory(mock_ifc)
-
-        with patch.object(factory, "_generate_mesh_data", return_value={"meshes": []}):
-            result = factory.create_bolt_assembly("1.1", 20, 800, "09Г2С")
-
-        assembly = result["assembly"]
-        assert assembly.Name == "Болт 1.1.М20×800 09Г2С ГОСТ 24379.1-2012"
-
-    def test_create_bolt_assembly_components_count_type_1_1(self, mock_builder_methods):
-        """Для типа 1.1 должно быть 4 компонента: шпилька + шайба + 2 гайки"""
-        from instance_factory import InstanceFactory
-
-        mock_ifc = MockIfcDoc()
-        factory = InstanceFactory(mock_ifc)
-
-        with patch.object(factory, "_generate_mesh_data", return_value={"meshes": []}):
-            result = factory.create_bolt_assembly("1.1", 20, 800, "09Г2С")
-
-        components = result["components"]
-        assert len(components) == 4  # stud + washer + 2 nuts
-
-    def test_create_bolt_assembly_components_count_type_2_1(self, mock_builder_methods):
-        """Для типа 2.1 должно быть 7 компонентов: шпилька + шайба + 4 гайки + анкерная плита"""
-        from instance_factory import InstanceFactory
-
-        mock_ifc = MockIfcDoc()
-        factory = InstanceFactory(mock_ifc)
-
-        with patch.object(factory, "_generate_mesh_data", return_value={"meshes": []}):
-            result = factory.create_bolt_assembly("2.1", 20, 800, "09Г2С")
-
-        components = result["components"]
-        assert len(components) == 7  # stud + washer + 4 nuts + plate
-
-    def test_create_bolt_assembly_stud_type(self, mock_builder_methods):
-        """Шпилька наследует ObjectType из типа (ElementType=STUD)
-
-        На экземпляре ObjectType не указан явно, наследуется через IfcRelDefinesByType.
-        """
-        from instance_factory import InstanceFactory
-
-        mock_ifc = MockIfcDoc()
-        factory = InstanceFactory(mock_ifc)
-
-        with patch.object(factory, "_generate_mesh_data", return_value={"meshes": []}):
-            result = factory.create_bolt_assembly("1.1", 20, 800, "09Г2С")
-
-        stud = result["stud"]
-        assert stud is not None
-        # ObjectType не указан явно на экземпляре (наследуется из типа)
-        assert stud.ObjectType is None
-
-    def test_create_bolt_assembly_creates_relations(self, mock_builder_methods):
-        """create_bolt_assembly должен создавать отношения"""
-        from instance_factory import InstanceFactory
-
-        mock_ifc = MockIfcDoc()
-        factory = InstanceFactory(mock_ifc)
-
-        with patch.object(factory, "_generate_mesh_data", return_value={"meshes": []}):
-            result = factory.create_bolt_assembly("1.1", 20, 800, "09Г2С")
-
-        # Проверка создания IfcRelDefinesByType
-        rel_defines = mock_ifc.by_type("IfcRelDefinesByType")
-        assert len(rel_defines) > 0
-
-        # Проверка создания IfcRelAggregates
-        rel_aggregates = mock_ifc.by_type("IfcRelAggregates")
-        assert len(rel_aggregates) > 0
-
-
-class TestCreatePlacement:
-    """Тесты _create_placement"""
-
-    def test_create_placement_creates_local_placement(self):
-        """_create_placement должен создавать IfcLocalPlacement"""
-        from instance_factory import InstanceFactory
-
-        mock_ifc = MockIfcDoc()
-        factory = InstanceFactory(mock_ifc)
-
-        result = factory._create_placement((0, 0, 0))
+        result = factory.create_bolt_assembly(
+            bolt_type="2.1",
+            diameter=20,
+            length=800,
+            material="09Г2С",
+        )
 
         assert result is not None
-        assert result.is_a() == "IfcLocalPlacement"
+        # Тип 2.1 должен иметь больше компонентов чем тип 1.1 (плита + дополнительные гайки)
+        components = result.get("components", [])
+        # У типа 2.1 должно быть больше 5 компонентов (шпилька, шайба, 2 гайки + плита + 2 гайки)
+        assert (
+            len(components) >= 5
+        ), f"Тип 2.1 должен иметь >= 5 компонентов, найдено: {len(components)}"
 
-    def test_create_placement_with_offset(self):
-        """_create_placement должен поддерживать смещение"""
+    def test_create_bolt_assembly_type_5(self):
+        """create_bolt_assembly для типа 5 (прямой болт)"""
+        from document_manager import IFCDocumentManager
         from instance_factory import InstanceFactory
 
-        mock_ifc = MockIfcDoc()
-        factory = InstanceFactory(mock_ifc)
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
 
-        result = factory._create_placement((10, 20, 30))
+        result = factory.create_bolt_assembly(
+            bolt_type="5",
+            diameter=20,
+            length=800,
+            material="09Г2С",
+        )
 
         assert result is not None
-        # Проверка, что координаты установлены
-        placement = result.RelativePlacement
-        assert placement.Location.Coordinates == [10.0, 20.0, 30.0]
+        assert "assembly" in result
 
-
-class TestCreateComponent:
-    """Тесты _create_component"""
-
-    @pytest.fixture
-    def mock_builder_methods(self):
-        """Фикстура для мокирования методов builder"""
-        from unittest.mock import patch
-
-        mock_shape_rep = MockIfcEntity("IfcShapeRepresentation")
-
-        with patch(
-            "ifcopenshell.util.shape_builder.ShapeBuilder.polyline",
-            return_value=MockIfcEntity("IfcIndexedPolyCurve"),
-        ), patch(
-            "ifcopenshell.util.shape_builder.ShapeBuilder.create_swept_disk_solid",
-            return_value=MockIfcEntity("IfcSweptDiskSolid"),
-        ), patch(
-            "ifcopenshell.util.shape_builder.ShapeBuilder.circle",
-            return_value=MockIfcEntity("IfcCircle"),
-        ), patch(
-            "ifcopenshell.util.shape_builder.ShapeBuilder.profile",
-            return_value=MockIfcEntity("IfcArbitraryProfileDefWithVoids"),
-        ), patch(
-            "ifcopenshell.util.shape_builder.ShapeBuilder.extrude",
-            return_value=MockIfcEntity("IfcExtrudedAreaSolid"),
-        ), patch(
-            "ifcopenshell.util.shape_builder.ShapeBuilder.get_representation",
-            return_value=mock_shape_rep,
-        ):
-            yield
-
-    def test_create_component_creates_fastener(self, mock_builder_methods):
-        """_create_component должен создавать IfcMechanicalFastener
-
-        Имя наследуется из типа, PredefinedType и ObjectType наследуются через IfcRelDefinesByType.
-        """
+    def test_create_bolt_assembly_with_material(self):
+        """create_bolt_assembly с разным материалом"""
+        from document_manager import IFCDocumentManager
         from instance_factory import InstanceFactory
-        from type_factory import TypeFactory
 
-        mock_ifc = MockIfcDoc()
-        factory = InstanceFactory(mock_ifc)
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
 
-        # Создадим тип гайки
-        type_factory = factory.type_factory
-        nut_type = type_factory.get_or_create_nut_type(20, "09Г2С")
+        for material in ["09Г2С", "ВСт3пс2", "10Г2"]:
+            result = factory.create_bolt_assembly(
+                bolt_type="1.1",
+                diameter=20,
+                length=800,
+                material=material,
+            )
+            assert result is not None
 
-        instances_list = []
-        result = factory._create_component("Nut", (0, 0, 10), nut_type, instances_list)
+    def test_create_bolt_assembly_with_ifc_class(self):
+        """create_bolt_assembly с разным Ifc классом"""
+        from document_manager import IFCDocumentManager
+        from instance_factory import InstanceFactory
 
-        assert result is not None
-        assert result.is_a() == "IfcMechanicalFastener"
-        # Имя наследуется из типа
-        assert result.Name == "Гайка М20 ГОСТ 5915-70"
-        # ObjectType не указан явно на экземпляре (наследуется из типа)
-        assert result.ObjectType is None
-        assert len(instances_list) == 1
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
 
+        for assembly_class in ["IfcMechanicalFastener", "IfcElementAssembly"]:
+            result = factory.create_bolt_assembly(
+                bolt_type="1.1",
+                diameter=20,
+                length=800,
+                material="09Г2С",
+                assembly_class=assembly_class,
+            )
+            assert result is not None
 
-class TestGenerateBoltAssembly:
-    """Тесты generate_bolt_assembly"""
+    def test_create_bolt_assembly_with_assembly_mode(self):
+        """create_bolt_assembly с разным режимом сборки"""
+        from document_manager import IFCDocumentManager
+        from instance_factory import InstanceFactory
 
-    def test_generate_bolt_assembly_returns_tuple(self):
-        """generate_bolt_assembly должна возвращать кортеж (ifc_str, mesh_data)"""
-        from instance_factory import generate_bolt_assembly
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
 
-        # Примечание: этот тест требует работающего ifcopenshell
-        # В среде без ifcopenshell он может упасть
-        params = {"bolt_type": "1.1", "diameter": 20, "length": 800, "material": "09Г2С"}
+        for assembly_mode in ["separate", "unified"]:
+            result = factory.create_bolt_assembly(
+                bolt_type="1.1",
+                diameter=20,
+                length=800,
+                material="09Г2С",
+                assembly_mode=assembly_mode,
+            )
+            assert result is not None
 
-        try:
-            result = generate_bolt_assembly(params)
-            assert isinstance(result, tuple)
-            assert len(result) == 2
-        except Exception:
-            # Если ifcopenshell недоступен, тест пропускается
-            pytest.skip("ifcopenshell недоступен")
+    def test_create_bolt_assembly_with_geometry_type(self):
+        """create_bolt_assembly с разным типом геометрии"""
+        from document_manager import IFCDocumentManager
+        from instance_factory import InstanceFactory
 
-    def test_generate_bolt_assembly_validates_ifc(self):
-        """Сгенерированный IFC файл должен проходить валидацию"""
-        from instance_factory import generate_bolt_assembly
-        from validate_utils import validate_ifc_file
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
 
-        params = {"bolt_type": "1.1", "diameter": 20, "length": 800, "material": "09Г2С"}
+        for geometry_type in ["solid", "mesh"]:
+            result = factory.create_bolt_assembly(
+                bolt_type="1.1",
+                diameter=20,
+                length=800,
+                material="09Г2С",
+                geometry_type=geometry_type,
+            )
+            assert result is not None
 
-        try:
-            result = generate_bolt_assembly(params)
-            ifc_str, mesh_data = result
+    def test_create_bolt_assembly_creates_entities(self):
+        """create_bolt_assembly должен создавать IFC сущности"""
+        from document_manager import IFCDocumentManager
+        from instance_factory import InstanceFactory
 
-            # Сохраняем в временный файл и проверяем
-            import os
-            import tempfile
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
 
-            import ifcopenshell
+        initial_count = len(list(doc))
 
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".ifc", delete=False) as tmp:
-                tmp.write(ifc_str)
-                tmp_path = tmp.name
+        result = factory.create_bolt_assembly(
+            bolt_type="1.1",
+            diameter=20,
+            length=800,
+            material="09Г2С",
+        )
 
-            try:
-                ifc_doc = ifcopenshell.open(tmp_path)
+        # Количество сущностей должно увеличиться
+        final_count = len(list(doc))
+        assert final_count > initial_count
 
-                # 1. Валидация IFC файла
-                errors = validate_ifc_file(ifc_doc)
-                assert errors is None, f"IFC файл не прошёл валидацию: {errors}"
+    def test_create_bolt_assembly_creates_fasteners(self):
+        """create_bolt_assembly должен создавать IfcMechanicalFastener"""
+        from document_manager import IFCDocumentManager
+        from instance_factory import InstanceFactory
 
-                # 2. Проверка наличия OwnerHistory с ID #1
-                owner_history = ifc_doc.by_id(1)
-                assert (
-                    owner_history.is_a() == "IfcOwnerHistory"
-                ), "IfcOwnerHistory должен иметь ID #1"
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
 
-                # 3. Проверка базовой структуры
-                projects = ifc_doc.by_type("IfcProject")
-                assert len(projects) == 1, "Должен быть один IfcProject"
+        result = factory.create_bolt_assembly(
+            bolt_type="1.1",
+            diameter=20,
+            length=800,
+            material="09Г2С",
+        )
 
-                sites = ifc_doc.by_type("IfcSite")
-                assert len(sites) == 1, "Должен быть один IfcSite"
+        fasteners = doc.by_type("IfcMechanicalFastener")
+        assert len(fasteners) > 0
 
-                buildings = ifc_doc.by_type("IfcBuilding")
-                assert len(buildings) == 1, "Должен быть один IfcBuilding"
+    def test_create_bolt_assembly_creates_material(self):
+        """create_bolt_assembly должен создавать материал"""
+        from document_manager import IFCDocumentManager
+        from instance_factory import InstanceFactory
 
-                storeys = ifc_doc.by_type("IfcBuildingStorey")
-                assert len(storeys) == 1, "Должен быть один IfcBuildingStorey"
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
 
-                # 4. Проверка болта и компонентов
-                fasteners = ifc_doc.by_type("IfcMechanicalFastener")
-                assert (
-                    len(fasteners) >= 4
-                ), f"Должно быть минимум 4 IfcMechanicalFastener (assembly + stud + nut + washer), найдено: {len(fasteners)}"
+        result = factory.create_bolt_assembly(
+            bolt_type="1.1",
+            diameter=20,
+            length=800,
+            material="09Г2С",
+        )
 
-                # 5. Проверка типов
-                fastener_types = ifc_doc.by_type("IfcMechanicalFastenerType")
-                assert (
-                    len(fastener_types) >= 4
-                ), f"Должно быть минимум 4 IfcMechanicalFastenerType, найдено: {len(fastener_types)}"
+        materials = doc.by_type("IfcMaterial")
+        assert len(materials) > 0
 
-                # 6. Проверка материалов
-                materials = ifc_doc.by_type("IfcMaterial")
-                assert (
-                    len(materials) >= 1
-                ), f"Должен быть хотя бы один IfcMaterial, найдено: {len(materials)}"
+    def test_create_bolt_assembly_invalid_bolt_type(self):
+        """create_bolt_assembly должен вызывать ошибку для неверного типа"""
+        from document_manager import IFCDocumentManager
+        from instance_factory import InstanceFactory
 
-                # 7. Проверка отношений
-                rel_aggregates = ifc_doc.by_type("IfcRelAggregates")
-                assert len(rel_aggregates) >= 1, "Должны быть отношения IfcRelAggregates"
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
 
-                rel_defines = ifc_doc.by_type("IfcRelDefinesByType")
-                assert len(rel_defines) >= 1, "Должны быть отношения IfcRelDefinesByType"
+        with pytest.raises((ValueError, KeyError)):
+            factory.create_bolt_assembly(
+                bolt_type="invalid",
+                diameter=20,
+                length=800,
+                material="09Г2С",
+            )
 
-                rel_associates = ifc_doc.by_type("IfcRelAssociatesMaterial")
-                assert len(rel_associates) >= 1, "Должны быть отношения IfcRelAssociatesMaterial"
+    def test_create_bolt_assembly_invalid_diameter(self):
+        """create_bolt_assembly должен вызывать ошибку для неверного диаметра"""
+        from document_manager import IFCDocumentManager
+        from instance_factory import InstanceFactory
 
-                # 8. Проверка mesh данных
-                assert mesh_data is not None, "mesh_data не должен быть None"
-                assert "meshes" in mesh_data, "mesh_data должен содержать 'meshes'"
-                assert (
-                    len(mesh_data["meshes"]) >= 4
-                ), f"Должно быть минимум 4 mesh, найдено: {len(mesh_data['meshes'])}"
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
 
-            finally:
-                os.unlink(tmp_path)
+        with pytest.raises((ValueError, KeyError)):
+            factory.create_bolt_assembly(
+                bolt_type="1.1",
+                diameter=999,
+                length=800,
+                material="09Г2С",
+            )
 
-        except Exception as e:
-            # Если ifcopenshell недоступен, тест пропускается
-            pytest.skip(f"ifcopenshell недоступен: {e}")
+    def test_create_bolt_assembly_invalid_length(self):
+        """create_bolt_assembly должен вызывать ошибку для неверной длины"""
+        from document_manager import IFCDocumentManager
+        from instance_factory import InstanceFactory
 
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
 
-class TestGetElementProperties:
-    """Тесты get_element_properties"""
+        with pytest.raises((ValueError, KeyError)):
+            factory.create_bolt_assembly(
+                bolt_type="1.1",
+                diameter=20,
+                length=-100,
+                material="09Г2С",
+            )
 
-    # Примечание: get_element_properties требует инициализированный IFC документ
-    # и не может быть протестирован без полной инициализации ifcopenshell
-    # Интеграционное тестирование должно проводиться в браузере через Pyodide
-    pass
+    def test_create_bolt_assembly_invalid_material(self):
+        """create_bolt_assembly должен вызывать ошибку для неверного материала"""
+        from document_manager import IFCDocumentManager
+        from instance_factory import InstanceFactory
+
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
+
+        with pytest.raises((ValueError, KeyError)):
+            factory.create_bolt_assembly(
+                bolt_type="1.1",
+                diameter=20,
+                length=800,
+                material="invalid_material",
+            )

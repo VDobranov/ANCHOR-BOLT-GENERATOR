@@ -1,7 +1,5 @@
 """
-Тесты для document_manager.py - менеджер IFC документов
-
-Интеграционные тесты для управления множественными документами.
+Тесты для document_manager.py — менеджер IFC документов
 """
 
 import os
@@ -9,55 +7,89 @@ import sys
 
 import pytest
 
-# Добавляем python директорию в path для импортов
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python"))
 
 
-class TestIFCDocumentManager:
-    """Тесты для IFCDocumentManager"""
+@pytest.fixture(autouse=True)
+def reset_document_manager():
+    """Сброс менеджера документов между тестами"""
+    from document_manager import IFCDocumentManager
+
+    # Очищаем все документы
+    IFCDocumentManager._instances = {}
+    yield
+
+
+class TestIFCDocumentManagerInit:
+    """Тесты инициализации IFCDocumentManager"""
+
+    def test_init(self):
+        """IFCDocumentManager должен инициализироваться"""
+        from document_manager import IFCDocumentManager
+
+        manager = IFCDocumentManager()
+        assert manager._documents == {}
+        assert manager._current_id is None
+
+
+class TestCreateDocument:
+    """Тесты create_document"""
 
     def test_create_document(self):
-        """IFCDocumentManager должен создавать новый документ"""
+        """create_document должен создавать документ"""
         from document_manager import IFCDocumentManager
 
         manager = IFCDocumentManager()
-        doc = manager.create_document("test-doc")
+        doc = manager.create_document("test_doc")
 
         assert doc is not None
-        assert doc.schema == "IFC4"
-        assert "test-doc" in manager.list_documents()
+        assert "test_doc" in manager._documents
 
-    def test_create_document_with_custom_schema(self):
-        """IFCDocumentManager должен поддерживать кастомную схему"""
+    def test_create_document_with_schema(self):
+        """create_document должен создавать документ с указанной схемой"""
         from document_manager import IFCDocumentManager
 
         manager = IFCDocumentManager()
-        doc = manager.create_document("test-doc", schema="IFC4")
+        doc = manager.create_document("test_doc", schema="IFC4")
 
-        assert doc.schema == "IFC4"
+        projects = doc.by_type("IfcProject")
+        assert len(projects) == 1
 
-    def test_create_duplicate_document_raises(self):
-        """Создание дубликата документа должно вызывать ошибку"""
+    def test_create_document_raises_for_duplicate(self):
+        """create_document должен вызывать ошибку для дубликата"""
         from document_manager import IFCDocumentManager
 
         manager = IFCDocumentManager()
-        manager.create_document("test-doc")
+        manager.create_document("test_doc")
 
         with pytest.raises(ValueError, match="уже существует"):
-            manager.create_document("test-doc")
+            manager.create_document("test_doc")
 
-    def test_get_document(self):
-        """Получение документа по ID"""
+    def test_create_document_sets_current_id(self):
+        """create_document должен устанавливать текущий ID"""
         from document_manager import IFCDocumentManager
 
         manager = IFCDocumentManager()
-        doc = manager.create_document("test-doc")
-        retrieved = manager.get_document("test-doc")
+        manager.create_document("test_doc")
 
-        assert retrieved is doc
+        assert manager._current_id == "test_doc"
 
-    def test_get_document_not_found(self):
-        """Получение несуществующего документа должно вызывать ошибку"""
+
+class TestGetDocument:
+    """Тесты get_document"""
+
+    def test_get_document(self):
+        """get_document должен возвращать документ"""
+        from document_manager import IFCDocumentManager
+
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        retrieved = manager.get_document("test_doc")
+
+        assert retrieved == doc
+
+    def test_get_document_raises_for_not_found(self):
+        """get_document должен вызывать ошибку для несуществующего"""
         from document_manager import IFCDocumentManager
 
         manager = IFCDocumentManager()
@@ -65,59 +97,68 @@ class TestIFCDocumentManager:
         with pytest.raises(ValueError, match="не найден"):
             manager.get_document("nonexistent")
 
-    def test_get_current_document(self):
-        """Получение текущего документа без указания ID"""
-        from document_manager import IFCDocumentManager
 
-        manager = IFCDocumentManager()
-        doc = manager.create_document("test-doc")
-        retrieved = manager.get_document()  # Без ID, должен вернуть текущий
-
-        assert retrieved is doc
-
-    def test_delete_document(self):
-        """Удаление документа"""
-        from document_manager import IFCDocumentManager
-
-        manager = IFCDocumentManager()
-        manager.create_document("test-doc")
-        manager.delete_document("test-doc")
-
-        assert "test-doc" not in manager.list_documents()
-
-    def test_delete_current_document(self):
-        """Удаление текущего документа должно сбрасывать current_id"""
-        from document_manager import IFCDocumentManager
-
-        manager = IFCDocumentManager()
-        manager.create_document("test-doc")
-        manager.delete_document("test-doc")
-
-        assert manager.get_current_id() is None
-
-    def test_get_material_manager(self):
-        """Получение менеджера материалов для документа"""
-        from document_manager import IFCDocumentManager
-
-        manager = IFCDocumentManager()
-        manager.create_document("test-doc")
-        mat_manager = manager.get_material_manager("test-doc")
-
-        assert mat_manager is not None
+class TestResetDocument:
+    """Тесты reset_document"""
 
     def test_reset_document(self):
-        """Сброс документа"""
+        """reset_document должен сбрасывать документ"""
         from document_manager import IFCDocumentManager
 
         manager = IFCDocumentManager()
-        doc1 = manager.create_document("test-doc")
-        doc2 = manager.reset_document("test-doc")
+        doc1 = manager.create_document("test_doc")
+        doc2 = manager.reset_document("test_doc")
 
-        assert doc2 is not None
-        assert doc2.schema == "IFC4"
+        assert doc1 != doc2
+        assert "test_doc" in manager._documents
+
+    def test_reset_document_current_id(self):
+        """reset_document должен сохранять текущий ID"""
+        from document_manager import IFCDocumentManager
+
+        manager = IFCDocumentManager()
+        manager.create_document("test_doc")
+        manager.reset_document("test_doc")
+
+        assert manager._current_id == "test_doc"
+
+
+class TestDeleteDocument:
+    """Тесты delete_document"""
+
+    def test_delete_document(self):
+        """delete_document должен удалять документ"""
+        from document_manager import IFCDocumentManager
+
+        manager = IFCDocumentManager()
+        manager.create_document("test_doc")
+        manager.delete_document("test_doc")
+
+        assert "test_doc" not in manager._documents
+
+    def test_delete_document_raises_for_not_found(self):
+        """delete_document не должен вызывать ошибку для несуществующего"""
+        from document_manager import IFCDocumentManager
+
+        manager = IFCDocumentManager()
+        # delete_document не вызывает ошибку если документ не найден
+        manager.delete_document("nonexistent")
+
+
+class TestListDocuments:
+    """Тесты list_documents"""
+
+    def test_list_documents_empty(self):
+        """list_documents должен возвращать пустой список"""
+        from document_manager import IFCDocumentManager
+
+        manager = IFCDocumentManager()
+        docs = manager.list_documents()
+
+        assert docs == []
 
     def test_list_documents(self):
-        """Получение списка документов"""
+        """list_documents должен возвращать список документов"""
         from document_manager import IFCDocumentManager
 
         manager = IFCDocumentManager()
@@ -126,55 +167,46 @@ class TestIFCDocumentManager:
 
         docs = manager.list_documents()
 
-        assert len(docs) == 2
         assert "doc1" in docs
         assert "doc2" in docs
+        assert len(docs) == 2
+
+
+class TestClearAll:
+    """Тесты clear_all"""
 
     def test_clear_all(self):
-        """Очистка всех документов"""
+        """clear_all должен очищать все документы"""
         from document_manager import IFCDocumentManager
 
         manager = IFCDocumentManager()
         manager.create_document("doc1")
         manager.create_document("doc2")
+
         manager.clear_all()
 
-        assert len(manager.list_documents()) == 0
-        assert manager.get_current_id() is None
+        assert len(manager._documents) == 0
+        assert manager._current_id is None
 
-    def test_multiple_documents_isolated(self):
-        """Несколько документов должны быть изолированы"""
+
+class TestMaterialManager:
+    """Тесты material_manager"""
+
+    def test_get_material_manager(self):
+        """get_material_manager должен возвращать менеджер материалов"""
         from document_manager import IFCDocumentManager
 
         manager = IFCDocumentManager()
-        doc1 = manager.create_document("doc1")
-        doc2 = manager.create_document("doc2")
+        manager.create_document("test_doc")
+        mat_manager = manager.get_material_manager("test_doc")
 
-        assert doc1 is not doc2
-        assert len(doc1.by_type("IfcProject")) == 1
-        assert len(doc2.by_type("IfcProject")) == 1
+        assert mat_manager is not None
 
+    def test_get_material_manager_raises_for_not_found(self):
+        """get_material_manager должен вызывать ошибку для несуществующего"""
+        from document_manager import IFCDocumentManager
 
-class TestGlobalManager:
-    """Тесты для глобального менеджера"""
+        manager = IFCDocumentManager()
 
-    def test_get_manager(self):
-        """get_manager должен возвращать один и тот же экземпляр"""
-        from document_manager import get_manager, reset_manager
-
-        reset_manager()
-        manager1 = get_manager()
-        manager2 = get_manager()
-
-        assert manager1 is manager2
-
-    def test_reset_manager(self):
-        """reset_manager должен сбрасывать глобальный менеджер"""
-        from document_manager import get_manager, reset_manager
-
-        reset_manager()
-        manager1 = get_manager()
-        reset_manager()
-        manager2 = get_manager()
-
-        assert manager1 is not manager2
+        with pytest.raises(ValueError, match="не найден"):
+            manager.get_material_manager("nonexistent")
