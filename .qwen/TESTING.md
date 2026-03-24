@@ -2,7 +2,7 @@
 
 ## Обзор
 
-TDD-подход к разработке: три уровня тестирования (Python unit-тесты, JavaScript unit-тесты, IFC-валидация Gherkin). Статистика: 276 Python тестов, 97 JavaScript тестов, 100+ правил валидации IFC.
+TDD-подход к разработке: три уровня тестирования (Python unit-тесты, JavaScript unit-тесты, IFC-валидация Gherkin). Статистика: **305 Python тестов**, **99 JavaScript тестов**, 100+ правил валидации IFC.
 
 → Подробнее: [docs/tests-docs/01-обзор.md](../docs/tests-docs/01-обзор.md)
 
@@ -38,7 +38,7 @@ MockIfcEntity и MockIfcDoc (conftest.py) изолируют тесты от ifc
 
 ## Покрытие тестами
 
-Python: 95% (данные, сервисы, фабрики, менеджеры, контейнер). JavaScript: 100% (утилиты, сервисы, константы, статусы). Не покрывается: geometry_converter, ifc_generator, main, validate_utils, protocols, utils, geometry_builder, instance_factory, document_manager (сложные mock или интеграционные зависимости).
+**Python: 89%** (данные, сервисы, фабрики, менеджеры, контейнер, **ifc_generator**, **instance_factory**, **document_manager**, **main**, **validate_utils**). **JavaScript: 100%** (утилиты, сервисы, константы, статусы). Не покрывается: geometry_converter, protocols, utils, geometry_builder (сложные mock или интеграционные зависимости).
 
 → Подробнее: [docs/tests-docs/07-покрытие-тестами.md](../docs/tests-docs/07-покрытие-тестами.md)
 
@@ -56,7 +56,7 @@ GitHub Actions (ifc-validation.yml): триггеры push/PR → Gherkin Valida
 
 ## Статистика тестов
 
-Python: 276 passed, 1 skipped. JavaScript: 97 passed.
+**Python: 305 passed, 2 skipped. JavaScript: 99 passed.**
 
 ## Добавление новых тестов
 
