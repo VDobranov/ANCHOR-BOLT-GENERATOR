@@ -211,7 +211,6 @@ __marimo__/
 
 # Node.js
 node_modules/
-package-lock.json
 
 # Project temp files
 pretty.output
