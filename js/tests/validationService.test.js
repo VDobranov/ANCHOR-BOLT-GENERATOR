@@ -14,9 +14,18 @@ describe('ValidationService', () => {
         });
 
         test('должен возвращать valid=false для пустого типа', () => {
-            expect(ValidationService.validateBoltType('')).toEqual({ valid: false, error: 'Тип болта не указан' });
-            expect(ValidationService.validateBoltType(null)).toEqual({ valid: false, error: 'Тип болта не указан' });
-            expect(ValidationService.validateBoltType(undefined)).toEqual({ valid: false, error: 'Тип болта не указан' });
+            expect(ValidationService.validateBoltType('')).toEqual({
+                valid: false,
+                error: 'Тип болта не указан'
+            });
+            expect(ValidationService.validateBoltType(null)).toEqual({
+                valid: false,
+                error: 'Тип болта не указан'
+            });
+            expect(ValidationService.validateBoltType(undefined)).toEqual({
+                valid: false,
+                error: 'Тип болта не указан'
+            });
         });
 
         test('должен возвращать valid=false для неподдерживаемого типа', () => {
@@ -39,8 +48,14 @@ describe('ValidationService', () => {
         });
 
         test('должен возвращать valid=false для пустого диаметра', () => {
-            expect(ValidationService.validateDiameter('')).toEqual({ valid: false, error: 'Диаметр не указан' });
-            expect(ValidationService.validateDiameter(null)).toEqual({ valid: false, error: 'Диаметр не указан' });
+            expect(ValidationService.validateDiameter('')).toEqual({
+                valid: false,
+                error: 'Диаметр не указан'
+            });
+            expect(ValidationService.validateDiameter(null)).toEqual({
+                valid: false,
+                error: 'Диаметр не указан'
+            });
         });
 
         test('должен возвращать valid=false для NaN', () => {
@@ -76,20 +91,44 @@ describe('ValidationService', () => {
         });
 
         test('должен возвращать valid=false для пустой длины', () => {
-            expect(ValidationService.validateLength('')).toEqual({ valid: false, error: 'Длина не указана' });
+            expect(ValidationService.validateLength('')).toEqual({
+                valid: false,
+                error: 'Длина не указана'
+            });
+        });
+
+        test('должен возвращать valid=false для длины не числом', () => {
+            const result = ValidationService.validateLength('abc');
+            expect(result.valid).toBe(false);
+            expect(result.error).toContain('числом');
         });
     });
 
     describe('validateMaterial', () => {
         test('должен возвращать valid=true для правильного материала', () => {
-            expect(ValidationService.validateMaterial('09Г2С')).toEqual({ valid: true, error: null });
-            expect(ValidationService.validateMaterial('ВСт3пс2')).toEqual({ valid: true, error: null });
-            expect(ValidationService.validateMaterial('10Г2')).toEqual({ valid: true, error: null });
+            expect(ValidationService.validateMaterial('09Г2С')).toEqual({
+                valid: true,
+                error: null
+            });
+            expect(ValidationService.validateMaterial('ВСт3пс2')).toEqual({
+                valid: true,
+                error: null
+            });
+            expect(ValidationService.validateMaterial('10Г2')).toEqual({
+                valid: true,
+                error: null
+            });
         });
 
         test('должен возвращать valid=false для пустого материала', () => {
-            expect(ValidationService.validateMaterial('')).toEqual({ valid: false, error: 'Материал не указан' });
-            expect(ValidationService.validateMaterial(null)).toEqual({ valid: false, error: 'Материал не указан' });
+            expect(ValidationService.validateMaterial('')).toEqual({
+                valid: false,
+                error: 'Материал не указан'
+            });
+            expect(ValidationService.validateMaterial(null)).toEqual({
+                valid: false,
+                error: 'Материал не указан'
+            });
         });
 
         test('должен возвращать valid=false для неподдерживаемого материала', () => {

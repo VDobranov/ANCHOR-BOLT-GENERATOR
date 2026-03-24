@@ -61,6 +61,20 @@ describe('status.js', () => {
                 const statusEl = document.getElementById('status');
                 expect(statusEl.textContent).toBe('Auto-init');
             });
+
+            test('должен устанавливать таймер для success статуса', (done) => {
+                manager.show('Success!', STATUS_TYPES.SUCCESS);
+
+                // Проверяем, что таймер установлен
+                expect(manager.timeoutId).toBeDefined();
+
+                // Ждём истечения таймера
+                setTimeout(() => {
+                    const statusEl = document.getElementById('status');
+                    expect(statusEl.style.display).toBe('none');
+                    done();
+                }, APP_CONFIG.STATUS_DURATION.success + 50);
+            });
         });
 
         describe('hide', () => {

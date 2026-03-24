@@ -38,7 +38,7 @@ MockIfcEntity и MockIfcDoc (conftest.py) изолируют тесты от ifc
 
 ## Покрытие тестами
 
-Python: 82% (валидация, данные, сервисы, геометрия, фабрики, менеджеры). JavaScript: 98% (утилиты, сервисы, константы, статусы). Не покрывается: geometry_converter (требует ifcopenshell.geom), form.js, viewer.js, ifcBridge.js, main.js (сложные mock Pyodide/Three.js).
+Python: 95% (данные, сервисы, фабрики, менеджеры, контейнер). JavaScript: 100% (утилиты, сервисы, константы, статусы). Не покрывается: geometry_converter, ifc_generator, main, validate_utils, protocols, utils, geometry_builder, instance_factory, document_manager (сложные mock или интеграционные зависимости).
 
 → Подробнее: [docs/tests-docs/07-покрытие-тестами.md](../docs/tests-docs/07-покрытие-тестами.md)
 

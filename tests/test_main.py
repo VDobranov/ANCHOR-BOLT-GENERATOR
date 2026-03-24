@@ -157,3 +157,103 @@ class TestOwnerHistory:
 
         # Проверяем валидацию документа
         assert_valid_ifc(ifc_doc, "Базовый IFC документ не прошёл валидацию")
+
+
+class TestDocumentManagement:
+    """Тесты для управления документами"""
+
+    def test_get_ifc_document(self):
+        """get_ifc_document должен возвращать текущий документ"""
+        from main import get_ifc_document, initialize_base_document, reset_doc_manager
+
+        reset_doc_manager()
+        doc = initialize_base_document()
+        retrieved_doc = get_ifc_document()
+
+        assert retrieved_doc == doc
+
+    def test_get_ifc_document_with_id(self):
+        """get_ifc_document с указанным ID"""
+        from main import get_ifc_document, initialize_base_document, reset_doc_manager
+
+        reset_doc_manager()
+        doc = initialize_base_document(doc_id="test_doc")
+        retrieved_doc = get_ifc_document("test_doc")
+
+        assert retrieved_doc == doc
+
+    def test_reset_ifc_document(self):
+        """reset_ifc_document должен сбрасывать документ"""
+        from main import (
+            get_ifc_document,
+            initialize_base_document,
+            reset_doc_manager,
+            reset_ifc_document,
+        )
+
+        reset_doc_manager()
+        doc1 = initialize_base_document()
+        doc2 = reset_ifc_document()
+
+        # Документ должен быть новым
+        assert doc1 != doc2
+
+    def test_delete_document(self):
+        """delete_document должен удалять документ"""
+        from main import (
+            delete_document,
+            initialize_base_document,
+            list_documents,
+            reset_doc_manager,
+        )
+
+        reset_doc_manager()
+        initialize_base_document(doc_id="test_delete")
+
+        assert "test_delete" in list_documents()
+
+        delete_document("test_delete")
+
+        assert "test_delete" not in list_documents()
+
+    def test_list_documents(self):
+        """list_documents должен возвращать список документов"""
+        from main import initialize_base_document, list_documents, reset_doc_manager
+
+        reset_doc_manager()
+        initialize_base_document(doc_id="doc1")
+        initialize_base_document(doc_id="doc2")
+
+        docs = list_documents()
+
+        assert "doc1" in docs
+        assert "doc2" in docs
+
+    def test_clear_all_documents(self):
+        """clear_all_documents должен очищать все документы"""
+        from main import (
+            clear_all_documents,
+            initialize_base_document,
+            list_documents,
+            reset_doc_manager,
+        )
+
+        reset_doc_manager()
+        initialize_base_document(doc_id="doc1")
+        initialize_base_document(doc_id="doc2")
+
+        assert len(list_documents()) == 2
+
+        clear_all_documents()
+
+        assert len(list_documents()) == 0
+
+    def test_initialize_base_document_default(self):
+        """initialize_base_document создаёт документ по умолчанию"""
+        from main import initialize_base_document, reset_doc_manager
+
+        reset_doc_manager()
+        doc = initialize_base_document()
+
+        projects = doc.by_type("IfcProject")
+        assert len(projects) == 1
