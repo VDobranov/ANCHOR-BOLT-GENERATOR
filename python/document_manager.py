@@ -136,7 +136,7 @@ END-ISO-10303-21;
             "IfcProject",
             GlobalId=ifc.guid.new(),
             OwnerHistory=f.owner_history,
-            Name="Anchor Bolt Generator",
+            Name="Шаблонный проект",
             Description="Generated anchor bolts with IFC4 ADD2 TC1",
         )
 
