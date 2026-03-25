@@ -317,3 +317,55 @@ class TestCreateBoltAssembly:
                 length=800,
                 material="invalid_material",
             )
+
+    def test_create_bolt_assembly_nominal_diameter(self):
+        """create_bolt_assembly должен устанавливать NominalDiameter для всех IfcMechanicalFastener"""
+        from document_manager import IFCDocumentManager
+        from instance_factory import InstanceFactory
+
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
+
+        result = factory.create_bolt_assembly(
+            bolt_type="1.1",
+            diameter=20,
+            length=800,
+            material="09Г2С",
+        )
+
+        # Проверяем NominalDiameter у всех IfcMechanicalFastener
+        fasteners = doc.by_type("IfcMechanicalFastener")
+        assert len(fasteners) > 0
+        for fastener in fasteners:
+            assert hasattr(fastener, "NominalDiameter")
+            assert fastener.NominalDiameter == 20
+
+    def test_create_bolt_assembly_nominal_length(self):
+        """create_bolt_assembly должен устанавливать NominalLength для шпилек и сборки"""
+        from document_manager import IFCDocumentManager
+        from instance_factory import InstanceFactory
+
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
+
+        result = factory.create_bolt_assembly(
+            bolt_type="1.1",
+            diameter=20,
+            length=800,
+            material="09Г2С",
+        )
+
+        # Проверяем NominalLength у сборки и шпильки
+        fasteners = doc.by_type("IfcMechanicalFastener")
+        assembly = result["assembly"]
+        stud = result["stud"]
+
+        # Сборка должна иметь NominalLength
+        assert hasattr(assembly, "NominalLength")
+        assert assembly.NominalLength == 800
+
+        # Шпилька должна иметь NominalLength
+        assert hasattr(stud, "NominalLength")
+        assert stud.NominalLength == 800

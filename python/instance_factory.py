@@ -144,6 +144,8 @@ class InstanceFactory:
                 OwnerHistory=owner_history,
                 Name=assembly_type.Name,
                 ObjectPlacement=assembly_placement,
+                NominalDiameter=diameter,
+                NominalLength=length,
             )
         self._add_instance_representation(assembly, assembly_type)
 
@@ -183,6 +185,8 @@ class InstanceFactory:
                 OwnerHistory=owner_history,
                 Name=stud_type.Name,
                 ObjectPlacement=stud_placement,
+                NominalDiameter=diameter,
+                NominalLength=length,
             )
             self._add_instance_representation(stud, stud_type)
             stud_instances.append(stud)
@@ -197,6 +201,7 @@ class InstanceFactory:
                     washer_instances,
                     owner_history,
                     assembly_placement,
+                    diameter,
                 )
                 components.append(washer_top)
 
@@ -209,6 +214,7 @@ class InstanceFactory:
                     nut_instances,
                     owner_history,
                     assembly_placement,
+                    diameter,
                 )
                 components.append(nut_top1)
 
@@ -221,6 +227,7 @@ class InstanceFactory:
                     nut_instances,
                     owner_history,
                     assembly_placement,
+                    diameter,
                 )
                 components.append(nut_top2)
 
@@ -237,6 +244,7 @@ class InstanceFactory:
                     nut_instances,
                     owner_history,
                     assembly_placement,
+                    diameter,
                 )
                 components.append(nut_bottom2)
 
@@ -255,6 +263,7 @@ class InstanceFactory:
                     plate_instances,
                     owner_history,
                     assembly_placement,
+                    diameter,
                 )
                 components.append(plate)
 
@@ -273,6 +282,7 @@ class InstanceFactory:
                     nut_instances,
                     owner_history,
                     assembly_placement,
+                    diameter,
                 )
                 components.append(nut_bottom)
 
@@ -408,6 +418,7 @@ class InstanceFactory:
         instances_list,
         owner_history=None,
         assembly_placement=None,
+        diameter=None,
     ):
         """Создание компонента (гайка/шайба/плита)
 
@@ -424,6 +435,7 @@ class InstanceFactory:
             OwnerHistory=owner_history,
             Name=type_obj.Name,
             ObjectPlacement=placement,
+            NominalDiameter=diameter,
         )
         self._add_instance_representation(component, type_obj)
         instances_list.append(component)
