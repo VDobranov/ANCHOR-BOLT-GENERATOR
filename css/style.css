@@ -325,7 +325,7 @@ form.disabled {
     text-align: right;
     white-space: normal;
     word-break: break-word;
-    max-width: 60%;
+    /* max-width: 60%; */
 }
 
 /* Footer */

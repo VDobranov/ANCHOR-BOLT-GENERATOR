@@ -2,6 +2,8 @@
  * ifcBridge.js — Коммуникация между JavaScript и Python (Pyodide)
  */
 
+import UI from './ui.js';
+
 class IFCBridge {
     constructor(pyodide) {
         this.pyodide = pyodide;
