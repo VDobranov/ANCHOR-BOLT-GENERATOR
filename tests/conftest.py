@@ -59,9 +59,15 @@ class MockIfcEntity:
             if not hasattr(self, "RepresentationMaps"):
                 self.RepresentationMaps = None
 
-    def is_a(self) -> str:
-        """Получение типа сущности"""
-        return self._entity_type
+    def is_a(self, entity_type: Optional[str] = None) -> str:
+        """Получение типа сущности или проверка типа"""
+        if entity_type is None:
+            return self._entity_type
+        return self._entity_type if self._entity_type == entity_type else ""
+
+    def get_info(self) -> Dict[str, Any]:
+        """Получение информации о сущности для ifcopenshell.api"""
+        return {"entity_type": self._entity_type, **self._kwargs}
 
     def __getattr__(self, name: str) -> Any:
         """Получение атрибута"""

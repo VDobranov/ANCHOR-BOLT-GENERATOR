@@ -368,19 +368,25 @@ class TestGetOrCreateAssemblyType:
         mock_ifc = MockIfcDoc()
         factory = TypeFactory(mock_ifc)
 
-        result = factory.get_or_create_assembly_type("1.1", 20, 800, "09Г2С")
+        # Используем IfcElementAssembly чтобы избежать ifcopenshell.api для Pset
+        result = factory.get_or_create_assembly_type(
+            "1.1", 20, 800, "09Г2С", assembly_class="IfcElementAssembly"
+        )
 
         assert result is not None
-        assert result.is_a() == "IfcMechanicalFastenerType"
+        assert result.is_a() == "IfcElementAssemblyType"
 
     def test_get_or_create_assembly_type_name_format(self):
-        """Имя типа должно следовать формату \"Болт {T}.М{d}×{L} {M} ГОСТ 24379.1-2012\" """
+        """Имя типа должно следовать формату "Болт {T}.М{d}×{L} {M} ГОСТ 24379.1-2012" """
         from type_factory import TypeFactory
 
         mock_ifc = MockIfcDoc()
         factory = TypeFactory(mock_ifc)
 
-        result = factory.get_or_create_assembly_type("1.1", 20, 800, "09Г2С")
+        # Используем IfcElementAssembly чтобы избежать ifcopenshell.api для Pset
+        result = factory.get_or_create_assembly_type(
+            "1.1", 20, 800, "09Г2С", assembly_class="IfcElementAssembly"
+        )
 
         assert result.Name == "Болт 1.1.М20×800 09Г2С ГОСТ 24379.1-2012"
 
@@ -391,10 +397,46 @@ class TestGetOrCreateAssemblyType:
         mock_ifc = MockIfcDoc()
         factory = TypeFactory(mock_ifc)
 
-        result1 = factory.get_or_create_assembly_type("1.1", 20, 800, "09Г2С")
-        result2 = factory.get_or_create_assembly_type("1.1", 20, 800, "09Г2С")
+        # Используем IfcElementAssembly чтобы избежать ifcopenshell.api для Pset
+        result1 = factory.get_or_create_assembly_type(
+            "1.1", 20, 800, "09Г2С", assembly_class="IfcElementAssembly"
+        )
+        result2 = factory.get_or_create_assembly_type(
+            "1.1", 20, 800, "09Г2С", assembly_class="IfcElementAssembly"
+        )
 
         assert result1 is result2
+
+    def test_get_or_create_assembly_type_with_pset(self):
+        """get_or_create_assembly_type должен добавлять Pset_MechanicalFastenerAnchorBolt"""
+        from document_manager import IFCDocumentManager
+        from type_factory import TypeFactory
+
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = TypeFactory(doc)
+
+        result = factory.get_or_create_assembly_type("1.1", 20, 800, "09Г2С")
+
+        assert result is not None
+        assert result.is_a() == "IfcMechanicalFastenerType"
+
+        # Проверяем наличие Pset_MechanicalFastenerAnchorBolt
+        psets = doc.by_type("IfcPropertySet")
+        anchor_pset = None
+        for pset in psets:
+            if pset.Name == "Pset_MechanicalFastenerAnchorBolt":
+                anchor_pset = pset
+                break
+
+        assert anchor_pset is not None
+
+        # Проверяем свойства
+        prop_names = [p.Name for p in anchor_pset.HasProperties]
+        assert "AnchorBoltDiameter" in prop_names
+        assert "AnchorBoltLength" in prop_names
+        assert "AnchorBoltProtrusionLength" in prop_names
+        assert "AnchorBoltThreadLength" in prop_names
 
 
 class TestGetCachedTypesCount:

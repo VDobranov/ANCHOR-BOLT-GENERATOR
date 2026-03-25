@@ -10,8 +10,15 @@ type_factory.py — Фабрика для создания и кэширован
 
 from typing import Any, Dict, Optional
 
+import ifcopenshell.api
 from geometry_builder import GeometryBuilder
-from gost_data import get_material_name, get_nut_dimensions, get_washer_dimensions
+from gost_data import (
+    get_material_name,
+    get_nut_dimensions,
+    get_thread_length,
+    get_washer_dimensions,
+    validate_parameters,
+)
 from material_manager import MaterialManager
 from protocols import IfcDocumentProtocol
 from utils import get_ifcopenshell
@@ -311,6 +318,31 @@ class TypeFactory:
                 OwnerHistory=self.owner_history,
                 Name=type_name,
                 PredefinedType="ANCHORBOLT",
+            )
+
+            # Добавляем Pset_MechanicalFastenerAnchorBolt для IfcMechanicalFastenerType
+            # Получаем длину резьбы
+            thread_length = get_thread_length(diameter, length) or 0
+            protrusion_length = thread_length  # AnchorBoltProtrusionLength = длине резьбы
+
+            # Создаём Pset_MechanicalFastenerAnchorBolt через ifcopenshell.api
+            pset = ifcopenshell.api.run(
+                "pset.add_pset",
+                self.ifc,
+                product=assembly_type,
+                name="Pset_MechanicalFastenerAnchorBolt",
+            )
+            # Добавляем свойства
+            ifcopenshell.api.run(
+                "pset.edit_pset",
+                self.ifc,
+                pset=pset,
+                properties={
+                    "AnchorBoltDiameter": float(diameter),
+                    "AnchorBoltLength": float(length),
+                    "AnchorBoltProtrusionLength": float(protrusion_length),
+                    "AnchorBoltThreadLength": float(thread_length),
+                },
             )
 
         # Создаём материал сборки
