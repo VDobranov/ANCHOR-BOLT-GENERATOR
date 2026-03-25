@@ -89,8 +89,8 @@ def test_create_bolt_assembly_with_mock():
 
 ## Когда использовать Mock
 
-| Ситуация | Решение |
-|----------|---------|
-| Тесты с ifcopenshell.geom | MockIfcDoc |
-| Сегментация при тестировании | Mock + @pytest.mark.skipif |
-| Изоляция внешних зависимостей | unittest.mock.patch |
+| Ситуация                      | Решение                    |
+| ----------------------------- | -------------------------- |
+| Тесты с ifcopenshell.geom     | MockIfcDoc                 |
+| Сегментация при тестировании  | Mock + @pytest.mark.skipif |
+| Изоляция внешних зависимостей | unittest.mock.patch        |

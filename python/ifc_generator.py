@@ -138,3 +138,59 @@ class IFCGenerator:
             warnings.append("IfcMechanicalFastener не найден")
 
         return {"valid": len(errors) == 0, "errors": errors, "warnings": warnings}
+
+    def get_element_properties(self, global_id):
+        """
+        Извлечение PropertySet для элемента по GlobalId
+
+        Args:
+            global_id: GlobalId элемента (строка)
+
+        Returns:
+            dict с name и property_sets или None если элемент не найден
+            {
+                'name': str,
+                'property_sets': [
+                    {
+                        'name': str,
+                        'properties': [
+                            {'name': str, 'value': any, 'type': str}
+                        ]
+                    }
+                ]
+            }
+        """
+        # Поиск элемента по GlobalId
+        element = None
+        for entity in self.ifc:
+            if hasattr(entity, "GlobalId") and entity.GlobalId == global_id:
+                element = entity
+                break
+
+        if element is None:
+            return None
+
+        # Получение PropertySet через IsDefinedBy
+        property_sets = []
+        is_defined_by = getattr(element, "IsDefinedBy", None)
+        if is_defined_by:
+            for rel in is_defined_by:
+                if rel.is_a("IfcRelDefinesByProperties"):
+                    pset = rel.RelatingPropertyDefinition
+                    properties = []
+                    for prop in pset.HasProperties:
+                        prop_value = getattr(prop, "NominalValue", None)
+                        properties.append(
+                            {
+                                "name": prop.Name,
+                                "value": prop_value.value if prop_value else None,
+                                "type": prop_value.is_a() if prop_value else None,
+                            }
+                        )
+
+                    property_sets.append({"name": pset.Name, "properties": properties})
+
+        return {
+            "name": element.Name or element.ObjectType or "Unnamed",
+            "property_sets": property_sets,
+        }

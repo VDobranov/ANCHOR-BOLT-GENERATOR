@@ -41,7 +41,10 @@ export class ValidationService {
         }
 
         if (!AVAILABLE_DIAMETERS.includes(numDiameter)) {
-            return { valid: false, error: `Диаметр должен быть одним из: ${AVAILABLE_DIAMETERS.join(', ')}` };
+            return {
+                valid: false,
+                error: `Диаметр должен быть одним из: ${AVAILABLE_DIAMETERS.join(', ')}`
+            };
         }
 
         return { valid: true, error: null };

@@ -27,9 +27,7 @@ class TypeFactory:
     - Геометрия кэшируется по ключу (тип, диаметр, длина)
     """
 
-    def __init__(
-        self, ifc_doc: IfcDocumentProtocol, geometry_type: str = "solid"
-    ):
+    def __init__(self, ifc_doc: IfcDocumentProtocol, geometry_type: str = "solid"):
         self.ifc: IfcDocumentProtocol = ifc_doc
         self.types_cache: Dict[Any, Any] = {}
         self.representation_maps: Dict[tuple, Any] = {}  # Кэш RepresentationMap по ключу
@@ -421,13 +419,9 @@ class TypeFactory:
         # Используем remove_deep2 с do_not_delete для защиты контекста
         # Контекст используется в других представлениях, поэтому не должен быть удалён
         import ifcopenshell.util.element
-        
+
         context = temp_shape_rep.ContextOfItems
-        ifcopenshell.util.element.remove_deep2(
-            self.ifc, 
-            temp_product,
-            do_not_delete={context}
-        )
+        ifcopenshell.util.element.remove_deep2(self.ifc, temp_product, do_not_delete={context})
 
         if shape and len(shape.geometry.verts) > 0:
             verts = shape.geometry.verts
@@ -451,12 +445,14 @@ class TypeFactory:
             # Используем ifcopenshell.util.element.remove_deep2() с also_consider
             # also_consider=[solid_representation] чтобы traverse() не шёл через него на faceted_brep
             import ifcopenshell.util.element
-            
+
             for item in old_items:
                 try:
                     # also_consider включает solid_representation в подграф
                     # Это предотвращает переход traverse() на faceted_brep через solid_representation
-                    ifcopenshell.util.element.remove_deep2(self.ifc, item, also_consider=[solid_representation])
+                    ifcopenshell.util.element.remove_deep2(
+                        self.ifc, item, also_consider=[solid_representation]
+                    )
                 except Exception:
                     pass  # Некоторые сущности могут использоваться в других местах
 

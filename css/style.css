@@ -17,13 +17,16 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family:
+        -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
     line-height: 1.6;
 }
 
-html, body, #canvas3D {
+html,
+body,
+#canvas3D {
     width: 100%;
     height: 100%;
 }
@@ -63,14 +66,14 @@ header a:after {
     /* content: " ⎋"; */
     /* content: " 🔗"; */
     /* content: " " url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAQElEQVR42qXKwQkAIAxDUUdxtO6/RBQkQZvSi8I/pL4BoGw/XPkh4XigPmsUgh0626AjRsgxHTkUThsG2T/sIlzdTsp52kSS1wAAAABJRU5ErkJggg==); */
-    content: " ";
+    content: ' ';
     background: url("data:image/svg+xml; utf8, <svg fill='white' height='1024' width='768' xmlns='http://www.w3.org/2000/svg'><path d='M640 768H128V257.90599999999995L256 256V128H0v768h768V576H640V768zM384 128l128 128L320 448l128 128 192-192   128 128V128H384z'/></svg>");
     background-size: cover;
     display: inline-block;
     position: relative;
-    top: .3em;
-    width: .6em;
-    height: .8em;
+    top: 0.3em;
+    width: 0.6em;
+    height: 0.8em;
     margin-left: 0.3em;
     margin-right: 0.3em;
 }
@@ -132,7 +135,9 @@ header a:after {
     font-size: 14px;
     font-family: inherit;
     color: var(--text-color);
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
 }
 
 .form-group input:focus,
@@ -155,7 +160,7 @@ header a:after {
     cursor: pointer;
 }
 
-.checkbox-group input[type="checkbox"] {
+.checkbox-group input[type='checkbox'] {
     width: auto;
     margin-right: 10px;
     cursor: pointer;
@@ -262,7 +267,7 @@ form.disabled {
     position: absolute;
     bottom: 20px;
     right: 20px;
-    width: 300px;
+    width: 400px;
     max-height: 300px;
     background: white;
     border: 1px solid var(--border-color);
@@ -287,6 +292,15 @@ form.disabled {
     font-style: italic;
 }
 
+.pset-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin: 12px 0 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--primary-color);
+}
+
 .property-item {
     display: flex;
     justify-content: space-between;
@@ -302,11 +316,16 @@ form.disabled {
 .property-key {
     color: var(--secondary-color);
     font-weight: 600;
+    flex-shrink: 0;
+    margin-right: 8px;
 }
 
 .property-value {
     color: var(--text-color);
     text-align: right;
+    white-space: normal;
+    word-break: break-word;
+    max-width: 60%;
 }
 
 /* Footer */
@@ -340,7 +359,7 @@ footer {
     }
 
     .properties-panel {
-        width: 280px;
+        width: 320px;
     }
 }
 

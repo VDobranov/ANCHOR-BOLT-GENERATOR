@@ -3,6 +3,11 @@
  * Координация между формой, 3D viewer и Python-мостом
  */
 
+import UI from './ui.js';
+import IFCViewer from './viewer.js';
+import { BoltForm, IFCExportSettings } from './form.js';
+import { initializeIFCBridge } from './ifcBridge.js';
+
 let viewer = null;
 let bridge = null;
 let form = null;
@@ -79,7 +84,10 @@ async function generateBolt(params) {
     }
 
     UI.toggle(false);
-    UI.showStatus(`Генерирую болт: ${params.bolt_type}, М${params.diameter}x${params.length}...`, 'info');
+    UI.showStatus(
+        `Генерирую болт: ${params.bolt_type}, М${params.diameter}x${params.length}...`,
+        'info'
+    );
 
     try {
         // Получение настроек экспорта
@@ -106,7 +114,11 @@ async function generateBolt(params) {
 
         // Включение кнопки download
         UI.toggleDownloadButton(true);
-        UI.showStatus(`Болт ${params.bolt_type}.М${params.diameter}x${params.length} сгенерирован!`, 'success', 3000);
+        UI.showStatus(
+            `Болт ${params.bolt_type}.М${params.diameter}x${params.length} сгенерирован!`,
+            'success',
+            3000
+        );
     } catch (error) {
         UI.showStatus(`Ошибка: ${error.message}`, 'error', 5000);
         console.error(error);
@@ -130,10 +142,10 @@ async function downloadIFCFile() {
     // Сначала перегенерируем болт с текущими настройками
     const params = form.getParams();
     await generateBolt(params);
-    
+
     // Небольшая задержка для завершения генерации
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     const ifcData = bridge.getIFCData();
     if (!ifcData) return;
 

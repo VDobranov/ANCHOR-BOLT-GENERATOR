@@ -60,12 +60,12 @@ def before_scenario(context, scenario):
 
 ## Категории правил
 
-| Категория | Описание | Примеры |
-|-----------|----------|---------|
-| IFC | Версия IFC, deprecated сущности | IFC101, IFC102 |
-| MPD | RepresentationType/Identifier | MPD001 |
-| GEM | Геометрическая валидация | GEM001, GEM003 |
-| SPS | Пространственная структура | SPS001, SPS007 |
+| Категория | Описание                        | Примеры        |
+| --------- | ------------------------------- | -------------- |
+| IFC       | Версия IFC, deprecated сущности | IFC101, IFC102 |
+| MPD       | RepresentationType/Identifier   | MPD001         |
+| GEM       | Геометрическая валидация        | GEM001, GEM003 |
+| SPS       | Пространственная структура      | SPS001, SPS007 |
 
 ## Исключения
 

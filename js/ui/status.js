@@ -34,7 +34,7 @@ export class StatusManager {
 
         if (this.statusElement) {
             // Очистка предыдущих классов
-            Object.values(STATUS_TYPES).forEach(t => {
+            Object.values(STATUS_TYPES).forEach((t) => {
                 removeClass(this.statusElement, `status-${t}`);
             });
 

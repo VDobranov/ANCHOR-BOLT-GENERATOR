@@ -209,3 +209,31 @@ class TestIFCGeneratorValidate:
 
         # Предупреждения о missing storey и fastener
         assert len(result["warnings"]) >= 0  # Может быть 0 или больше
+
+    def test_get_element_properties_not_found(self):
+        """get_element_properties должен возвращать None для несуществующего GlobalId"""
+        from ifc_generator import IFCGenerator
+        from main import initialize_base_document
+
+        ifc_doc = initialize_base_document()
+        generator = IFCGenerator(ifc_doc)
+        result = generator.get_element_properties("nonexistent_global_id")
+
+        assert result is None
+
+    def test_get_element_properties_for_project(self):
+        """get_element_properties должен находить проект по GlobalId"""
+        from ifc_generator import IFCGenerator
+        from main import initialize_base_document
+
+        ifc_doc = initialize_base_document()
+        projects = ifc_doc.by_type("IfcProject")
+        assert len(projects) == 1
+
+        generator = IFCGenerator(ifc_doc)
+        result = generator.get_element_properties(projects[0].GlobalId)
+
+        assert result is not None
+        assert "name" in result
+        assert "property_sets" in result
+        assert isinstance(result["property_sets"], list)

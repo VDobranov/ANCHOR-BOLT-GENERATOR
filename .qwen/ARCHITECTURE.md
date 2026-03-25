@@ -7,13 +7,14 @@
 → Подробнее: [docs/arch-docs/01-обзор.md](../docs/arch-docs/01-обзор.md)
 
 ## Технологический стек
-| Компонент | Технология |
-|-----------|------------|
-| Frontend | Vanilla JS (ES6 modules) |
-| 3D-движок | Three.js r128 |
-| Python-среда | Pyodide 0.26.0 (WebAssembly) |
-| IFC-библиотека | IfcOpenShell 0.8.4 |
-| Тестирование | pytest + Jest + Behave (Gherkin) |
+
+| Компонент      | Технология                       |
+| -------------- | -------------------------------- |
+| Frontend       | Vanilla JS (ES6 modules)         |
+| 3D-движок      | Three.js r128                    |
+| Python-среда   | Pyodide 0.26.0 (WebAssembly)     |
+| IFC-библиотека | IfcOpenShell 0.8.4               |
+| Тестирование   | pytest + Jest + Behave (Gherkin) |
 
 → Подробнее: [docs/arch-docs/02-технологический-стек.md](../docs/arch-docs/02-технологический-стек.md)
 
@@ -109,10 +110,10 @@ IfcProject
 
 ## Тестирование
 
-| Уровень | Инструмент | Описание |
-|---------|------------|----------|
-| Unit-тесты | pytest | Python модули (152 теста) |
-| Unit-тесты | Jest | JavaScript модули (38 тестов) |
+| Уровень       | Инструмент       | Описание                           |
+| ------------- | ---------------- | ---------------------------------- |
+| Unit-тесты    | pytest           | Python модули (152 теста)          |
+| Unit-тесты    | Jest             | JavaScript модули (38 тестов)      |
 | Валидация IFC | Behave (Gherkin) | Проверка по правилам buildingSMART |
 
 → Подробнее: [docs/arch-docs/07-тестирование.md](../docs/arch-docs/07-тестирование.md)

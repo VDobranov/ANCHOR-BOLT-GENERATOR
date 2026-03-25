@@ -85,10 +85,10 @@ class IFCDocumentManager:
 
         # Согласно buildingSMART IFC Header Policy:
         # - FILE_DESCRIPTION: ViewDefinition для IFC4 — ReferenceView_V1.2
-        # - FILE_NAME: name, time_stamp (ISO 8601), author, organization, 
+        # - FILE_NAME: name, time_stamp (ISO 8601), author, organization,
         #              preprocessor_version, originating_system, authorization
         # - originating_system формат: "Company - Application - Version"
-        
+
         spf_content = f"""ISO-10303-21;
 HEADER;
 FILE_DESCRIPTION(('ViewDefinition [ReferenceView_V1.2]'),'2;1');
@@ -210,11 +210,15 @@ END-ISO-10303-21;
             GeodeticDatum="WGS84",
             VerticalDatum="unknown",
         )
-        
+
         # IFC4: IfcCoordinateReferenceSystemSelect может быть IfcGeometricRepresentationContext
         # Используем контекст как SourceCRS
-        context = f.by_type("IfcGeometricRepresentationContext")[0] if f.by_type("IfcGeometricRepresentationContext") else None
-        
+        context = (
+            f.by_type("IfcGeometricRepresentationContext")[0]
+            if f.by_type("IfcGeometricRepresentationContext")
+            else None
+        )
+
         if context:
             # Создаём IfcMapConversion для связи Project с CRS
             # GRF005: Scale должен быть указан явно
@@ -230,7 +234,7 @@ END-ISO-10303-21;
                 OrthogonalHeight=0.0,
                 Scale=1000.0,  # Миллиметры в метры (координаты * 1000)
             )
-            
+
             # Связываем IfcProject с операцией через HasCoordinateOperation
             # В IFC4 IfcProject не имеет HasCoordinateOperation, связь через контекст
 

@@ -11,7 +11,8 @@ export const APP_CONFIG = Object.freeze({
     THREE_JS_URL: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
 
     // ifcopenshell wheel
-    IFCOPENSHELL_WHEEL_URL: 'https://raw.githubusercontent.com/vdobranov/anchor-bolt-generator/main/wheels/ifcopenshell-0.8.4+158fe92-cp313-cp313-pyodide_2025_0_wasm32.whl',
+    IFCOPENSHELL_WHEEL_URL:
+        'https://raw.githubusercontent.com/vdobranov/anchor-bolt-generator/main/wheels/ifcopenshell-0.8.4+158fe92-cp313-cp313-pyodide_2025_0_wasm32.whl',
 
     // Python модули для загрузки
     PYTHON_MODULES: [
@@ -57,10 +58,10 @@ export const APP_CONFIG = Object.freeze({
 
     // Цвета компонентов
     COMPONENT_COLORS: {
-        STUD: 0x8B8B8B,
-        WASHER: 0xA9A9A9,
+        STUD: 0x8b8b8b,
+        WASHER: 0xa9a9a9,
         NUT: 0x696969,
-        ANCHORBOLT: 0x4F4F4F
+        ANCHORBOLT: 0x4f4f4f
     }
 });
 

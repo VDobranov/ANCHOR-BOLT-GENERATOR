@@ -18,6 +18,7 @@ def test_validate_valid_parameters():
 ```
 
 ### Запуск теста
+
 ```bash
 pytest tests/test_example.py -v
 ```
@@ -41,6 +42,7 @@ def validate_parameters(bolt_type, execution, diameter, length, material):
 ```
 
 ### Запуск теста
+
 ```bash
 pytest tests/test_example.py -v
 ```

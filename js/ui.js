@@ -55,48 +55,13 @@ const UI = {
 
     /**
      * Обновление панели свойств
-     * @param {object} meshItem — выбранный mesh-объект или данные сборки
+     * @param {object} data — данные элемента (name, elementProperties)
      */
-    updatePropertiesPanel(meshItem) {
+    updatePropertiesPanel(data) {
         const panel = document.getElementById('propertiesContent');
         if (!panel) return;
 
-        // Если есть данные о сборке, отображаем их
-        if (meshItem && meshItem.assemblyInfo) {
-            const info = meshItem.assemblyInfo;
-            const boltTypeNames = {
-                1.1: 'Тип 1. Исполнение 1',
-                1.2: 'Тип 1. Исполнение 2',
-                2.1: 'Тип 2. Исполнение 1',
-                5: 'Тип 5'
-            };
-
-            panel.innerHTML = `
-                <div class="property-item">
-                    <span class="property-key">Имя:</span>
-                    <span class="property-value">${meshItem.name}</span>
-                </div>
-                <div class="property-item">
-                    <span class="property-key">Тип болта:</span>
-                    <span class="property-value">${boltTypeNames[info.bolt_type] || info.bolt_type}</span>
-                </div>
-                <div class="property-item">
-                    <span class="property-key">Диаметр:</span>
-                    <span class="property-value">М${info.diameter}</span>
-                </div>
-                <div class="property-item">
-                    <span class="property-key">Длина:</span>
-                    <span class="property-value">${info.length} мм</span>
-                </div>
-                <div class="property-item">
-                    <span class="property-key">Материал:</span>
-                    <span class="property-value">${info.material}</span>
-                </div>
-            `;
-            return;
-        }
-
-        if (!meshItem) {
+        if (!data) {
             panel.innerHTML = '<p class="placeholder">Выберите элемент в 3D сцене</p>';
             return;
         }
@@ -104,23 +69,34 @@ const UI = {
         let html = `
             <div class="property-item">
                 <span class="property-key">Имя:</span>
-                <span class="property-value">${meshItem.name}</span>
-            </div>
-            <div class="property-item">
-                <span class="property-key">ID:</span>
-                <span class="property-value">${meshItem.id}</span>
+                <span class="property-value">${data.name || 'Unnamed'}</span>
             </div>
         `;
 
-        if (meshItem.metadata) {
-            Object.entries(meshItem.metadata).forEach(([key, value]) => {
-                html += `
-                    <div class="property-item">
-                        <span class="property-key">${key}:</span>
-                        <span class="property-value">${value}</span>
-                    </div>
-                `;
-            });
+        // Отображение PropertySet
+        if (
+            data.elementProperties?.property_sets &&
+            data.elementProperties.property_sets.length > 0
+        ) {
+            for (const pset of data.elementProperties.property_sets) {
+                html += `<div class="pset-header">${pset.name}</div>`;
+                if (pset.properties && pset.properties.length > 0) {
+                    for (const prop of pset.properties) {
+                        const value =
+                            prop.value !== null && prop.value !== undefined ? prop.value : 'N/A';
+                        html += `
+                            <div class="property-item">
+                                <span class="property-key">${prop.name}:</span>
+                                <span class="property-value">${value}</span>
+                            </div>
+                        `;
+                    }
+                } else {
+                    html += `<p class='placeholder'>Нет свойств</p>`;
+                }
+            }
+        } else {
+            html += `<p class='placeholder'>Нет PropertySet</p>`;
         }
 
         panel.innerHTML = html;

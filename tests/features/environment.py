@@ -23,15 +23,17 @@ def before_all(context):
     """
     # Настраиваем логирование
     context.config.setup_logging()
-    
+
     # Путь к тестовым IFC файлам
     context.test_files_dir = Path(__file__).parent.parent / "fixtures"
     context.test_files_dir.mkdir(exist_ok=True, parents=True)
-    
+
     print(f"\n{'='*60}")
     print("IFC Gherkin Validation - buildingSMART")
     print(f"{'='*60}")
-    print(f"Feature files: {project_root / 'external' / 'ifc-gherkin-rules' / 'features' / 'rules'}")
+    print(
+        f"Feature files: {project_root / 'external' / 'ifc-gherkin-rules' / 'features' / 'rules'}"
+    )
     print(f"Step definitions: {gherkin_rules_path}")
     print(f"{'='*60}\n")
 
@@ -48,7 +50,7 @@ def after_scenario(context, scenario):
     """
     Выполняется после каждого сценария.
     """
-    if hasattr(context, 'model') and context.model:
+    if hasattr(context, "model") and context.model:
         context.model = None
 
 

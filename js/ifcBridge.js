@@ -291,6 +291,31 @@ class IFCBridge {
     getIFCData() {
         return this.currentIFCData;
     }
+
+    /**
+     * Получение PropertySet элемента по GlobalId
+     * @param {string} globalId - GlobalId элемента
+     * @returns {Promise<object|null>} - Данные о свойствах или null
+     */
+    async getElementProperties(globalId) {
+        try {
+            const result = await this.pyodide.runPythonAsync(`
+                from ifc_generator import IFCGenerator
+                from main import get_ifc_document
+
+                ifc_doc = get_ifc_document()
+                generator = IFCGenerator(ifc_doc)
+                props = generator.get_element_properties('${globalId}')
+                props
+            `);
+
+            // Конвертация Proxy объектов Pyodide в JavaScript объекты
+            return this.convertPyodideObject(result);
+        } catch (error) {
+            console.error('Error getting element properties:', error);
+            return null;
+        }
+    }
 }
 
 let ifcBridge = null;
@@ -298,6 +323,7 @@ let ifcBridge = null;
 async function initializeIFCBridge(pyodide) {
     ifcBridge = new IFCBridge(pyodide);
     await ifcBridge.initialize();
+    window.ifcBridge = ifcBridge; // Экспорт в window для доступа из других модулей
     return ifcBridge;
 }
 

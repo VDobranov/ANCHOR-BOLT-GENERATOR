@@ -66,7 +66,7 @@ class TestIFCRules:
     def test_ojt001_predefined_type_rule(self, factory, bolt_params):
         """
         OJT001: Предопределённый тип объекта
-        
+
         Требование: Если экземпляр связан с типом через IfcRelDefinesByType
         и у типа PredefinedType != NOTDEFINED, то PredefinedType у экземпляра
         должен быть пустым.
@@ -102,8 +102,9 @@ class TestIFCRules:
         # У типа PredefinedType != NOTDEFINED
         relating_type = assembly_type_relation.RelatingType
         assert relating_type.PredefinedType is not None, "Тип должен иметь PredefinedType"
-        assert not relating_type.PredefinedType.startswith("NOTDEFINED"), \
-            "PredefinedType типа не должен быть NOTDEFINED"
+        assert not relating_type.PredefinedType.startswith(
+            "NOTDEFINED"
+        ), "PredefinedType типа не должен быть NOTDEFINED"
 
     # =============================================================================
     # SPS001: Basic spatial structure for buildings - v2
@@ -112,7 +113,7 @@ class TestIFCRules:
     def test_sps001_basic_spatial_structure(self, factory, bolt_params):
         """
         SPS001: Базовая пространственная структура для зданий
-        
+
         Требование: Модель должна содержать IfcProject, IfcSite, IfcBuilding, IfcBuildingStorey
         """
         result = factory.create_bolt_assembly(
@@ -143,7 +144,7 @@ class TestIFCRules:
     def test_sps007_spatial_containment(self, factory, bolt_params):
         """
         SPS007: Пространственное вложение
-        
+
         Требование: Элементы должны быть привязаны к пространственной структуре
         через IfcRelContainedInSpatialStructure
         """
@@ -166,8 +167,9 @@ class TestIFCRules:
             if assembly in (rel.RelatedElements or []):
                 found = True
                 # Проверяем что RelatedStructure — это IfcBuildingStorey
-                assert rel.RelatingStructure.is_a("IfcBuildingStorey"), \
-                    "Элемент должен быть привязан к IfcBuildingStorey"
+                assert rel.RelatingStructure.is_a(
+                    "IfcBuildingStorey"
+                ), "Элемент должен быть привязан к IfcBuildingStorey"
                 break
 
         assert found, "Assembly должен быть включён в пространственную структуру (SPS007)"
@@ -257,18 +259,19 @@ class TestIFCRules:
         # Собираем все элементы из каждого типа отношений
         contained_elements = set()
         for rel in rel_contained:
-            for elem in (rel.RelatedElements or []):
+            for elem in rel.RelatedElements or []:
                 contained_elements.add(elem.id())
 
         referenced_elements = set()
         for rel in rel_referenced:
-            for elem in (rel.RelatedElements or []):
+            for elem in rel.RelatedElements or []:
                 referenced_elements.add(elem.id())
 
         # Проверяем что нет пересечений
         overlap = contained_elements & referenced_elements
-        assert len(overlap) == 0, \
-            f"Элементы не должны быть одновременно в Contained и Referenced: {overlap} (SPS005)"
+        assert (
+            len(overlap) == 0
+        ), f"Элементы не должны быть одновременно в Contained и Referenced: {overlap} (SPS005)"
 
     # =============================================================================
     # SPS008: Spatial container representations - v1
@@ -297,20 +300,23 @@ class TestIFCRules:
         # Для IFC4 ADD2 представление пространственных элементов опционально
         # Проверяем что если представление есть, то оно корректно
         for site in sites:
-            if hasattr(site, 'Representation') and site.Representation:
+            if hasattr(site, "Representation") and site.Representation:
                 # Проверяем что Representation — это IfcProductDefinitionShape
-                assert site.Representation.is_a("IfcProductDefinitionShape"), \
-                    f"Representation IfcSite должен быть IfcProductDefinitionShape (SPS008)"
+                assert site.Representation.is_a(
+                    "IfcProductDefinitionShape"
+                ), f"Representation IfcSite должен быть IfcProductDefinitionShape (SPS008)"
 
         for building in buildings:
-            if hasattr(building, 'Representation') and building.Representation:
-                assert building.Representation.is_a("IfcProductDefinitionShape"), \
-                    f"Representation IfcBuilding должен быть IfcProductDefinitionShape (SPS008)"
+            if hasattr(building, "Representation") and building.Representation:
+                assert building.Representation.is_a(
+                    "IfcProductDefinitionShape"
+                ), f"Representation IfcBuilding должен быть IfcProductDefinitionShape (SPS008)"
 
         for storey in storeys:
-            if hasattr(storey, 'Representation') and storey.Representation:
-                assert storey.Representation.is_a("IfcProductDefinitionShape"), \
-                    f"Representation IfcBuildingStorey должен быть IfcProductDefinitionShape (SPS008)"
+            if hasattr(storey, "Representation") and storey.Representation:
+                assert storey.Representation.is_a(
+                    "IfcProductDefinitionShape"
+                ), f"Representation IfcBuildingStorey должен быть IfcProductDefinitionShape (SPS008)"
 
         # Примечание: Для простых случаев (как генератор болтов) отсутствие
         # геометрического представления у пространственных элементов допустимо
@@ -322,7 +328,7 @@ class TestIFCRules:
     def test_mat000_materials(self, factory, bolt_params):
         """
         MAT000: Материалы
-        
+
         Требование: Материалы должны быть определены и ассоциированы с элементами
         или их типами
         """
@@ -350,17 +356,18 @@ class TestIFCRules:
 
         for assoc in mat_assoc:
             assert assoc.RelatingMaterial is not None, "Материал должен быть указан"
-            
+
             # Проверяем ассоциацию с типом assembly
-            for obj in (assoc.RelatedObjects or []):
+            for obj in assoc.RelatedObjects or []:
                 if obj.is_a("IfcMechanicalFastenerType") or obj.is_a("IfcElementAssemblyType"):
                     found_for_type = True
                 if obj == assembly:
                     found_for_instance = True
 
         # Материалы должны быть ассоциированы хотя бы с типами
-        assert found_for_type or found_for_instance, \
-            "Материалы должны быть ассоциированы с типами или экземплярами (MAT000)"
+        assert (
+            found_for_type or found_for_instance
+        ), "Материалы должны быть ассоциированы с типами или экземплярами (MAT000)"
 
     # =============================================================================
     # GEM051: Presence of geometric context - v2
@@ -369,14 +376,14 @@ class TestIFCRules:
     def test_gem051_geometric_context_presence(self, ifc_doc):
         """
         GEM051: Наличие геометрического контекста
-        
+
         Требование: Должен быть определён IfcGeometricRepresentationContext
         """
         contexts = ifc_doc.by_type("IfcGeometricRepresentationContext")
         assert len(contexts) > 0, "Должен быть IfcGeometricRepresentationContext (GEM051)"
 
         # Проверяем что контекст имеет ContextType='Model'
-        model_contexts = [c for c in contexts if getattr(c, 'ContextType', None) == 'Model']
+        model_contexts = [c for c in contexts if getattr(c, "ContextType", None) == "Model"]
         assert len(model_contexts) > 0, "Должен быть 3D контекст (ContextType='Model')"
 
     # =============================================================================
@@ -386,7 +393,7 @@ class TestIFCRules:
     def test_gem052_geometric_subcontexts(self, ifc_doc):
         """
         GEM052: Корректные геометрические подконтексты
-        
+
         Требование: Подконтексты должны иметь правильные ContextIdentifier и TargetView
         """
         subcontexts = ifc_doc.by_type("IfcGeometricRepresentationSubContext")
@@ -394,12 +401,19 @@ class TestIFCRules:
 
         for subcontext in subcontexts:
             # Проверяем ContextIdentifier
-            assert subcontext.ContextIdentifier in ["Body", "Box", "Axis", "Annotation"], \
-                f"Некорректный ContextIdentifier: {subcontext.ContextIdentifier}"
+            assert subcontext.ContextIdentifier in [
+                "Body",
+                "Box",
+                "Axis",
+                "Annotation",
+            ], f"Некорректный ContextIdentifier: {subcontext.ContextIdentifier}"
 
             # Проверяем TargetView
-            assert subcontext.TargetView in ["MODEL_VIEW", "PLAN_VIEW", "SECTION_VIEW"], \
-                f"Некорректный TargetView: {subcontext.TargetView}"
+            assert subcontext.TargetView in [
+                "MODEL_VIEW",
+                "PLAN_VIEW",
+                "SECTION_VIEW",
+            ], f"Некорректный TargetView: {subcontext.TargetView}"
 
             # Проверяем связь с родительским контекстом
             assert subcontext.ParentContext is not None, "Должен быть ParentContext"
@@ -411,7 +425,7 @@ class TestIFCRules:
     def test_pjs101_project_presence(self, ifc_doc):
         """
         PJS101: Наличие проекта
-        
+
         Требование: Модель должна содержать IfcProject
         """
         projects = ifc_doc.by_type("IfcProject")
@@ -428,7 +442,7 @@ class TestIFCRules:
     def test_pjs003_guid_presence(self, factory, bolt_params):
         """
         PJS003: Глобально уникальные идентификаторы
-        
+
         Требование: Все корневые сущности должны иметь уникальный GlobalId
         """
         result = factory.create_bolt_assembly(
@@ -442,16 +456,18 @@ class TestIFCRules:
         # Собираем все GlobalId
         global_ids = []
         for entity in ifc_doc:
-            if hasattr(entity, 'GlobalId') and entity.GlobalId:
+            if hasattr(entity, "GlobalId") and entity.GlobalId:
                 global_ids.append(entity.GlobalId)
 
         # Проверяем уникальность
-        assert len(global_ids) == len(set(global_ids)), \
-            "Все GlobalId должны быть уникальными (PJS003)"
+        assert len(global_ids) == len(
+            set(global_ids)
+        ), "Все GlobalId должны быть уникальными (PJS003)"
 
         # Проверяем формат GlobalId (22 символа, base64)
         import re
-        guid_pattern = re.compile(r'^[0-9A-Za-z$_]{22}$')
+
+        guid_pattern = re.compile(r"^[0-9A-Za-z$_]{22}$")
         for guid in global_ids[:10]:  # Проверяем первые 10
             assert guid_pattern.match(guid), f"Некорректный формат GlobalId: {guid}"
 
@@ -462,10 +478,10 @@ class TestIFCRules:
     def test_ifc105_resource_entities_referenced(self, factory, bolt_params):
         """
         IFC105: Ресурсные сущности должны быть сосланы корневой сущностью
-        
+
         Требование: Ресурсные сущности должны быть сосланы хотя бы одной корневой
         сущностью (IfcRoot с GlobalId) напрямую или через цепочку других сущностей.
-        
+
         Проверяем:
         1. Материалы ассоциированы через IfcRelAssociatesMaterial
         2. Геометрия используется через RepresentationMaps типов
@@ -481,7 +497,7 @@ class TestIFCRules:
         # 1. Проверяем что все материалы ассоциированы
         materials = ifc_doc.by_type("IfcMaterial")
         mat_assoc = ifc_doc.by_type("IfcRelAssociatesMaterial")
-        
+
         for material in materials:
             is_used = False
             for assoc in mat_assoc:
@@ -496,10 +512,10 @@ class TestIFCRules:
         swept_solids = ifc_doc.by_type("IfcExtrudedAreaSolid")
         profile_defs = ifc_doc.by_type("IfcArbitraryProfileDefWithVoids")
         circles = ifc_doc.by_type("IfcCircle")
-        
+
         representation_maps = ifc_doc.by_type("IfcRepresentationMap")
         shape_reps = ifc_doc.by_type("IfcShapeRepresentation")
-        
+
         # Проверяем что каждый SweptSolid используется в ShapeRepresentation
         for solid in swept_solids:
             is_used = False
@@ -508,26 +524,28 @@ class TestIFCRules:
                     is_used = True
                     break
             assert is_used, f"IfcExtrudedAreaSolid #{solid.id()} не используется (IFC105)"
-        
+
         # Проверяем что каждый ProfileDef используется в ExtrudedAreaSolid
         for profile in profile_defs:
             is_used = False
             for solid in swept_solids:
-                if getattr(solid, 'SweptArea', None) == profile:
+                if getattr(solid, "SweptArea", None) == profile:
                     is_used = True
                     break
-            assert is_used, f"IfcArbitraryProfileDefWithVoids #{profile.id()} не используется (IFC105)"
-        
+            assert (
+                is_used
+            ), f"IfcArbitraryProfileDefWithVoids #{profile.id()} не используется (IFC105)"
+
         # Проверяем что каждый Circle используется в ProfileDef или ShapeRepresentation
         for circle in circles:
             is_used = False
             # Circle может использоваться в ArbitraryProfileDefWithVoids (OuterCurve или InnerCurves)
             for profile in profile_defs:
-                if getattr(profile, 'OuterCurve', None) == circle:
+                if getattr(profile, "OuterCurve", None) == circle:
                     is_used = True
                     break
                 # Проверяем InnerCurves (список)
-                inner_curves = getattr(profile, 'InnerCurves', None) or []
+                inner_curves = getattr(profile, "InnerCurves", None) or []
                 if circle in inner_curves:
                     is_used = True
                     break
@@ -538,13 +556,13 @@ class TestIFCRules:
                         is_used = True
                         break
             assert is_used, f"IfcCircle #{circle.id()} не используется (IFC105)"
-        
+
         # 3. Проверяем что RepresentationMaps используются через MappedItem
         mapped_items = ifc_doc.by_type("IfcMappedItem")
         for rep_map in representation_maps:
             is_used = False
             for mapped_item in mapped_items:
-                if getattr(mapped_item, 'MappingSource', None) == rep_map:
+                if getattr(mapped_item, "MappingSource", None) == rep_map:
                     is_used = True
                     break
             assert is_used, f"IfcRepresentationMap #{rep_map.id()} не используется (IFC105)"
@@ -556,7 +574,7 @@ class TestIFCRules:
     def test_mpd001_representation_identifiers(self, factory, bolt_params):
         """
         MPD001: Корректное использование RepresentationType и RepresentationIdentifier
-        
+
         Требование: Идентификаторы представлений должны соответствовать контексту
         """
         result = factory.create_bolt_assembly(
@@ -569,18 +587,18 @@ class TestIFCRules:
 
         # Проверяем все ShapeRepresentation
         representations = ifc_doc.by_type("IfcShapeRepresentation")
-        
+
         for rep in representations:
             # Проверяем что ContextOfItems существует
-            assert rep.ContextOfItems is not None, \
-                "ContextOfItems должен быть указан"
+            assert rep.ContextOfItems is not None, "ContextOfItems должен быть указан"
 
             # Проверяем что RepresentationIdentifier указан
             if rep.RepresentationIdentifier:
                 # Допустимые идентификаторы
                 valid_identifiers = ["Body", "Axis", "Box", "Annotation", "Profile"]
-                assert rep.RepresentationIdentifier in valid_identifiers, \
-                    f"Некорректный RepresentationIdentifier: {rep.RepresentationIdentifier}"
+                assert (
+                    rep.RepresentationIdentifier in valid_identifiers
+                ), f"Некорректный RepresentationIdentifier: {rep.RepresentationIdentifier}"
 
     # =============================================================================
     # LOP000: Local placement - v1
@@ -589,7 +607,7 @@ class TestIFCRules:
     def test_lop000_local_placement(self, factory, bolt_params):
         """
         LOP000: Локальное размещение
-        
+
         Требование: Элементы должны иметь ObjectPlacement с IfcLocalPlacement
         """
         result = factory.create_bolt_assembly(
@@ -601,16 +619,19 @@ class TestIFCRules:
         assembly = result["assembly"]
 
         # Проверяем что assembly имеет ObjectPlacement
-        assert assembly.ObjectPlacement is not None, \
-            "Assembly должен иметь ObjectPlacement (LOP000)"
+        assert (
+            assembly.ObjectPlacement is not None
+        ), "Assembly должен иметь ObjectPlacement (LOP000)"
 
         # Проверяем что это IfcLocalPlacement
-        assert assembly.ObjectPlacement.is_a("IfcLocalPlacement"), \
-            "ObjectPlacement должен быть IfcLocalPlacement"
+        assert assembly.ObjectPlacement.is_a(
+            "IfcLocalPlacement"
+        ), "ObjectPlacement должен быть IfcLocalPlacement"
 
         # Проверяем что RelativePlacement указан
-        assert assembly.ObjectPlacement.RelativePlacement is not None, \
-            "RelativePlacement должен быть указан"
+        assert (
+            assembly.ObjectPlacement.RelativePlacement is not None
+        ), "RelativePlacement должен быть указан"
 
     # =============================================================================
     # SPS003: Correct containment of assemblies - v1
@@ -619,7 +640,7 @@ class TestIFCRules:
     def test_sps003_assembly_containment(self, factory, bolt_params):
         """
         SPS003: Корректное вложение сборок
-        
+
         Требование: Сборки должны быть привязаны к пространственной структуре
         """
         result = factory.create_bolt_assembly(
@@ -633,7 +654,7 @@ class TestIFCRules:
 
         # Сборка должна быть включена в пространственную структуру
         rel_contained = ifc_doc.by_type("IfcRelContainedInSpatialStructure")
-        
+
         found = False
         for rel in rel_contained:
             if assembly in (rel.RelatedElements or []):
@@ -649,7 +670,7 @@ class TestIFCRules:
     def test_asm000_composed_elements(self, factory, bolt_params):
         """
         ASM000: Составные элементы
-        
+
         Требование: IfcElementAssembly должен иметь компоненты через IfcRelAggregates
         """
         result = factory.create_bolt_assembly(
@@ -663,7 +684,7 @@ class TestIFCRules:
 
         # Для separate режима проверяем IfcRelAggregates
         rel_aggregates = ifc_doc.by_type("IfcRelAggregates")
-        
+
         found = False
         for rel in rel_aggregates:
             if rel.RelatingObject == assembly:
@@ -742,13 +763,19 @@ class TestIFCRules:
         conv_units = ifc_doc.by_type("IfcConversionBasedUnit")
 
         total_units = len(si_units) + len(conv_units)
-        assert total_units > 0, "Должна быть хотя бы одна единица измерения (IfcSIUnit или IfcConversionBasedUnit)"
+        assert (
+            total_units > 0
+        ), "Должна быть хотя бы одна единица измерения (IfcSIUnit или IfcConversionBasedUnit)"
 
         # Проверяем наличие единицы длины (LENGTHUNIT)
         # Примечание: IfcSIUnit использует 'LENGTHUNIT', IfcConversionBasedUnit использует 'LENGTH_UNIT'
-        length_units = [u for u in si_units if hasattr(u, 'UnitType') and u.UnitType == 'LENGTHUNIT']
+        length_units = [
+            u for u in si_units if hasattr(u, "UnitType") and u.UnitType == "LENGTHUNIT"
+        ]
         if not length_units:
-            length_units = [u for u in conv_units if hasattr(u, 'UnitType') and u.UnitType == 'LENGTH_UNIT']
+            length_units = [
+                u for u in conv_units if hasattr(u, "UnitType") and u.UnitType == "LENGTH_UNIT"
+            ]
         assert len(length_units) > 0, "Должна быть единица длины (LENGTH_UNIT)"
 
     # =============================================================================
@@ -783,12 +810,15 @@ class TestIFCRules:
 
         # Проверяем что есть хотя бы одна репрезентация с идентификатором
         reps_with_id = [r for r in representations if r.RepresentationIdentifier]
-        assert len(reps_with_id) > 0, "Должна быть хотя бы одна репрезентация с RepresentationIdentifier"
+        assert (
+            len(reps_with_id) > 0
+        ), "Должна быть хотя бы одна репрезентация с RepresentationIdentifier"
 
         # Проверяем что идентификаторы валидны (не пустые строки)
         for rep in reps_with_id:
-            assert rep.RepresentationIdentifier.strip(), \
-                f"RepresentationIdentifier не должен быть пустым: {rep}"
+            assert (
+                rep.RepresentationIdentifier.strip()
+            ), f"RepresentationIdentifier не должен быть пустым: {rep}"
 
     # =============================================================================
     # GEM004: Constraints on representation identifiers - v3
@@ -812,13 +842,14 @@ class TestIFCRules:
         ifc_doc = result["ifc_doc"]
 
         # Допустимые идентификаторы для IFC4
-        valid_identifiers = {'Body', 'Axis', 'Box', 'SurveyPoints', 'FootPrint'}
+        valid_identifiers = {"Body", "Axis", "Box", "SurveyPoints", "FootPrint"}
 
         representations = ifc_doc.by_type("IfcShapeRepresentation")
         for rep in representations:
             if rep.RepresentationIdentifier:
-                assert rep.RepresentationIdentifier in valid_identifiers, \
-                    f"Недопустимый RepresentationIdentifier: {rep.RepresentationIdentifier}"
+                assert (
+                    rep.RepresentationIdentifier in valid_identifiers
+                ), f"Недопустимый RepresentationIdentifier: {rep.RepresentationIdentifier}"
 
     # =============================================================================
     # OJP000: Object placement - v1
@@ -840,17 +871,20 @@ class TestIFCRules:
         assembly = result["assembly"]
 
         # Проверяем что assembly имеет ObjectPlacement
-        assert assembly.ObjectPlacement is not None, \
-            "IfcMechanicalFastener должен иметь ObjectPlacement"
-        assert assembly.ObjectPlacement.is_a("IfcLocalPlacement"), \
-            "ObjectPlacement должен быть IfcLocalPlacement"
+        assert (
+            assembly.ObjectPlacement is not None
+        ), "IfcMechanicalFastener должен иметь ObjectPlacement"
+        assert assembly.ObjectPlacement.is_a(
+            "IfcLocalPlacement"
+        ), "ObjectPlacement должен быть IfcLocalPlacement"
 
         # Проверяем компоненты болта
         components = ifc_doc.by_type("IfcElement")
         for component in components:
             if component != assembly:
-                assert component.ObjectPlacement is not None, \
-                    f"{component.is_a()} должен иметь ObjectPlacement"
+                assert (
+                    component.ObjectPlacement is not None
+                ), f"{component.is_a()} должен иметь ObjectPlacement"
 
     # =============================================================================
     # OJP001: Relative placement for aggregated elements - v3
@@ -880,16 +914,17 @@ class TestIFCRules:
         for rel in rel_aggregates:
             if rel.RelatingObject and rel.RelatedObjects:
                 # IfcProject не имеет ObjectPlacement, пропускаем
-                if not hasattr(rel.RelatingObject, 'ObjectPlacement'):
+                if not hasattr(rel.RelatingObject, "ObjectPlacement"):
                     continue
                 relating_placement = rel.RelatingObject.ObjectPlacement
                 for related_obj in rel.RelatedObjects:
-                    if hasattr(related_obj, 'ObjectPlacement') and related_obj.ObjectPlacement:
+                    if hasattr(related_obj, "ObjectPlacement") and related_obj.ObjectPlacement:
                         # PlacementRelTo должен ссылаться на родителя или быть None (мировая СК)
                         placement_rel = related_obj.ObjectPlacement.PlacementRelTo
                         # Допускается None (мировая СК) или ссылка на родителя
-                        assert placement_rel is None or placement_rel == relating_placement, \
-                            f"PlacementRelTo должен ссылаться на родителя или быть None"
+                        assert (
+                            placement_rel is None or placement_rel == relating_placement
+                        ), f"PlacementRelTo должен ссылаться на родителя или быть None"
 
     # =============================================================================
     # Приоритет 1: Критичные правила для генератора болтов
@@ -907,9 +942,10 @@ class TestIFCRules:
         (IFC2X3, IFC4, IFC4X3_ADD1, IFC4X3_ADD2)
         """
         schema = ifc_doc.schema
-        valid_schemas = {'IFC2X3', 'IFC4', 'IFC4X3_ADD1', 'IFC4X3_ADD2'}
-        assert schema in valid_schemas, \
-            f"Неофициальная версия IFC: {schema}. Допустимые: {valid_schemas} (IFC101)"
+        valid_schemas = {"IFC2X3", "IFC4", "IFC4X3_ADD1", "IFC4X3_ADD2"}
+        assert (
+            schema in valid_schemas
+        ), f"Неофициальная версия IFC: {schema}. Допустимые: {valid_schemas} (IFC101)"
 
     # =============================================================================
     # IFC102: Absence of deprecated entities - v5
@@ -932,21 +968,22 @@ class TestIFCRules:
         # Список устаревших сущностей в IFC4
         # Некоторые сущности удалены из IFC4, поэтому проверяем только существующие
         deprecated_entities = {
-            'IfcAbsorbingAbsorptance',
-            'IfcAnnotationFillArea',
-            'IfcContextDependentUnit',
-            'IfcDerivedUnit',
-            'IfcLightSourcePositional',
-            'IfcLightSourceSpot',
-            'IfcNullStyle',
+            "IfcAbsorbingAbsorptance",
+            "IfcAnnotationFillArea",
+            "IfcContextDependentUnit",
+            "IfcDerivedUnit",
+            "IfcLightSourcePositional",
+            "IfcLightSourceSpot",
+            "IfcNullStyle",
         }
 
         # Проверяем наличие устаревших сущностей
         for entity_name in deprecated_entities:
             try:
                 entities = ifc_doc.by_type(entity_name)
-                assert len(entities) == 0, \
-                    f"Найдена устаревшая сущность {entity_name}: {entities} (IFC102)"
+                assert (
+                    len(entities) == 0
+                ), f"Найдена устаревшая сущность {entity_name}: {entities} (IFC102)"
             except RuntimeError:
                 # Сущность не существует в этой схеме IFC — это хорошо
                 pass
@@ -962,8 +999,9 @@ class TestIFCRules:
         Требование: Должен быть ровно один IfcProject
         """
         projects = ifc_doc.by_type("IfcProject")
-        assert len(projects) == 1, \
-            f"Должен быть ровно один IfcProject, найдено: {len(projects)} (PJS000)"
+        assert (
+            len(projects) == 1
+        ), f"Должен быть ровно один IfcProject, найдено: {len(projects)} (PJS000)"
 
     # =============================================================================
     # PJS002: Correct elements related to project - v2
@@ -1020,8 +1058,7 @@ class TestIFCRules:
                     break
                 current = aggregated_in.get(current)
 
-            assert found_project, \
-                f"Элемент {elem} не агрегирован в проект (PJS002)"
+            assert found_project, f"Элемент {elem} не агрегирован в проект (PJS002)"
 
     # =============================================================================
     # GEM001: Closed shell edge usage - v3
@@ -1052,8 +1089,7 @@ class TestIFCRules:
             # что оболочки не пустые
             for shell in closed_shells:
                 faces = shell.CfsFaces or []
-                assert len(faces) > 0, \
-                    f"IfcClosedShell не должен быть пустым (GEM001)"
+                assert len(faces) > 0, f"IfcClosedShell не должен быть пустым (GEM001)"
 
     # =============================================================================
     # GEM002: Space representation - v2
@@ -1077,9 +1113,10 @@ class TestIFCRules:
         # Проверяем что если есть IfcSpace, то у него есть представление
         spaces = ifc_doc.by_type("IfcSpace")
         for space in spaces:
-            if hasattr(space, 'Representation') and space.Representation:
-                assert space.Representation.is_a("IfcProductDefinitionShape"), \
-                    f"Representation IfcSpace должен быть IfcProductDefinitionShape (GEM002)"
+            if hasattr(space, "Representation") and space.Representation:
+                assert space.Representation.is_a(
+                    "IfcProductDefinitionShape"
+                ), f"Representation IfcSpace должен быть IfcProductDefinitionShape (GEM002)"
 
     # =============================================================================
     # GEM111: No duplicated points within a polyloop or polyline - v1
@@ -1107,8 +1144,9 @@ class TestIFCRules:
             points = polyline.Points or []
             # Проверяем на дубликаты координат
             coords = [tuple(p.Coordinates) for p in points]
-            assert len(coords) == len(set(coords)), \
-                f"IfcPolyline содержит дублирующиеся точки (GEM111)"
+            assert len(coords) == len(
+                set(coords)
+            ), f"IfcPolyline содержит дублирующиеся точки (GEM111)"
 
         for polyloop in polyloops:
             points = polyloop.Polygon or []
@@ -1117,8 +1155,9 @@ class TestIFCRules:
             # Проверяем остальные
             if len(coords) > 1:
                 coords_check = coords[:-1] if coords[0] == coords[-1] else coords
-                assert len(coords_check) == len(set(coords_check)), \
-                    f"IfcPolyloop содержит дублирующиеся точки (GEM111)"
+                assert len(coords_check) == len(
+                    set(coords_check)
+                ), f"IfcPolyloop содержит дублирующиеся точки (GEM111)"
 
     # =============================================================================
     # GEM112: No duplicated points within an indexed poly curve - v1
@@ -1147,8 +1186,9 @@ class TestIFCRules:
             for segment in segments:
                 if segment.is_a("IfcIndexedPolyCurve"):
                     indices = segment.CoordIndex or []
-                    assert len(indices) == len(set(indices)), \
-                        f"IfcIndexedPolyCurve содержит дублирующиеся индексы (GEM112)"
+                    assert len(indices) == len(
+                        set(indices)
+                    ), f"IfcIndexedPolyCurve содержит дублирующиеся индексы (GEM112)"
 
     # =============================================================================
     # GEM113: Indexed poly curve arcs must not be defined using colinear points - v2
@@ -1176,7 +1216,7 @@ class TestIFCRules:
             segments = curve.Segments or []
             for segment in segments:
                 # Проверяем сегменты которые могут быть дугами
-                if hasattr(segment, 'is_a') and 'Arc' in segment.is_a():
+                if hasattr(segment, "is_a") and "Arc" in segment.is_a():
                     # Для дуг проверяем что точки не коллинеарны
                     # (реализация зависит от конкретного типа дуги)
                     pass  # Для болтов дуги используются редко
@@ -1206,8 +1246,7 @@ class TestIFCRules:
         # Проверяем что грани существуют и не пустые
         for face in faces[:10]:  # Проверяем первые 10 граней
             bounds = face.Bounds or []
-            assert len(bounds) > 0, \
-                f"IfcFace не должен быть пустым (BRP003)"
+            assert len(bounds) > 0, f"IfcFace не должен быть пустым (BRP003)"
 
     # =============================================================================
     # SWE001: Arbitrary profile boundary no self intersections - v4
@@ -1234,8 +1273,7 @@ class TestIFCRules:
         # Проверяем что профили валидны
         for profile in profiles:
             outer_curve = profile.OuterCurve
-            assert outer_curve is not None, \
-                f"Профиль должен иметь OuterCurve (SWE001)"
+            assert outer_curve is not None, f"Профиль должен иметь OuterCurve (SWE001)"
 
     # =============================================================================
     # SWE002: Mirroring within IfcDerivedProfileDef shall not be used - v2
@@ -1260,10 +1298,11 @@ class TestIFCRules:
 
         for profile in derived_profiles:
             # Проверяем что нет зеркалирования (ReflectionScale = -1)
-            if hasattr(profile, 'ReflectionScale'):
+            if hasattr(profile, "ReflectionScale"):
                 scale = profile.Reflection_scale
-                assert scale != -1, \
-                    f"IfcDerivedProfileDef не должен использовать зеркалирование (SWE002)"
+                assert (
+                    scale != -1
+                ), f"IfcDerivedProfileDef не должен использовать зеркалирование (SWE002)"
 
     # =============================================================================
     # Приоритет 2: Общие правила валидации
@@ -1295,13 +1334,15 @@ class TestIFCRules:
 
         for assoc in class_associations:
             # Проверяем что RelatingClassification указан
-            assert assoc.RelatingClassification is not None, \
-                "IfcRelAssociatesClassification должен иметь RelatingClassification (CLS000)"
+            assert (
+                assoc.RelatingClassification is not None
+            ), "IfcRelAssociatesClassification должен иметь RelatingClassification (CLS000)"
 
             # Проверяем что RelatedObjects не пустой
             related = assoc.RelatedObjects or []
-            assert len(related) > 0, \
-                "IfcRelAssociatesClassification должен иметь RelatedObjects (CLS000)"
+            assert (
+                len(related) > 0
+            ), "IfcRelAssociatesClassification должен иметь RelatedObjects (CLS000)"
 
     # =============================================================================
     # CTX000: Presentation colours and textures - v2
@@ -1327,8 +1368,7 @@ class TestIFCRules:
         for item in styled_items:
             # Проверяем что стиль указан
             styles = item.Styles or []
-            assert len(styles) > 0, \
-                "IfcStyledItem должен иметь стили (CTX000)"
+            assert len(styles) > 0, "IfcStyledItem должен иметь стили (CTX000)"
 
     # =============================================================================
     # GRP000: Groups - v1
@@ -1354,8 +1394,7 @@ class TestIFCRules:
 
         for group in groups:
             # Проверяем что группа имеет имя
-            assert group.GlobalId is not None, \
-                "IfcGroup должен иметь GlobalId (GRP000)"
+            assert group.GlobalId is not None, "IfcGroup должен иметь GlobalId (GRP000)"
 
     # =============================================================================
     # GRP001: Acyclic groups - v1
@@ -1408,8 +1447,9 @@ class TestIFCRules:
         for group in groups:
             if group not in visited:
                 rec_stack = set()
-                assert not has_cycle(group, visited, rec_stack), \
-                    f"Обнаружен цикл в группах (GRP001)"
+                assert not has_cycle(
+                    group, visited, rec_stack
+                ), f"Обнаружен цикл в группах (GRP001)"
 
     # =============================================================================
     # LAY000: Presentation layer assignment - v1
@@ -1434,13 +1474,13 @@ class TestIFCRules:
 
         for layer in layers:
             # Проверяем что слой имеет имя
-            assert layer.Name, \
-                "IfcPresentationLayerAssignment должен иметь имя (LAY000)"
+            assert layer.Name, "IfcPresentationLayerAssignment должен иметь имя (LAY000)"
 
             # Проверяем что AssignedItems не пустой
             items = layer.AssignedItems or []
-            assert len(items) > 0, \
-                "IfcPresentationLayerAssignment должен иметь AssignedItems (LAY000)"
+            assert (
+                len(items) > 0
+            ), "IfcPresentationLayerAssignment должен иметь AssignedItems (LAY000)"
 
     # =============================================================================
     # MAT000: Materials - полная проверка - v1
@@ -1466,19 +1506,16 @@ class TestIFCRules:
 
         # Проверяем ассоциации
         mat_associations = ifc_doc.by_type("IfcRelAssociatesMaterial")
-        assert len(mat_associations) > 0, \
-            "Должны быть ассоциации материалов (MAT000)"
+        assert len(mat_associations) > 0, "Должны быть ассоциации материалов (MAT000)"
 
         # Проверяем что каждый материал имеет имя
         for mat in materials:
-            assert mat.Name, \
-                f"Материал должен иметь имя: {mat} (MAT000)"
+            assert mat.Name, f"Материал должен иметь имя: {mat} (MAT000)"
 
         # Проверяем что материалы ассоциированы с элементами или типами
         for assoc in mat_associations:
             related = assoc.RelatedObjects or []
-            assert len(related) > 0, \
-                "Материал должен быть ассоциирован с объектами (MAT000)"
+            assert len(related) > 0, "Материал должен быть ассоциирован с объектами (MAT000)"
 
     # =============================================================================
     # POR000: Port connectivity and nesting - v1
@@ -1503,8 +1540,7 @@ class TestIFCRules:
         ports = ifc_doc.by_type("IfcDistributionPort")
 
         for port in ports:
-            assert port.GlobalId is not None, \
-                "IfcDistributionPort должен иметь GlobalId (POR000)"
+            assert port.GlobalId is not None, "IfcDistributionPort должен иметь GlobalId (POR000)"
 
     # =============================================================================
     # PSE001: Standard properties and property sets - v3
@@ -1530,13 +1566,11 @@ class TestIFCRules:
 
         for prop_set in prop_sets:
             # Проверяем что набор имеет имя
-            assert prop_set.Name, \
-                "IfcPropertySet должен иметь имя (PSE001)"
+            assert prop_set.Name, "IfcPropertySet должен иметь имя (PSE001)"
 
             # Проверяем что есть свойства
             properties = prop_set.HasProperties or []
-            assert len(properties) > 0, \
-                "IfcPropertySet должен иметь свойства (PSE001)"
+            assert len(properties) > 0, "IfcPropertySet должен иметь свойства (PSE001)"
 
     # =============================================================================
     # PSE002: Custom properties and property sets - v1
@@ -1564,8 +1598,9 @@ class TestIFCRules:
             properties = prop_set.HasProperties or []
             for prop in properties:
                 if prop.is_a("IfcPropertySingleValue"):
-                    assert hasattr(prop, 'NominalValue'), \
-                        "IfcPropertySingleValue должен иметь NominalValue (PSE002)"
+                    assert hasattr(
+                        prop, "NominalValue"
+                    ), "IfcPropertySingleValue должен иметь NominalValue (PSE002)"
 
     # =============================================================================
     # QTY000: Quantities for objects - v1
@@ -1590,8 +1625,7 @@ class TestIFCRules:
 
         for qty_set in qty_sets:
             # Проверяем что набор имеет имя
-            assert qty_set.Name, \
-                "IfcElementQuantity должен иметь имя (QTY000)"
+            assert qty_set.Name, "IfcElementQuantity должен иметь имя (QTY000)"
 
     # =============================================================================
     # QTY001: Standard quantities and quantity sets - v1
@@ -1618,9 +1652,8 @@ class TestIFCRules:
             quantities = qty_set.Quantities or []
             for qty in quantities:
                 # Проверяем что количество имеет значение
-                if hasattr(qty, 'LengthValue'):
-                    assert qty.LengthValue is not None, \
-                        "Количество должно иметь значение (QTY001)"
+                if hasattr(qty, "LengthValue"):
+                    assert qty.LengthValue is not None, "Количество должно иметь значение (QTY001)"
 
     # =============================================================================
     # SPA000: Spaces information - v1
@@ -1646,8 +1679,7 @@ class TestIFCRules:
         spaces = ifc_doc.by_type("IfcSpace")
 
         for space in spaces:
-            assert space.GlobalId is not None, \
-                "IfcSpace должен иметь GlobalId (SPA000)"
+            assert space.GlobalId is not None, "IfcSpace должен иметь GlobalId (SPA000)"
 
     # =============================================================================
     # VER000: Versioning and revision control - v1
@@ -1661,15 +1693,13 @@ class TestIFCRules:
         """
         # Проверяем что OwnerHistory существует
         owner_histories = ifc_doc.by_type("IfcOwnerHistory")
-        assert len(owner_histories) > 0, \
-            "Должен быть IfcOwnerHistory (VER000)"
+        assert len(owner_histories) > 0, "Должен быть IfcOwnerHistory (VER000)"
 
         # Проверяем что есть версия приложения
         for hist in owner_histories:
             if hist.OwningApplication:
                 app = hist.OwningApplication
-                assert hasattr(app, 'Version'), \
-                    "Приложение должно иметь версию (VER000)"
+                assert hasattr(app, "Version"), "Приложение должно иметь версию (VER000)"
 
     # =============================================================================
     # VRT000: Virtual elements - v1
@@ -1692,11 +1722,10 @@ class TestIFCRules:
 
         # Для болтов виртуальные элементы не требуются
         # Проверяем что если есть, то корректны
-        virtual_elements = [e for e in ifc_doc if 'Virtual' in e.is_a()]
+        virtual_elements = [e for e in ifc_doc if "Virtual" in e.is_a()]
 
         for elem in virtual_elements:
-            assert elem.GlobalId is not None, \
-                f"Виртуальный элемент должен иметь GlobalId (VRT000)"
+            assert elem.GlobalId is not None, f"Виртуальный элемент должен иметь GlobalId (VRT000)"
 
     # =============================================================================
     # GEM011: Curve segments consistency - v2
@@ -1721,8 +1750,7 @@ class TestIFCRules:
 
         for curve in curves:
             segments = curve.Segments or []
-            assert len(segments) > 0, \
-                "IfcCompositeCurve должен иметь сегменты (GEM011)"
+            assert len(segments) > 0, "IfcCompositeCurve должен иметь сегменты (GEM011)"
 
     # =============================================================================
     # Приоритет 3: Georeferencing (GRF)
@@ -1745,8 +1773,7 @@ class TestIFCRules:
 
         # Если есть MapConversion, проверяем что есть CRS
         if map_conversion:
-            assert projected_crs, \
-                "Если есть IfcMapConversion, должен быть IfcProjectedCRS (GRF000)"
+            assert projected_crs, "Если есть IfcMapConversion, должен быть IfcProjectedCRS (GRF000)"
 
     # =============================================================================
     # GRF001: Identical coordinate operations - v2
@@ -1777,8 +1804,7 @@ class TestIFCRules:
 
         for crs in projected_crs:
             # Проверяем что есть Name (может содержать EPSG)
-            assert crs.Name, \
-                "IfcProjectedCRS должен иметь имя (GRF002)"
+            assert crs.Name, "IfcProjectedCRS должен иметь имя (GRF002)"
 
     # =============================================================================
     # GRF003: CRS presence with spatial entities - v1
@@ -1796,8 +1822,9 @@ class TestIFCRules:
         if len(buildings) > 0:
             # Если есть здание, должен быть IfcProjectedCRS
             projected_crs = ifc_doc.by_type("IfcProjectedCRS")
-            assert len(projected_crs) >= 1, \
-                "Если есть IfcBuilding, должен быть IfcProjectedCRS (GRF003)"
+            assert (
+                len(projected_crs) >= 1
+            ), "Если есть IfcBuilding, должен быть IfcProjectedCRS (GRF003)"
 
     # =============================================================================
     # GRF004: Valid EPSG prefix in coordinate reference system - v1
@@ -1816,8 +1843,10 @@ class TestIFCRules:
             if "EPSG" in name.upper():
                 # Проверяем формат EPSG:XXXX
                 import re
-                assert re.search(r'EPSG:\d+', name, re.IGNORECASE), \
-                    f"Невалидный формат EPSG: {name} (GRF004)"
+
+                assert re.search(
+                    r"EPSG:\d+", name, re.IGNORECASE
+                ), f"Невалидный формат EPSG: {name} (GRF004)"
 
     # =============================================================================
     # GRF005: CRS unit type differences - v1
@@ -1837,11 +1866,15 @@ class TestIFCRules:
             # Для IFC4 единицы должны быть IfcSIUnit с LENGTHUNIT = METRE
             for unit_assign in unit_assignments:
                 units = unit_assign.Units or []
-                length_units = [u for u in units if hasattr(u, 'UnitType') and u.UnitType == 'LENGTHUNIT']
+                length_units = [
+                    u for u in units if hasattr(u, "UnitType") and u.UnitType == "LENGTHUNIT"
+                ]
                 # Проверяем что единица длины — метр или миллиметр
                 for unit in length_units:
-                    assert unit.Name in ['METRE', 'MILLI'], \
-                        f"Единица длины должна быть METRE или MILLI, а не {unit.Name} (GRF005)"
+                    assert unit.Name in [
+                        "METRE",
+                        "MILLI",
+                    ], f"Единица длины должна быть METRE или MILLI, а не {unit.Name} (GRF005)"
 
     # =============================================================================
     # GRF006: WKT specification for missing EPSG - v2
@@ -1860,8 +1893,9 @@ class TestIFCRules:
             # Если нет EPSG, проверяем что есть WKT
             if "EPSG" not in name.upper():
                 # WKT может быть в описании
-                assert crs.Description or hasattr(crs, 'WKT'), \
-                    "Если нет EPSG, должна быть WKT спецификация (GRF006)"
+                assert crs.Description or hasattr(
+                    crs, "WKT"
+                ), "Если нет EPSG, должна быть WKT спецификация (GRF006)"
 
     # =============================================================================
     # GRF007: Valid vertical datum CRS type - v1
@@ -1878,11 +1912,11 @@ class TestIFCRules:
         for crs in projected_crs:
             # VerticalDatum должен быть указан и не должен быть пустым
             vertical_datum = crs.VerticalDatum
-            assert vertical_datum is not None, \
-                "VerticalDatum должен быть указан (GRF007)"
+            assert vertical_datum is not None, "VerticalDatum должен быть указан (GRF007)"
             # Для IFC4 VerticalDatum может быть 'unknown', 'ellipsoidal', 'orthometric', и т.д.
-            assert isinstance(vertical_datum, str) and len(vertical_datum) > 0, \
-                f"VerticalDatum должен быть строкой, а не {type(vertical_datum)} (GRF007)"
+            assert (
+                isinstance(vertical_datum, str) and len(vertical_datum) > 0
+            ), f"VerticalDatum должен быть строкой, а не {type(vertical_datum)} (GRF007)"
 
     # =============================================================================
     # GRF008: Rigid operation units - v1
@@ -1900,9 +1934,10 @@ class TestIFCRules:
         for conv in map_conversions:
             # В IFC4 MapUnit может быть указан или не указан
             # Если указан, должен быть IfcNamedUnit или IfcMonetaryUnit
-            if hasattr(conv, 'MapUnit') and conv.MapUnit:
-                assert conv.MapUnit.is_a('IfcNamedUnit') or conv.MapUnit.is_a('IfcMonetaryUnit'), \
-                    f"MapUnit должен быть IfcNamedUnit или IfcMonetaryUnit, а не {conv.MapUnit.is_a()} (GRF008)"
+            if hasattr(conv, "MapUnit") and conv.MapUnit:
+                assert conv.MapUnit.is_a("IfcNamedUnit") or conv.MapUnit.is_a(
+                    "IfcMonetaryUnit"
+                ), f"MapUnit должен быть IfcNamedUnit или IfcMonetaryUnit, а не {conv.MapUnit.is_a()} (GRF008)"
 
     # =============================================================================
     # Приоритет 4: Alignment (ALB) и Alignment Geometry (ALS)
@@ -1923,10 +1958,12 @@ class TestIFCRules:
         try:
             alignments = ifc_doc.by_type("IfcAlignment")
             for alignment in alignments:
-                assert alignment.ObjectPlacement is not None, \
-                    "IfcAlignment должен иметь ObjectPlacement (ALB000)"
-                assert alignment.Representation is not None, \
-                    "IfcAlignment должен иметь Representation (ALB000)"
+                assert (
+                    alignment.ObjectPlacement is not None
+                ), "IfcAlignment должен иметь ObjectPlacement (ALB000)"
+                assert (
+                    alignment.Representation is not None
+                ), "IfcAlignment должен иметь Representation (ALB000)"
         except RuntimeError:
             # IfcAlignment не существует в IFC4
             pass
@@ -1950,8 +1987,7 @@ class TestIFCRules:
                     any(obj.is_a("IfcAlignment") for obj in (rel.RelatedObjects or []))
                     for rel in rel_aggregates
                 )
-                assert alignment_in_aggregates, \
-                    "IfcAlignment должен быть агрегирован (ALB002)"
+                assert alignment_in_aggregates, "IfcAlignment должен быть агрегирован (ALB002)"
         except RuntimeError:
             pass
 
@@ -1989,8 +2025,9 @@ class TestIFCRules:
                     any(elem.is_a("IfcAlignment") for elem in (rel.RelatedElements or []))
                     for rel in rel_contained
                 )
-                assert alignment_contained, \
-                    "IfcAlignment должен быть в пространственной структуре (ALB004)"
+                assert (
+                    alignment_contained
+                ), "IfcAlignment должен быть в пространственной структуре (ALB004)"
         except RuntimeError:
             pass
 
@@ -2089,8 +2126,9 @@ class TestIFCRules:
         try:
             alignments = ifc_doc.by_type("IfcAlignment")
             for alignment in alignments:
-                assert alignment.ObjectPlacement is not None, \
-                    "IfcAlignment должен иметь ObjectPlacement (ALB030)"
+                assert (
+                    alignment.ObjectPlacement is not None
+                ), "IfcAlignment должен иметь ObjectPlacement (ALB030)"
         except RuntimeError:
             # IfcAlignment не существует в IFC4
             pass
@@ -2135,8 +2173,9 @@ class TestIFCRules:
             alignments = ifc_doc.by_type("IfcAlignment")
             # Если есть Alignment, проверяем что есть геометрия
             for alignment in alignments:
-                assert alignment.Representation is not None, \
-                    "IfcAlignment должен иметь Representation (ALS000)"
+                assert (
+                    alignment.Representation is not None
+                ), "IfcAlignment должен иметь Representation (ALS000)"
         except RuntimeError:
             pass
 
@@ -2335,9 +2374,10 @@ class TestIFCRules:
         # проверяем что оно корректно
         shape_reps = ifc_doc.by_type("IfcShapeRepresentation")
         for rep in shape_reps:
-            if rep.RepresentationType == 'BoundingBox':
-                assert rep.RepresentationIdentifier == 'Box', \
-                    "Bounding box должен иметь RepresentationIdentifier='Box' (BBX001)"
+            if rep.RepresentationType == "BoundingBox":
+                assert (
+                    rep.RepresentationIdentifier == "Box"
+                ), "Bounding box должен иметь RepresentationIdentifier='Box' (BBX001)"
 
     # =============================================================================
     # AXG000: Axis Geometry - v1
@@ -2352,12 +2392,13 @@ class TestIFCRules:
         # Проверяем что если есть IfcAxis2Placement3D, он корректен
         placements = ifc_doc.by_type("IfcAxis2Placement3D")
         for placement in placements:
-            assert placement.Location is not None, \
-                "IfcAxis2Placement3D должен иметь Location (AXG000)"
-            assert placement.Axis is not None, \
-                "IfcAxis2Placement3D должен иметь Axis (AXG000)"
-            assert placement.RefDirection is not None, \
-                "IfcAxis2Placement3D должен иметь RefDirection (AXG000)"
+            assert (
+                placement.Location is not None
+            ), "IfcAxis2Placement3D должен иметь Location (AXG000)"
+            assert placement.Axis is not None, "IfcAxis2Placement3D должен иметь Axis (AXG000)"
+            assert (
+                placement.RefDirection is not None
+            ), "IfcAxis2Placement3D должен иметь RefDirection (AXG000)"
 
     # =============================================================================
     # ANN000: Annotations - v1
@@ -2371,8 +2412,9 @@ class TestIFCRules:
         """
         annotations = ifc_doc.by_type("IfcAnnotation")
         for annotation in annotations:
-            assert annotation.Representation is not None, \
-                "IfcAnnotation должен иметь Representation (ANN000)"
+            assert (
+                annotation.Representation is not None
+            ), "IfcAnnotation должен иметь Representation (ANN000)"
 
     # =============================================================================
     # GDP000: Grid placement - v1
@@ -2386,7 +2428,5 @@ class TestIFCRules:
         """
         grids = ifc_doc.by_type("IfcGrid")
         for grid in grids:
-            assert grid.UAxes is not None, \
-                "IfcGrid должен иметь UAxes (GDP000)"
-            assert grid.VAxes is not None, \
-                "IfcGrid должен иметь VAxes (GDP000)"
+            assert grid.UAxes is not None, "IfcGrid должен иметь UAxes (GDP000)"
+            assert grid.VAxes is not None, "IfcGrid должен иметь VAxes (GDP000)"

@@ -327,7 +327,7 @@ class IFCViewer {
     /**
      * Обработка клика по сцене
      */
-    onCanvasClick(event) {
+    async onCanvasClick(event) {
         const rect = this.canvas.getBoundingClientRect();
         this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -336,6 +336,7 @@ class IFCViewer {
         const intersects = this.raycaster.intersectObjects(this.meshes.map((item) => item.mesh));
 
         if (intersects.length > 0) {
+            // Клик на элементе
             const meshItem = this.meshes.find((item) => item.mesh === intersects[0].object);
             if (meshItem) {
                 this.selectMesh(meshItem);
@@ -343,20 +344,37 @@ class IFCViewer {
                 const center = new THREE.Vector3();
                 boundingBox.getCenter(center);
                 this.focusPoint.copy(center);
-                window.dispatchEvent(new CustomEvent('meshSelected', { detail: meshItem }));
+
+                // Получаем PropertySet элемента
+                const globalId = meshItem.metadata?.GlobalId;
+                if (globalId && window.ifcBridge) {
+                    const props = await window.ifcBridge.getElementProperties(globalId);
+                    window.dispatchEvent(
+                        new CustomEvent('meshSelected', {
+                            detail: {
+                                name: props?.name || meshItem.name,
+                                elementProperties: props
+                            }
+                        })
+                    );
+                } else {
+                    window.dispatchEvent(new CustomEvent('meshSelected', { detail: meshItem }));
+                }
             }
         } else {
+            // Клик на пустом месте — сборка
             this.deselectMesh();
             this.focusPoint.set(0, 0, 0);
-            // Передаём данные о сборке если есть
-            if (this.assemblyInfo) {
+
+            if (this.assemblyInfo?.globalId && window.ifcBridge) {
+                const props = await window.ifcBridge.getElementProperties(
+                    this.assemblyInfo.globalId
+                );
                 window.dispatchEvent(
                     new CustomEvent('meshSelected', {
                         detail: {
-                            id: 'assembly',
-                            name: this.assemblyInfo.name || 'Assembly',
-                            isAssembly: true,
-                            assemblyInfo: this.assemblyInfo
+                            name: props?.name || this.assemblyInfo.name || 'Assembly',
+                            elementProperties: props
                         }
                     })
                 );

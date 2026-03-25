@@ -26,8 +26,8 @@ class InstanceFactory:
         geometry_type: str = "solid",
     ):
         self.ifc: IfcDocumentProtocol = ifc_doc
-        self.type_factory: TypeFactoryProtocol = (
-            type_factory or TypeFactory(ifc_doc, geometry_type=geometry_type)
+        self.type_factory: TypeFactoryProtocol = type_factory or TypeFactory(
+            ifc_doc, geometry_type=geometry_type
         )
         self.material_manager = MaterialManager(ifc_doc)
 
@@ -174,7 +174,9 @@ class InstanceFactory:
                 l0 = get_thread_length(diameter, length) or length
                 stud_offset = l0
                 stud_axis_down = True
-            stud_placement = self._create_placement((0, 0, stud_offset), axis_down=stud_axis_down, rel_to=assembly_placement)
+            stud_placement = self._create_placement(
+                (0, 0, stud_offset), axis_down=stud_axis_down, rel_to=assembly_placement
+            )
             stud = self.ifc.create_entity(
                 "IfcMechanicalFastener",
                 GlobalId=ifc.guid.new(),
@@ -357,8 +359,8 @@ class InstanceFactory:
                 assembly, bolt_type, diameter, length, material, assembly.Name
             )
         else:
-            mesh_data = self._generate_mesh_data(
-                components, bolt_type, diameter, length, material, assembly.Name
+            mesh_data = self._generate_mesh_data_with_assembly_id(
+                components, bolt_type, diameter, length, material, assembly, assembly.Name
             )
 
         return {
@@ -371,11 +373,11 @@ class InstanceFactory:
 
     def _create_placement(self, location, axis_down=False, rel_to=None):
         """Создание 3D размещения
-        
+
         Согласно правилу OJP001: если элемент является частью другого элемента
         через IfcRelAggregates, то его размещение должно быть относительным
         (PlacementRelTo должен указывать на размещение контейнера).
-        
+
         Args:
             location: Координаты (x, y, z)
             axis_down: Направление оси Z (-1 или 1)
@@ -398,7 +400,15 @@ class InstanceFactory:
             ),
         )
 
-    def _create_component(self, comp_type, location, type_obj, instances_list, owner_history=None, assembly_placement=None):
+    def _create_component(
+        self,
+        comp_type,
+        location,
+        type_obj,
+        instances_list,
+        owner_history=None,
+        assembly_placement=None,
+    ):
         """Создание компонента (гайка/шайба/плита)
 
         Имя наследуется из типа.
@@ -532,15 +542,15 @@ class InstanceFactory:
             return verts, faces
 
         import numpy as np
-        
+
         # Преобразуем в numpy array для удобства
         verts_array = np.array(verts).reshape(-1, 3)
-        
+
         # Словарь для маппинга вершин: старый индекс -> новый индекс
         vertex_map = {}
         # Список представительных вершин
         unique_verts = []
-        
+
         for i, vert in enumerate(verts_array):
             # Ищем ближайшую представительную вершину
             found = False
@@ -549,23 +559,23 @@ class InstanceFactory:
                     vertex_map[i] = j
                     found = True
                     break
-            
+
             if not found:
                 # Добавляем новую представительную вершину
                 vertex_map[i] = len(unique_verts)
                 unique_verts.append(vert)
-        
+
         # Обновляем грани
         new_faces = []
         for i in range(0, len(faces), 3):
-            v0, v1, v2 = faces[i], faces[i+1], faces[i+2]
+            v0, v1, v2 = faces[i], faces[i + 1], faces[i + 2]
             new_faces.extend([vertex_map[v0], vertex_map[v1], vertex_map[v2]])
-        
+
         # Возвращаем плоский список координат представительных вершин
         new_verts = []
         for vert in unique_verts:
             new_verts.extend(vert.tolist())
-        
+
         return new_verts, new_faces
 
     def _fix_triangle_orientation(self, verts, faces):
@@ -600,7 +610,7 @@ class InstanceFactory:
 
         new_faces = []
         for i in range(0, len(faces), 3):
-            v0, v1, v2 = faces[i], faces[i+1], faces[i+2]
+            v0, v1, v2 = faces[i], faces[i + 1], faces[i + 2]
 
             p0 = verts_array[v0]
             p1 = verts_array[v1]
@@ -647,9 +657,43 @@ class InstanceFactory:
             "length": length,
             "material": material,
             "name": assembly_name or f"bolt_{bolt_type}_M{diameter}x{length}",
+            "globalId": None,  # Будет установлен ниже
         }
 
         # Конвертация IFC геометрии в Three.js mesh
+        mesh_data = convert_assembly_to_meshes(self.ifc, components, color_map, assembly_info)
+
+        if not mesh_data or not mesh_data.get("meshes"):
+            print(f"Warning: ifcopenshell.geom failed to generate mesh data")
+            return {"meshes": []}
+
+        return mesh_data
+
+    def _generate_mesh_data_with_assembly_id(
+        self, components, bolt_type, diameter, length, material, assembly, assembly_name=None
+    ):
+        """Генерация mesh данных с GlobalId сборки"""
+        from geometry_converter import convert_assembly_to_meshes
+
+        color_map = {
+            "STUD": 0x8B8B8B,
+            "WASHER": 0xA9A9A9,
+            "NUT": 0x696969,
+            "ANCHORBOLT": 0x4F4F4F,
+        }
+
+        if assembly_name and hasattr(assembly_name, "__str__"):
+            assembly_name = str(assembly_name)
+
+        assembly_info = {
+            "bolt_type": bolt_type,
+            "diameter": diameter,
+            "length": length,
+            "material": material,
+            "name": assembly_name or f"bolt_{bolt_type}_M{diameter}x{length}",
+            "globalId": assembly.GlobalId,
+        }
+
         mesh_data = convert_assembly_to_meshes(self.ifc, components, color_map, assembly_info)
 
         if not mesh_data or not mesh_data.get("meshes"):
@@ -831,12 +875,10 @@ class InstanceFactory:
 
                     # Удаляем временный продукт и всю цепочку связанных сущностей
                     import ifcopenshell.util.element
-                    
+
                     context = temp_shape_rep.ContextOfItems
                     ifcopenshell.util.element.remove_deep2(
-                        self.ifc, 
-                        temp_product,
-                        do_not_delete={context}
+                        self.ifc, temp_product, do_not_delete={context}
                     )
 
                     if shape and len(shape.geometry.verts) > 0:
@@ -848,16 +890,16 @@ class InstanceFactory:
 
                         # Свариваем вершины которые находятся близко друг к другу
                         # Это нужно для BRP002: IfcClosedShell должен быть связным
-                        verts_mm, faces = self._weld_nearby_vertices(verts_mm, faces, tolerance=0.01)
+                        verts_mm, faces = self._weld_nearby_vertices(
+                            verts_mm, faces, tolerance=0.01
+                        )
 
                         # Исправляем ориентацию треугольников для GEM001
                         # Все нормали должны быть направлены наружу
                         verts_mm, faces = self._fix_triangle_orientation(verts_mm, faces)
 
                         # Преобразуем в points и triangles
-                        points = [
-                            tuple(verts_mm[i : i + 3]) for i in range(0, len(verts_mm), 3)
-                        ]
+                        points = [tuple(verts_mm[i : i + 3]) for i in range(0, len(verts_mm), 3)]
                         triangles = [list(faces[i : i + 3]) for i in range(0, len(faces), 3)]
 
                         # Создаём IfcFacetedBrep
@@ -869,7 +911,7 @@ class InstanceFactory:
                         assembly.Representation = self.ifc.create_entity(
                             "IfcProductDefinitionShape", Representations=[shape_rep]
                         )
-                        
+
                         # Удаляем unified_shape и all_solids
                         import ifcopenshell.util.element
 
@@ -879,18 +921,14 @@ class InstanceFactory:
                             *self.ifc.by_type("IfcPerson"),
                             *self.ifc.by_type("IfcOrganization"),
                         }
-                        
+
                         ifcopenshell.util.element.remove_deep2(
-                            self.ifc, 
-                            unified_shape,
-                            do_not_delete=protected
+                            self.ifc, unified_shape, do_not_delete=protected
                         )
-                        
+
                         if old_representation:
                             ifcopenshell.util.element.remove_deep2(
-                                self.ifc, 
-                                old_representation,
-                                do_not_delete=protected
+                                self.ifc, old_representation, do_not_delete=protected
                             )
                     else:
                         raise ValueError("Empty mesh from ifcopenshell.geom")
@@ -962,6 +1000,7 @@ class InstanceFactory:
                 "length": length,
                 "material": material,
                 "name": assembly_name or f"bolt_{bolt_type}_M{diameter}x{length}",
+                "globalId": assembly.GlobalId,
             },
         }
 

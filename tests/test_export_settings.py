@@ -63,7 +63,7 @@ class TestExportSettings:
 
     def test_assembly_class_element_assembly(self, factory, bolt_params):
         """IfcElementAssembly: сборка создаётся как IfcElementAssembly
-        
+
         Согласно правилу OJT001: PredefinedType пустой (наследуется от типа),
         ObjectType указан для уточнения типа объекта.
         """
@@ -228,7 +228,7 @@ class TestExportSettings:
         """Тест всех комбинаций настроек"""
         # Создаём factory с правильным geometry_type
         factory = InstanceFactory(ifc_doc, geometry_type=geometry_type)
-        
+
         result = factory.create_bolt_assembly(
             assembly_class=assembly_class,
             assembly_mode=assembly_mode,
@@ -248,7 +248,9 @@ class TestExportSettings:
         # PredefinedType должен быть пустым (наследуется от типа)
         if assembly_class == "IfcElementAssembly":
             assert result["assembly"].is_a("IfcElementAssembly")
-            assert result["assembly"].PredefinedType is None, "PredefinedType должен быть пустым (OJT001)"
+            assert (
+                result["assembly"].PredefinedType is None
+            ), "PredefinedType должен быть пустым (OJT001)"
             assert result["assembly"].ObjectType == "ANCHORBOLT"
         else:
             assert result["assembly"].is_a("IfcMechanicalFastener")
@@ -343,12 +345,16 @@ class TestExportSettings:
         # Проверяем что у типа PredefinedType != NOTDEFINED
         relating_type = assembly_type_relation.RelatingType
         assert relating_type.PredefinedType is not None, "Тип должен иметь PredefinedType"
-        assert not relating_type.PredefinedType.startswith("NOTDEFINED"), "PredefinedType типа не должен быть NOTDEFINED"
+        assert not relating_type.PredefinedType.startswith(
+            "NOTDEFINED"
+        ), "PredefinedType типа не должен быть NOTDEFINED"
 
         # Тест для IfcMechanicalFastener (компоненты)
         for comp in result["components"]:
             if comp.is_a("IfcMechanicalFastener"):
-                assert comp.PredefinedType is None, f"Компонент {comp.is_a()} должен иметь пустой PredefinedType (OJT001)"
+                assert (
+                    comp.PredefinedType is None
+                ), f"Компонент {comp.is_a()} должен иметь пустой PredefinedType (OJT001)"
 
     def test_spatial_structure_valid(self, factory, bolt_params):
         """Пространственная структура корректна"""
