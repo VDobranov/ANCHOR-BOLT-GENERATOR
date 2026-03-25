@@ -170,27 +170,73 @@ class IFCGenerator:
         if element is None:
             return None
 
-        # Получение PropertySet через IsDefinedBy
         property_sets = []
+
+        # 1. Получение PropertySet через IsDefinedBy (прямые Pset на экземпляре)
         is_defined_by = getattr(element, "IsDefinedBy", None)
         if is_defined_by:
             for rel in is_defined_by:
                 if rel.is_a("IfcRelDefinesByProperties"):
                     pset = rel.RelatingPropertyDefinition
-                    properties = []
-                    for prop in pset.HasProperties:
-                        prop_value = getattr(prop, "NominalValue", None)
-                        properties.append(
-                            {
-                                "name": prop.Name,
-                                "value": prop_value.value if prop_value else None,
-                                "type": prop_value.is_a() if prop_value else None,
-                            }
-                        )
+                    properties = self._extract_properties(pset)
+                    if properties:
+                        property_sets.append({"name": pset.Name, "properties": properties})
 
-                    property_sets.append({"name": pset.Name, "properties": properties})
+        # 2. Получение PropertySet из типа (через IsTypedBy)
+        # Элементы связаны с типом через IfcRelDefinesByType
+        is_typed_by = getattr(element, "IsTypedBy", None)
+        if is_typed_by:
+            for rel in is_typed_by:
+                if rel.is_a("IfcRelDefinesByType"):
+                    related_type = rel.RelatingType
+                    # Тип может иметь PropertySet через HasPropertySets
+                    has_property_sets = getattr(related_type, "HasPropertySets", None)
+                    if has_property_sets:
+                        for pset in has_property_sets:
+                            properties = self._extract_properties(pset)
+                            if properties:
+                                property_sets.append({"name": pset.Name, "properties": properties})
 
         return {
             "name": element.Name or element.ObjectType or "Unnamed",
             "property_sets": property_sets,
         }
+
+    def _extract_properties(self, pset):
+        """Извлечение свойств из PropertySet"""
+        properties = []
+        has_properties = getattr(pset, "HasProperties", None)
+        if has_properties:
+            for prop in has_properties:
+                prop_value = getattr(prop, "NominalValue", None)
+                # Получаем значение: для type declaration используем напрямую
+                value = None
+                prop_type = None
+                if prop_value is not None:
+                    try:
+                        # Пытаемся получить .value для оберток
+                        value = prop_value.value
+                        prop_type = prop_value.is_a()
+                    except (AttributeError, TypeError):
+                        # Если это entity_instance (IfcLengthMeasure и т.д.)
+                        # Конвертируем в float через обёртку
+                        if hasattr(prop_value, "wrappedValue"):
+                            value = prop_value.wrappedValue
+                            prop_type = prop_value.is_a()
+                        else:
+                            # Для простых типов
+                            value = (
+                                float(prop_value)
+                                if isinstance(prop_value, (int, float))
+                                else str(prop_value)
+                            )
+                            prop_type = type(prop_value).__name__
+
+                properties.append(
+                    {
+                        "name": prop.Name,
+                        "value": value,
+                        "type": prop_type,
+                    }
+                )
+        return properties

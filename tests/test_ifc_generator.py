@@ -237,3 +237,44 @@ class TestIFCGeneratorValidate:
         assert "name" in result
         assert "property_sets" in result
         assert isinstance(result["property_sets"], list)
+
+    def test_get_element_properties_from_type(self):
+        """get_element_properties должен получать PropertySet из типа"""
+        from document_manager import IFCDocumentManager
+        from ifc_generator import IFCGenerator
+        from instance_factory import InstanceFactory
+
+        manager = IFCDocumentManager()
+        doc = manager.create_document("test_doc")
+        factory = InstanceFactory(doc)
+
+        # Создаём болт с IfcMechanicalFastener (будет Pset на типе)
+        result = factory.create_bolt_assembly(
+            bolt_type="1.1",
+            diameter=20,
+            length=800,
+            material="09Г2С",
+            assembly_class="IfcMechanicalFastener",
+        )
+
+        generator = IFCGenerator(doc)
+
+        # Получаем сборку
+        assembly = result["assembly"]
+        props = generator.get_element_properties(assembly.GlobalId)
+
+        assert props is not None
+        # Должен быть Pset_MechanicalFastenerAnchorBolt из типа
+        pset_names = [pset["name"] for pset in props.get("property_sets", [])]
+        assert "Pset_MechanicalFastenerAnchorBolt" in pset_names
+
+        # Проверяем свойства
+        anchor_pset = next(
+            (p for p in props["property_sets"] if p["name"] == "Pset_MechanicalFastenerAnchorBolt"),
+            None,
+        )
+        assert anchor_pset is not None
+        prop_names = [p["name"] for p in anchor_pset["properties"]]
+        assert "AnchorBoltDiameter" in prop_names
+        assert "AnchorBoltLength" in prop_names
+        assert "AnchorBoltThreadLength" in prop_names
