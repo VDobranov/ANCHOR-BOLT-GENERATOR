@@ -142,7 +142,10 @@ END-ISO-10303-21;
 
         # Site с OwnerHistory
         site = f.create_entity(
-            "IfcSite", GlobalId=ifc.guid.new(), OwnerHistory=f.owner_history, Name="Default Site"
+            "IfcSite",
+            GlobalId=ifc.guid.new(),
+            OwnerHistory=f.owner_history,
+            Name="Шаблонная площадка",
         )
         # Размещение сайта (мировая СК, единичная матрица)
         run("geometry.edit_object_placement", f, product=site, matrix=np.eye(4))
@@ -152,7 +155,7 @@ END-ISO-10303-21;
             "IfcBuilding",
             GlobalId=ifc.guid.new(),
             OwnerHistory=f.owner_history,
-            Name="Default Building",
+            Name="Шаблонное здание",
         )
         # Размещение здания (относительно сайта, без смещения)
         run("geometry.edit_object_placement", f, product=building, matrix=np.eye(4))
@@ -162,7 +165,7 @@ END-ISO-10303-21;
             "IfcBuildingStorey",
             GlobalId=ifc.guid.new(),
             OwnerHistory=f.owner_history,
-            Name="Storey 1",
+            Name="Шаблонный этаж",
             Elevation=0.0,
         )
         # Размещение этажа (относительно здания, без смещения)
