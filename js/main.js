@@ -112,6 +112,18 @@ async function generateBolt(params) {
             viewer.updateMeshes(result.meshData);
         }
 
+        // Обновление панели свойств (сборка по умолчанию)
+        if (result.meshData?.assembly_info) {
+            const assemblyGlobalId = result.meshData.assembly_info.globalId;
+            if (assemblyGlobalId) {
+                const props = await bridge.getElementProperties(assemblyGlobalId);
+                UI.updatePropertiesPanel({
+                    name: props?.name || result.meshData.assembly_info.name,
+                    elementProperties: props
+                });
+            }
+        }
+
         // Включение кнопки download
         UI.toggleDownloadButton(true);
         UI.showStatus(
