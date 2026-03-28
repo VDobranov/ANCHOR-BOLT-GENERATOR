@@ -1022,6 +1022,8 @@ def generate_bolt_assembly(
     assembly_class="IfcMechanicalFastener",
     assembly_mode="separate",
     geometry_type="solid",
+    add_standard_pset=True,
+    pset_expertise="none",
 ) -> Tuple[str, Dict[str, Any]]:
     """
     Главная функция для генерации болта
@@ -1035,6 +1037,8 @@ def generate_bolt_assembly(
         assembly_class: Класс сборки ('IfcMechanicalFastener' или 'IfcElementAssembly')
         assembly_mode: Режим формирования ('separate' или 'unified')
         geometry_type: Тип геометрии ('solid' или 'triangulated')
+        add_standard_pset: Добавлять стандартные PSet (True/False)
+        pset_expertise: Добавлять PSet для экспертизы ('none', 'MGE', 'MOGE', 'SPB_GAU_CGE')
 
     Returns:
         Кортеж (ifc_string, mesh_data):
