@@ -54,10 +54,12 @@ class MockIfcEntity:
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-        # Установим RepresentationMaps по умолчанию для типов
+        # Установим RepresentationMaps и HasPropertySets по умолчанию для типов
         if entity_type == "IfcMechanicalFastenerType":
             if not hasattr(self, "RepresentationMaps"):
                 self.RepresentationMaps = None
+            if not hasattr(self, "HasPropertySets"):
+                self.HasPropertySets = []
 
     def is_a(self, entity_type: Optional[str] = None) -> str:
         """Получение типа сущности или проверка типа"""
@@ -201,6 +203,48 @@ class MockIfcDoc:
         return len(self.entities)
 
 
+def mock_ifcopenshell_api_run(func_name: str, ifc_doc, *args, **kwargs):
+    """
+    Мок для ifcopenshell.api.run
+
+    Поддерживает:
+    - pset.add_pset: создаёт IfcPropertySet
+    - pset.edit_pset: добавляет свойства в Pset
+    """
+    if func_name == "pset.add_pset":
+        product = kwargs.get("product")
+        name = kwargs.get("name")
+        pset = ifc_doc.create_entity("IfcPropertySet", Name=name)
+        # Mock entity
+        if not isinstance(getattr(product, "HasPropertySets", None), list):
+            product.HasPropertySets = []
+        product.HasPropertySets.append(pset)
+        return pset
+
+    elif func_name == "pset.edit_pset":
+        pset = kwargs.get("pset")
+        properties = kwargs.get("properties", {})
+        # Добавляем свойства в Pset
+        # Принудительно устанавливаем в список, если это не список
+        if not isinstance(getattr(pset, "HasProperties", None), list):
+            pset.HasProperties = []
+        for prop_name, prop_value in properties.items():
+            prop_entity = ifc_doc.create_entity("IfcPropertySingleValue", Name=prop_name)
+            # Создаём NominalValue
+            if isinstance(prop_value, float):
+                nominal = ifc_doc.create_entity("IfcReal", Value=prop_value)
+            elif isinstance(prop_value, int):
+                nominal = ifc_doc.create_entity("IfcInteger", Value=prop_value)
+            else:
+                nominal = ifc_doc.create_entity("IfcText", Value=str(prop_value))
+            prop_entity.NominalValue = nominal
+            pset.HasProperties.append(prop_entity)
+        return pset
+
+    # Для других функций возвращаем пустой dict
+    return {}
+
+
 # =============================================================================
 # Фикстуры
 # =============================================================================
@@ -221,6 +265,18 @@ def mock_ifc_doc() -> MockIfcDoc:
         Экземпляр MockIfcDoc
     """
     return MockIfcDoc()
+
+
+@pytest.fixture(scope="function")
+def mock_ifc_api_run(monkeypatch):
+    """
+    Мокирование ifcopenshell.api.run для тестов
+
+    Применяется явно в тестах, требующих мокирования.
+    """
+    import ifcopenshell.api
+
+    monkeypatch.setattr(ifcopenshell.api, "run", mock_ifcopenshell_api_run)
 
 
 @pytest.fixture(scope="function")

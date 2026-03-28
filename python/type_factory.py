@@ -45,6 +45,30 @@ class TypeFactory:
         owner_histories = self.ifc.by_type("IfcOwnerHistory")
         self.owner_history = owner_histories[0] if owner_histories else None
 
+    def _add_element_component_common_pset(self, product):
+        """
+        Добавление Pset_ElementComponentCommon для IfcMechanicalFastenerType
+
+        Args:
+            product: IfcMechanicalFastenerType, для которого добавляется Pset
+        """
+        pset_common = ifcopenshell.api.run(
+            "pset.add_pset",
+            self.ifc,
+            product=product,
+            name="Pset_ElementComponentCommon",
+        )
+        ifcopenshell.api.run(
+            "pset.edit_pset",
+            self.ifc,
+            pset=pset_common,
+            properties={
+                "CorrosionTreatment": "GALVANISED",
+                "DeliveryType": "LOOSE",
+                "Status": "NEW",
+            },
+        )
+
     def get_or_create_stud_type(self, bolt_type, diameter, length, material):
         """
         Создание/получение типа шпильки с RepresentationMap
@@ -110,6 +134,9 @@ class TypeFactory:
         )
         self.material_manager.associate_material(stud_type, mat)
 
+        # Добавляем Pset_ElementComponentCommon для всех IfcMechanicalFastenerType
+        self._add_element_component_common_pset(stud_type)
+
         self.types_cache[key] = stud_type
         return stud_type
 
@@ -165,6 +192,9 @@ class TypeFactory:
         )
         self.material_manager.associate_material(nut_type, mat)
 
+        # Добавляем Pset_ElementComponentCommon для всех IfcMechanicalFastenerType
+        self._add_element_component_common_pset(nut_type)
+
         self.types_cache[key] = nut_type
         return nut_type
 
@@ -213,6 +243,9 @@ class TypeFactory:
             mat_name, category="Steel", material_key=material
         )
         self.material_manager.associate_material(washer_type, mat)
+
+        # Добавляем Pset_ElementComponentCommon для всех IfcMechanicalFastenerType
+        self._add_element_component_common_pset(washer_type)
 
         self.types_cache[key] = washer_type
         return washer_type
@@ -269,6 +302,9 @@ class TypeFactory:
             mat_name, category="Steel", material_key=material
         )
         self.material_manager.associate_material(plate_type, mat)
+
+        # Добавляем Pset_ElementComponentCommon для всех IfcMechanicalFastenerType
+        self._add_element_component_common_pset(plate_type)
 
         self.types_cache[key] = plate_type
         return plate_type
@@ -344,6 +380,9 @@ class TypeFactory:
                     "AnchorBoltThreadLength": float(thread_length),
                 },
             )
+
+            # Добавляем Pset_ElementComponentCommon для всех IfcMechanicalFastenerType
+            self._add_element_component_common_pset(assembly_type)
 
         # Создаём материал сборки
         # Согласно IFC102: IfcMaterialList deprecated в IFC4
