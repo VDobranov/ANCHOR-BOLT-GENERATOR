@@ -112,6 +112,15 @@ class TypeFactory:
             RelatingPropertyDefinition=pset_common,
         )
 
+        # Вручную обновляем HasPropertySets на продукте
+        # ifcopenshell не делает это автоматически при создании IfcRelDefinesByProperties
+        existing_psets = getattr(product, "HasPropertySets", None)
+        if existing_psets:
+            # Добавляем новый Pset к существующим (кортеж неизменяем, создаём новый)
+            product.HasPropertySets = tuple(existing_psets) + (pset_common,)
+        else:
+            product.HasPropertySets = (pset_common,)
+
     def get_or_create_stud_type(self, bolt_type, diameter, length, material):
         """
         Создание/получение типа шпильки с RepresentationMap
