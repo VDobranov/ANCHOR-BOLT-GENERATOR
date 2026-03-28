@@ -179,5 +179,25 @@
     <script type="module" src="js/init.js"></script>
     <script type="module" src="js/resize.js"></script>
     <script type="module" src="js/properties-panel.js"></script>
+    
+    <!-- Логика зависимостей полей настроек экспорта -->
+    <script>
+        // Класс для сборки доступен только при режиме "Вроссыпь"
+        document.addEventListener('DOMContentLoaded', () => {
+            const assemblyModeSelect = document.getElementById('assemblyMode');
+            const assemblyClassSelect = document.getElementById('assemblyClass');
+            const assemblyClassGroup = assemblyClassSelect.closest('.form-group');
+            
+            function updateAssemblyClassDisabled() {
+                const isSeparate = assemblyModeSelect.value === 'separate';
+                assemblyClassSelect.disabled = !isSeparate;
+                assemblyClassGroup.style.opacity = isSeparate ? '1' : '0.5';
+                assemblyClassGroup.style.pointerEvents = isSeparate ? 'auto' : 'none';
+            }
+            
+            assemblyModeSelect.addEventListener('change', updateAssemblyClassDisabled);
+            updateAssemblyClassDisabled();
+        });
+    </script>
 </body>
 </html>

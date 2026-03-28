@@ -93,9 +93,13 @@ async function generateBolt(params) {
         // Получение настроек экспорта
         const settings = exportSettings.getSettings();
 
+        // Класс для сборки доступен только при режиме "Вроссыпь"
+        const assemblyClass =
+            settings.assemblyMode === 'separate' ? settings.assemblyClass : 'IfcMechanicalFastener';
+
         // Конвертация настроек для Python
         const exportSettingsForPython = {
-            assembly_class: settings.assemblyClass,
+            assembly_class: assemblyClass,
             assembly_mode: settings.assemblyMode,
             geometry_type: settings.geometryType,
             add_standard_pset: settings.addStandardPSet,

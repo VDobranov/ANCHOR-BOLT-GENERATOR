@@ -254,7 +254,16 @@ class IFCBridge {
                 geometry_type: 'solid'
             };
 
-            const settingsJson = JSON.stringify(settings)
+            // Класс для сборки доступен только при режиме "Вроссыпь"
+            const assemblyClass =
+                settings.assembly_mode === 'separate'
+                    ? settings.assembly_class
+                    : 'IfcMechanicalFastener';
+
+            const settingsJson = JSON.stringify({
+                ...settings,
+                assembly_class: assemblyClass
+            })
                 .replace(/false/g, 'False')
                 .replace(/true/g, 'True');
 
