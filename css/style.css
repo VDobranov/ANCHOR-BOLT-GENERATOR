@@ -81,10 +81,26 @@ header a:after {
 /* Main grid */
 .main-grid {
     display: grid;
-    grid-template-columns: 450px 1fr;
+    grid-template-columns: 450px 8px 1fr;
     gap: 0;
     flex: 1;
     overflow: hidden;
+}
+
+/* Resize handle */
+.resize-handle {
+    background-color: var(--border-color);
+    cursor: col-resize;
+    transition: background-color 0.2s;
+    z-index: 10;
+}
+
+.resize-handle:hover {
+    background-color: var(--primary-color);
+}
+
+.resize-handle.resizing {
+    background-color: var(--primary-color);
 }
 
 /* Form section */
@@ -300,14 +316,55 @@ form.disabled {
     padding: 16px;
     overflow-y: auto;
     z-index: 5;
+    transition: max-height 0.3s ease;
+}
+
+.properties-panel.collapsed {
+    max-height: 50px;
+    overflow: hidden;
+}
+
+.properties-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
 }
 
 .properties-panel h3 {
     font-size: 14px;
-    margin-bottom: 12px;
+    margin: 0;
     color: var(--text-color);
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 10px;
+}
+
+.properties-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--secondary-color);
+    transition:
+        transform 0.3s ease,
+        color 0.2s;
+}
+
+.properties-toggle:hover {
+    color: var(--primary-color);
+}
+
+.chevron {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s ease;
+}
+
+.properties-panel.collapsed .chevron {
+    transform: rotate(-180deg);
 }
 
 .properties-panel .placeholder {
@@ -373,7 +430,7 @@ footer {
 /* Responsive */
 @media (max-width: 1024px) {
     .main-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
     }
 
     .form-section {
@@ -383,8 +440,29 @@ footer {
         box-shadow: inset 0 -1px 0 var(--border-color);
     }
 
+    .resize-handle {
+        display: none;
+    }
+
+    .viewer-section {
+        height: 60vh;
+    }
+
+    .viewer-section #canvas3D {
+        height: 100%;
+    }
+
     .properties-panel {
         width: 320px;
+        max-height: 50px;
+    }
+
+    .properties-panel.collapsed {
+        max-height: 50px;
+    }
+
+    .properties-panel:not(.collapsed) {
+        max-height: 250px;
     }
 }
 
