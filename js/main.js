@@ -125,6 +125,7 @@ async function generateBolt(params) {
                 const props = await bridge.getElementProperties(assemblyGlobalId);
                 UI.updatePropertiesPanel({
                     name: props?.name || result.meshData.assembly_info.name,
+                    ifc_type: props?.ifc_type || 'N/A',
                     elementProperties: props
                 });
             }
