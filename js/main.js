@@ -97,7 +97,9 @@ async function generateBolt(params) {
         const exportSettingsForPython = {
             assembly_class: settings.assemblyClass,
             assembly_mode: settings.assemblyMode,
-            geometry_type: settings.geometryType
+            geometry_type: settings.geometryType,
+            add_standard_pset: settings.addStandardPSet,
+            pset_expertise: settings.psetExpertise
         };
 
         const result = await bridge.generateBolt(params, exportSettingsForPython);

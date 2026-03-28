@@ -95,6 +95,30 @@
                         </select>
                     </div>
 
+                    <!-- Добавлять стандартные PSet -->
+                    <div class="form-group">
+                        <label>Добавлять стандартные PSet:</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="addStandardPSet" value="yes" checked> Да
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="addStandardPSet" value="no"> Нет
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Добавлять PSet для экспертизы -->
+                    <div class="form-group">
+                        <label for="psetExpertise">Добавлять PSet для экспертизы:</label>
+                        <select id="psetExpertise" required>
+                            <option value="none" selected>Нет</option>
+                            <option value="MGE">МГЭ</option>
+                            <option value="MOGE">МОГЭ</option>
+                            <option value="SPB_GAU_CGE">СПб ГАУ ЦГЭ</option>
+                        </select>
+                    </div>
+
                     <!-- Кнопки -->
                     <div class="button-group">
                         <button type="button" id="downloadBtn" class="btn btn-secondary" disabled>

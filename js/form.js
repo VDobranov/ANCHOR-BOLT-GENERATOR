@@ -273,7 +273,9 @@ class IFCExportSettings {
         this.elements = {
             assemblyClass: document.getElementById('assemblyClass'),
             assemblyMode: document.getElementById('assemblyMode'),
-            geometryType: document.getElementById('geometryType')
+            geometryType: document.getElementById('geometryType'),
+            addStandardPSet: document.getElementsByName('addStandardPSet'),
+            psetExpertise: document.getElementById('psetExpertise')
         };
 
         // Добавляем обработчики изменений
@@ -284,7 +286,8 @@ class IFCExportSettings {
      * Настройка обработчиков событий
      */
     setupListeners() {
-        const { assemblyClass, assemblyMode, geometryType } = this.elements;
+        const { assemblyClass, assemblyMode, geometryType, addStandardPSet, psetExpertise } =
+            this.elements;
 
         // При изменении настроек — перегенерировать болт
         if (assemblyClass) {
@@ -295,6 +298,14 @@ class IFCExportSettings {
         }
         if (geometryType) {
             geometryType.addEventListener('change', () => this.triggerChange());
+        }
+        if (addStandardPSet) {
+            addStandardPSet.forEach((radio) => {
+                radio.addEventListener('change', () => this.triggerChange());
+            });
+        }
+        if (psetExpertise) {
+            psetExpertise.addEventListener('change', () => this.triggerChange());
         }
     }
 
@@ -312,10 +323,23 @@ class IFCExportSettings {
      * @returns {Object} Настройки экспорта
      */
     getSettings() {
+        // Получение значения выбранной радио-кнопки
+        let addStandardPSet = 'yes';
+        if (this.elements.addStandardPSet) {
+            for (const radio of this.elements.addStandardPSet) {
+                if (radio.checked) {
+                    addStandardPSet = radio.value;
+                    break;
+                }
+            }
+        }
+
         const settings = {
             assemblyClass: this.elements.assemblyClass?.value || 'IfcMechanicalFastener',
             assemblyMode: this.elements.assemblyMode?.value || 'separate',
-            geometryType: this.elements.geometryType?.value || 'solid'
+            geometryType: this.elements.geometryType?.value || 'solid',
+            addStandardPSet: addStandardPSet === 'yes',
+            psetExpertise: this.elements.psetExpertise?.value || 'none'
         };
 
         return settings;
@@ -335,6 +359,17 @@ class IFCExportSettings {
         if (settings.geometryType && this.elements.geometryType) {
             this.elements.geometryType.value = settings.geometryType;
         }
+        if (settings.addStandardPSet !== undefined && this.elements.addStandardPSet) {
+            for (const radio of this.elements.addStandardPSet) {
+                if (radio.value === (settings.addStandardPSet ? 'yes' : 'no')) {
+                    radio.checked = true;
+                    break;
+                }
+            }
+        }
+        if (settings.psetExpertise && this.elements.psetExpertise) {
+            this.elements.psetExpertise.value = settings.psetExpertise;
+        }
     }
 
     /**
@@ -345,7 +380,9 @@ class IFCExportSettings {
         return {
             assemblyClass: 'IfcMechanicalFastener',
             assemblyMode: 'separate',
-            geometryType: 'solid'
+            geometryType: 'solid',
+            addStandardPSet: true,
+            psetExpertise: 'none'
         };
     }
 }
