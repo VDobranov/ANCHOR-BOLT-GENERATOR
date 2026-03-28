@@ -323,20 +323,20 @@ form.disabled {
     bottom: 20px;
     right: 20px;
     width: 400px;
-    max-height: 300px;
+    max-height: 60px;
     background: white;
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     padding: 16px;
-    overflow-y: auto;
+    overflow: hidden;
     z-index: 5;
     transition: max-height 0.3s ease;
 }
 
-.properties-panel.collapsed {
-    max-height: 60px;
-    overflow: hidden;
+.properties-panel.expanded {
+    max-height: calc(100% - 40px);
+    overflow-y: auto;
 }
 
 .properties-panel-header {
@@ -378,7 +378,7 @@ form.disabled {
     transition: transform 0.3s ease;
 }
 
-.properties-panel.collapsed .chevron {
+.properties-panel:not(.expanded) .chevron {
     transform: rotate(-180deg);
 }
 
@@ -469,15 +469,13 @@ footer {
 
     .properties-panel {
         width: 320px;
-        max-height: 50px;
+        max-height: 60px;
+        overflow: hidden;
     }
 
-    .properties-panel.collapsed {
-        max-height: 50px;
-    }
-
-    .properties-panel:not(.collapsed) {
-        max-height: 250px;
+    .properties-panel.expanded {
+        max-height: calc(100% - 40px);
+        overflow-y: auto;
     }
 }
 

@@ -26,15 +26,17 @@ class PropertiesPanelToggler {
 
     /**
      * Установка начального состояния
-     * На маленьких экранах - свернуто, на больших - развернуто
+     * На маленьких экранах - свернуто (по CSS), на больших - развернуто
      */
     setInitialState() {
         const isSmallScreen = window.innerWidth <= this.smallScreenThreshold;
 
         if (isSmallScreen) {
-            this.panel.classList.add('collapsed');
+            // На маленьких экранах по умолчанию свёрнуто (CSS)
+            this.panel.classList.remove('expanded');
         } else {
-            this.panel.classList.remove('collapsed');
+            // На больших экранах развёрнуто
+            this.panel.classList.add('expanded');
         }
     }
 
@@ -42,7 +44,7 @@ class PropertiesPanelToggler {
      * Переключение состояния
      */
     toggle() {
-        this.panel.classList.toggle('collapsed');
+        this.panel.classList.toggle('expanded');
     }
 
     /**
@@ -51,12 +53,11 @@ class PropertiesPanelToggler {
     handleResize() {
         const isSmallScreen = window.innerWidth <= this.smallScreenThreshold;
 
-        // При изменении размера экрана не меняем состояние,
-        // если пользователь явно не свернул/развернул
-        // Но если перешли порог - применяем состояние по умолчанию
-        if (isSmallScreen && !this.panel.classList.contains('collapsed')) {
-            // На маленьком экране по умолчанию свернуто
-            // но не сворачиваем автоматически, если пользователь развернул
+        // При изменении размера экрана применяем состояние по умолчанию
+        if (isSmallScreen) {
+            this.panel.classList.remove('expanded');
+        } else {
+            this.panel.classList.add('expanded');
         }
     }
 
@@ -64,14 +65,14 @@ class PropertiesPanelToggler {
      * Развернуть панель
      */
     expand() {
-        this.panel.classList.remove('collapsed');
+        this.panel.classList.add('expanded');
     }
 
     /**
      * Свернуть панель
      */
     collapse() {
-        this.panel.classList.add('collapsed');
+        this.panel.classList.remove('expanded');
     }
 }
 
