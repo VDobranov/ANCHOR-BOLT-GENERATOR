@@ -171,8 +171,8 @@ class IFCGenerator:
         if element is None:
             return None
 
-        # Получаем IFC тип элемента
-        ifc_type = element.is_a() if hasattr(element, "is_a") else "Unknown"
+        # Получаем IFC тип элемента (конвертируем в строку)
+        ifc_type = str(element.is_a()) if hasattr(element, "is_a") else "Unknown"
 
         property_sets = []
 
@@ -196,6 +196,9 @@ class IFCGenerator:
                     # Тип может иметь PropertySet через HasPropertySets
                     has_property_sets = getattr(related_type, "HasPropertySets", None)
                     if has_property_sets:
+                        # Конвертируем кортеж в список, если нужно
+                        if isinstance(has_property_sets, tuple):
+                            has_property_sets = list(has_property_sets)
                         for pset in has_property_sets:
                             properties = self._extract_properties(pset)
                             if properties:
@@ -213,29 +216,44 @@ class IFCGenerator:
         has_properties = getattr(pset, "HasProperties", None)
         if has_properties:
             for prop in has_properties:
-                prop_value = getattr(prop, "NominalValue", None)
-                # Получаем значение: для type declaration используем напрямую
                 value = None
                 prop_type = None
-                if prop_value is not None:
-                    try:
-                        # Пытаемся получить .value для оберток
-                        value = prop_value.value
-                        prop_type = prop_value.is_a()
-                    except (AttributeError, TypeError):
-                        # Если это entity_instance (IfcLengthMeasure и т.д.)
-                        # Конвертируем в float через обёртку
-                        if hasattr(prop_value, "wrappedValue"):
-                            value = prop_value.wrappedValue
-                            prop_type = prop_value.is_a()
+
+                # Проверяем IfcPropertyEnumeratedValue
+                if prop.is_a("IfcPropertyEnumeratedValue"):
+                    enum_values = getattr(prop, "EnumerationValues", None)
+                    if enum_values and len(enum_values) > 0:
+                        # Берём первое значение из enumeration
+                        first_val = enum_values[0]
+                        if hasattr(first_val, "value"):
+                            value = first_val.value
+                        elif hasattr(first_val, "wrappedValue"):
+                            value = first_val.wrappedValue
                         else:
-                            # Для простых типов
-                            value = (
-                                float(prop_value)
-                                if isinstance(prop_value, (int, float))
-                                else str(prop_value)
-                            )
-                            prop_type = type(prop_value).__name__
+                            value = str(first_val)
+                        prop_type = "IfcPropertyEnumeratedValue"
+                else:
+                    # IfcPropertySingleValue и другие
+                    prop_value = getattr(prop, "NominalValue", None)
+                    if prop_value is not None:
+                        try:
+                            # Пытаемся получить .value для оберток
+                            value = prop_value.value
+                            prop_type = prop_value.is_a()
+                        except (AttributeError, TypeError):
+                            # Если это entity_instance (IfcLengthMeasure и т.д.)
+                            # Конвертируем в float через обёртку
+                            if hasattr(prop_value, "wrappedValue"):
+                                value = prop_value.wrappedValue
+                                prop_type = prop_value.is_a()
+                            else:
+                                # Для простых типов
+                                value = (
+                                    float(prop_value)
+                                    if isinstance(prop_value, (int, float))
+                                    else str(prop_value)
+                                )
+                                prop_type = type(prop_value).__name__
 
                 properties.append(
                     {

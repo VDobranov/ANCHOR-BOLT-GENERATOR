@@ -353,6 +353,7 @@ class IFCViewer {
                         new CustomEvent('meshSelected', {
                             detail: {
                                 name: props?.name || meshItem.name,
+                                ifc_type: props?.ifc_type || 'N/A',
                                 elementProperties: props
                             }
                         })
@@ -374,6 +375,7 @@ class IFCViewer {
                     new CustomEvent('meshSelected', {
                         detail: {
                             name: props?.name || this.assemblyInfo.name || 'Assembly',
+                            ifc_type: props?.ifc_type || 'N/A',
                             elementProperties: props
                         }
                     })
