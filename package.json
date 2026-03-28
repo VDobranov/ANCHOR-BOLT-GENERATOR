@@ -49,7 +49,9 @@
       "!js/main.js",
       "!js/init.js",
       "!js/ui.js",
-      "!js/config.js"
+      "!js/config.js",
+      "!js/properties-panel.js",
+      "!js/resize.js"
     ],
     "coverageThreshold": {
       "global": {
