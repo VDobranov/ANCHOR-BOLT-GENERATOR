@@ -81,7 +81,7 @@ header a:after {
 /* Main grid */
 .main-grid {
     display: grid;
-    grid-template-columns: 400px 1fr;
+    grid-template-columns: 450px 1fr;
     gap: 0;
     flex: 1;
     overflow: hidden;
