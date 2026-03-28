@@ -114,7 +114,7 @@ header a:after {
 }
 
 .form-group {
-    margin-bottom: 18px;
+    margin-bottom: 12px;
     display: flex;
     align-items: center;
 }
@@ -122,17 +122,17 @@ header a:after {
 .form-group label {
     flex: 1;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-color);
 }
 
 .form-group input,
 .form-group select {
     flex: 2;
-    padding: 10px 12px;
+    padding: 6px 10px;
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
-    font-size: 14px;
+    font-size: 13px;
     font-family: inherit;
     color: var(--text-color);
     transition:
@@ -170,15 +170,15 @@ header a:after {
 .button-group {
     display: flex;
     gap: 10px;
-    margin-top: 25px;
+    margin-top: 15px;
 }
 
 .btn {
     flex: 1;
-    padding: 12px 16px;
+    padding: 8px 12px;
     border: none;
     border-radius: var(--radius);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
