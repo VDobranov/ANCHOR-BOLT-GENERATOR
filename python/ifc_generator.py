@@ -194,17 +194,8 @@ class IFCGenerator:
                 if rel.is_a("IfcRelDefinesByType"):
                     related_type = rel.RelatingType
 
-                    # 2a. Получение PropertySet через IfcRelDefinesByProperties на типе
-                    # Ищем все IfcRelDefinesByProperties в документе
-                    for type_rel in self.ifc.by_type("IfcRelDefinesByProperties"):
-                        related_objs = getattr(type_rel, "RelatedObjects", [])
-                        if related_objs and related_type in related_objs:
-                            pset = type_rel.RelatingPropertyDefinition
-                            properties = self._extract_properties(pset)
-                            if properties:
-                                property_sets.append({"name": pset.Name, "properties": properties})
-
-                    # 2b. Получение PropertySet через HasPropertySets на типе
+                    # Получение PropertySet через HasPropertySets на типе
+                    # Это включает и Pset созданные через IfcRelDefinesByProperties
                     has_property_sets = getattr(related_type, "HasPropertySets", None)
                     if has_property_sets:
                         # Конвертируем кортеж в список, если нужно
