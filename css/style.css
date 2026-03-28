@@ -241,6 +241,21 @@ header a:after {
     cursor: not-allowed;
 }
 
+/* Form warning */
+.form-warning {
+    background-color: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #92400e;
+    margin-top: -6px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 /* Disabled form state */
 form.disabled {
     pointer-events: none;

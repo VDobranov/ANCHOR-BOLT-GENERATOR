@@ -275,7 +275,8 @@ class IFCExportSettings {
             assemblyMode: document.getElementById('assemblyMode'),
             geometryType: document.getElementById('geometryType'),
             addStandardPSet: document.getElementsByName('addStandardPSet'),
-            psetExpertise: document.getElementById('psetExpertise')
+            psetExpertise: document.getElementById('psetExpertise'),
+            psetExpertiseWarning: document.getElementById('psetExpertiseWarning')
         };
 
         // Добавляем обработчики изменений
@@ -301,11 +302,30 @@ class IFCExportSettings {
         }
         if (addStandardPSet) {
             addStandardPSet.forEach((radio) => {
-                radio.addEventListener('change', () => this.triggerChange());
+                radio.addEventListener('change', () => {
+                    this.triggerChange();
+                });
             });
         }
         if (psetExpertise) {
-            psetExpertise.addEventListener('change', () => this.triggerChange());
+            psetExpertise.addEventListener('change', () => {
+                this.updateWarning();
+                this.triggerChange();
+            });
+        }
+
+        // Инициализация предупреждения
+        this.updateWarning();
+    }
+
+    /**
+     * Обновление видимости предупреждения
+     */
+    updateWarning() {
+        const { psetExpertise, psetExpertiseWarning } = this.elements;
+        if (psetExpertise && psetExpertiseWarning) {
+            const isSelected = psetExpertise.value !== 'none';
+            psetExpertiseWarning.style.display = isSelected ? 'flex' : 'none';
         }
     }
 
