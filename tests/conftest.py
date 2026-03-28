@@ -153,6 +153,9 @@ class MockIfcDoc:
         elif entity_type == "IfcText":
             value = args[0] if args else kwargs.get("Value", "")
             entity = MockIfcEntity(entity_type, Value=value)
+        elif entity_type == "IfcLabel":
+            value = args[0] if args else kwargs.get("Value", "")
+            entity = MockIfcEntity(entity_type, Value=value)
         elif entity_type in ["IfcLineIndex", "IfcArcIndex"] and args:
             entity = MockIfcEntity(entity_type, Indices=args[0])
         else:

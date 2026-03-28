@@ -433,7 +433,13 @@ class TestGetOrCreateAssemblyType:
 
         # Проверяем Pset_ElementComponentCommon
         assert common_pset is not None
-        common_props = {p.Name: p.NominalValue.Value for p in common_pset.HasProperties}
+        # Для IfcPropertyEnumeratedValue используем EnumerationValues[0].Value
+        common_props = {}
+        for p in common_pset.HasProperties:
+            if hasattr(p, "EnumerationValues") and p.EnumerationValues:
+                common_props[p.Name] = p.EnumerationValues[0].Value
+            elif hasattr(p, "NominalValue") and p.NominalValue:
+                common_props[p.Name] = p.NominalValue.Value
         assert common_props.get("CorrosionTreatment") == "GALVANISED"
         assert common_props.get("DeliveryType") == "LOOSE"
         assert common_props.get("Status") == "NEW"

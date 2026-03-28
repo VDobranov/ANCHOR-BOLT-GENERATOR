@@ -49,24 +49,67 @@ class TypeFactory:
         """
         Добавление Pset_ElementComponentCommon для IfcMechanicalFastenerType
 
+        Согласно IFC4 спецификации для Pset_ElementComponentCommon:
+        - Status: IfcPropertyEnumeratedValue (PEnum_ElementStatus)
+        - DeliveryType: IfcPropertyEnumeratedValue
+        - CorrosionTreatment: IfcPropertyEnumeratedValue
+
         Args:
             product: IfcMechanicalFastenerType, для которого добавляется Pset
         """
-        pset_common = ifcopenshell.api.run(
-            "pset.add_pset",
-            self.ifc,
-            product=product,
-            name="Pset_ElementComponentCommon",
+        ifc = get_ifcopenshell()
+
+        # Создаём PEnum_ElementStatus enumeration
+        enum_status_values = [
+            self.ifc.create_entity("IfcLabel", v)
+            for v in ["NEW", "EXISTING", "DEMOLISH", "TEMPORARY", "OTHER", "NOTKNOWN", "UNSET"]
+        ]
+        enum_status = self.ifc.create_entity(
+            "IfcPropertyEnumeration",
+            Name="PEnum_ElementStatus",
+            EnumerationValues=enum_status_values,
         )
-        ifcopenshell.api.run(
-            "pset.edit_pset",
-            self.ifc,
-            pset=pset_common,
-            properties={
-                "CorrosionTreatment": "GALVANISED",
-                "DeliveryType": "LOOSE",
-                "Status": "NEW",
-            },
+
+        # Создаём свойства как IfcPropertyEnumeratedValue
+        # Status
+        prop_status = self.ifc.create_entity(
+            "IfcPropertyEnumeratedValue",
+            Name="Status",
+            EnumerationValues=[self.ifc.create_entity("IfcLabel", "NEW")],
+            EnumerationReference=enum_status,
+        )
+
+        # DeliveryType
+        prop_delivery = self.ifc.create_entity(
+            "IfcPropertyEnumeratedValue",
+            Name="DeliveryType",
+            EnumerationValues=[self.ifc.create_entity("IfcLabel", "LOOSE")],
+        )
+
+        # CorrosionTreatment
+        prop_corrosion = self.ifc.create_entity(
+            "IfcPropertyEnumeratedValue",
+            Name="CorrosionTreatment",
+            EnumerationValues=[self.ifc.create_entity("IfcLabel", "GALVANISED")],
+        )
+
+        # Создаём Pset_ElementComponentCommon
+        pset_common = self.ifc.create_entity(
+            "IfcPropertySet",
+            GlobalId=ifc.guid.new(),
+            OwnerHistory=self.owner_history,
+            Name="Pset_ElementComponentCommon",
+            HasProperties=[prop_status, prop_delivery, prop_corrosion],
+        )
+
+        # Связываем Pset с продуктом через IfcRelDefinesByProperties
+        self.ifc.create_entity(
+            "IfcRelDefinesByProperties",
+            GlobalId=ifc.guid.new(),
+            OwnerHistory=self.owner_history,
+            Name="Pset_ElementComponentCommon_Association",
+            RelatedObjects=[product],
+            RelatingPropertyDefinition=pset_common,
         )
 
     def get_or_create_stud_type(self, bolt_type, diameter, length, material):
