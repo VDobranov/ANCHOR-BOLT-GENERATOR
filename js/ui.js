@@ -55,7 +55,7 @@ const UI = {
 
     /**
      * Обновление панели свойств
-     * @param {object} data — данные элемента (name, elementProperties)
+     * @param {object} data — данные элемента (name, elementProperties, ifc_type)
      */
     updatePropertiesPanel(data) {
         const panel = document.getElementById('propertiesContent');
@@ -67,6 +67,10 @@ const UI = {
         }
 
         let html = `
+            <div class="property-item">
+                <span class="property-key">IFC класс:</span>
+                <span class="property-value">${data.ifc_type || 'N/A'}</span>
+            </div>
             <div class="property-item">
                 <span class="property-key">Имя:</span>
                 <span class="property-value">${data.name || 'Unnamed'}</span>

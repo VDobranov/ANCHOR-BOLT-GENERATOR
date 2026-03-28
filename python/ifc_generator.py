@@ -147,9 +147,10 @@ class IFCGenerator:
             global_id: GlobalId элемента (строка)
 
         Returns:
-            dict с name и property_sets или None если элемент не найден
+            dict с name, ifc_type и property_sets или None если элемент не найден
             {
                 'name': str,
+                'ifc_type': str,
                 'property_sets': [
                     {
                         'name': str,
@@ -169,6 +170,9 @@ class IFCGenerator:
 
         if element is None:
             return None
+
+        # Получаем IFC тип элемента
+        ifc_type = element.is_a() if hasattr(element, "is_a") else "Unknown"
 
         property_sets = []
 
@@ -199,6 +203,7 @@ class IFCGenerator:
 
         return {
             "name": element.Name or element.ObjectType or "Unnamed",
+            "ifc_type": ifc_type,
             "property_sets": property_sets,
         }
 
