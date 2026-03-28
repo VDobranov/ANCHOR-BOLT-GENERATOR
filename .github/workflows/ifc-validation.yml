@@ -55,7 +55,6 @@ jobs:
       run: |
         cd external/ifc-gherkin-rules
         # GEM113 — известный баг в валидаторе buildingSMART (класс Line без @dataclass)
-        # PSE001 — баг в парсинге pset_definitions.csv (None vs null в JSON)
         # Исключаем до фикса в upstream: https://github.com/IFCOpenShell/ifc-gherkin-rules
         python -m behave \
           --define input=../../test_bolt.ifc \
@@ -64,7 +63,6 @@ jobs:
           --tags="-@IFC4.3" \
           --tags="-@critical" \
           --exclude features/rules/GEM/GEM113_Indexed-poly-curve-arcs-must-not-be-defined-using-colinear-points.feature \
-          --exclude features/rules/PSE/PSE001_Standard-properties-and-property-sets-validation.feature \
           --format pretty \
           features/rules/
 
