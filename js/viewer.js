@@ -131,15 +131,9 @@ class IFCViewer {
         const moveSpeedX = frustumWidth / this.canvas.clientWidth;
         const moveSpeedY = frustumHeight / this.canvas.clientHeight;
 
-        // Получаем направление взгляда камеры
-        const forward = new THREE.Vector3();
-        this.camera.getWorldDirection(forward);
-
-        // Вычисляем правый и верхний векторы через cross product
-        const right = new THREE.Vector3()
-            .crossVectors(forward, new THREE.Vector3(0, 1, 0))
-            .normalize();
-        const up = new THREE.Vector3().crossVectors(right, forward).normalize();
+        // Получаем оси камеры из кватерниона
+        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
+        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion);
 
         // Перемещаем камеру и точку фокуса по осям камеры
         const offset = new THREE.Vector3()
@@ -149,6 +143,7 @@ class IFCViewer {
         this.camera.position.add(offset);
         this.focusPoint.add(offset);
         this.camera.lookAt(this.focusPoint);
+        this.camera.updateMatrixWorld();
     }
 
     rotate(deltaX, deltaY) {
@@ -159,11 +154,7 @@ class IFCViewer {
         const distance = offset.length();
 
         // Получаем оси камеры для вращения
-        const forward = new THREE.Vector3();
-        this.camera.getWorldDirection(forward);
-        const right = new THREE.Vector3()
-            .crossVectors(forward, new THREE.Vector3(0, 1, 0))
-            .normalize();
+        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
         const up = new THREE.Vector3(0, 1, 0);
 
         // Создаём кватернионы для вращения вокруг осей камеры
