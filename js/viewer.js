@@ -130,21 +130,21 @@ class IFCViewer {
         const moveSpeedX = frustumWidth / this.canvas.clientWidth;
         const moveSpeedY = frustumHeight / this.canvas.clientHeight;
 
-        // Обновляем матрицу камеры для получения актуальных осей
-        this.camera.updateMatrixWorld();
+        // Получаем направление взгляда камеры
+        const forward = new THREE.Vector3();
+        this.camera.getWorldDirection(forward);
 
-        // Получаем векторы осей камеры из матрицы
-        const panX = new THREE.Vector3();
-        const panY = new THREE.Vector3();
-
-        // Извлекаем оси из матрицы камеры
-        panX.setFromMatrixColumn(this.camera.matrixWorld, 0);
-        panY.setFromMatrixColumn(this.camera.matrixWorld, 1);
+        // Правый вектор = forward × worldUp
+        const right = new THREE.Vector3()
+            .crossVectors(forward, new THREE.Vector3(0, 1, 0))
+            .normalize();
+        // Верхний вектор = right × forward
+        const up = new THREE.Vector3().crossVectors(right, forward).normalize();
 
         // Перемещаем камеру и точку фокуса по осям камеры
         const offset = new THREE.Vector3()
-            .addScaledVector(panX, -deltaX * moveSpeedX)
-            .addScaledVector(panY, deltaY * moveSpeedY);
+            .addScaledVector(right, -deltaX * moveSpeedX)
+            .addScaledVector(up, deltaY * moveSpeedY);
 
         this.camera.position.add(offset);
         this.focusPoint.add(offset);
@@ -182,9 +182,6 @@ class IFCViewer {
         // Обновляем позицию камеры
         this.camera.position.copy(this.focusPoint).add(offset);
         this.camera.lookAt(this.focusPoint);
-
-        // Обновляем матрицу мира для корректной работы pan()
-        this.camera.updateMatrixWorld();
     }
 
     zoom(factor) {
