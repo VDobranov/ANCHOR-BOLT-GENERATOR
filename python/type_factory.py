@@ -228,7 +228,12 @@ class TypeFactory:
         )
 
         # Добавляем свойство в Pset вручную
-        pset_construction.HasProperties = tuple(pset_construction.HasProperties) + (prop_material,)
+        # HasProperties может быть None для нового Pset
+        existing_props = getattr(pset_construction, "HasProperties", None)
+        if existing_props:
+            pset_construction.HasProperties = tuple(existing_props) + (prop_material,)
+        else:
+            pset_construction.HasProperties = (prop_material,)
 
     def _add_element_component_common_pset(self, product):
         """
