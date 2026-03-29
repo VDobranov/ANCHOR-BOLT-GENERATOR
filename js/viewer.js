@@ -130,12 +130,9 @@ class IFCViewer {
         const moveSpeedX = frustumWidth / this.canvas.clientWidth;
         const moveSpeedY = frustumHeight / this.canvas.clientHeight;
 
-        // Получаем ориентацию камеры через кватернион
-        const quaternion = this.camera.quaternion.clone();
-
         // Векторы осей камеры в мировых координатах
-        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion);
-        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion);
+        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
+        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion);
 
         // Перемещаем камеру и точку фокуса по осям камеры
         const offset = new THREE.Vector3()
@@ -145,6 +142,7 @@ class IFCViewer {
         this.camera.position.add(offset);
         this.focusPoint.add(offset);
         this.camera.lookAt(this.focusPoint);
+        this.camera.updateMatrixWorld();
     }
 
     rotate(deltaX, deltaY) {
@@ -178,6 +176,7 @@ class IFCViewer {
         // Обновляем позицию камеры
         this.camera.position.copy(this.focusPoint).add(offset);
         this.camera.lookAt(this.focusPoint);
+        this.camera.updateMatrixWorld();
     }
 
     zoom(factor) {
@@ -186,6 +185,7 @@ class IFCViewer {
         this.camera.top *= factor;
         this.camera.bottom *= factor;
         this.camera.updateProjectionMatrix();
+        this.camera.updateMatrixWorld();
     }
 
     /**
@@ -291,6 +291,7 @@ class IFCViewer {
         this.camera.position.copy(state.position);
         this.focusPoint.copy(state.focusPoint);
         this.camera.lookAt(this.focusPoint);
+        this.camera.updateMatrixWorld();
     }
 
     /**
@@ -446,6 +447,7 @@ class IFCViewer {
         this.camera.top = frustumSize;
         this.camera.bottom = -frustumSize;
         this.camera.updateProjectionMatrix();
+        this.camera.updateMatrixWorld();
 
         this.applyCameraRotation();
     }
@@ -469,6 +471,7 @@ class IFCViewer {
 
         this.camera.position.copy(this.focusPoint).add(newOffset);
         this.camera.lookAt(this.focusPoint);
+        this.camera.updateMatrixWorld();
     }
 
     onWindowResize() {
@@ -482,6 +485,7 @@ class IFCViewer {
         this.camera.top = frustumSize;
         this.camera.bottom = -frustumSize;
         this.camera.updateProjectionMatrix();
+        this.camera.updateMatrixWorld();
         this.renderer.setSize(width, height);
     }
 
