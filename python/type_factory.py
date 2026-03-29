@@ -125,6 +125,98 @@ class TypeFactory:
             },
         )
 
+    def _add_spb_gau_cge_psets(self, product, diameter: int, length: int, material: str, gost: str):
+        """
+        Добавление PSet для экспертизы СПб ГАУ ЦГЭ
+
+        Args:
+            product: IfcMechanicalFastenerType, для которого добавляется Pset
+            diameter: Диаметр болта (мм)
+            length: Длина болта (мм)
+            material: Материал болта
+            gost: ГОСТ на фундаментные болты
+        """
+        # Добавляем только для СПб ГАУ ЦГЭ
+        if self.pset_expertise != "SPB_GAU_CGE":
+            return
+
+        # Добавляем только для IfcMechanicalFastenerType
+        if not product.is_a("IfcMechanicalFastenerType"):
+            return
+
+        ifc = get_ifcopenshell()
+
+        # 1. Pset "Местоположение"
+        pset_location = ifcopenshell.api.run(
+            "pset.add_pset",
+            self.ifc,
+            product=product,
+            name="Местоположение",
+        )
+        ifcopenshell.api.run(
+            "pset.edit_pset",
+            self.ifc,
+            pset=pset_location,
+            properties={
+                "Номер корпуса": self.ifc.create_entity("IfcText", "-"),
+                "Номер секции": self.ifc.create_entity("IfcText", "-"),
+                "Этаж": self.ifc.create_entity("IfcText", "-"),
+            },
+        )
+
+        # 2. Pset "Маркировка"
+        pset_marking = ifcopenshell.api.run(
+            "pset.add_pset",
+            self.ifc,
+            product=product,
+            name="Маркировка",
+        )
+        ifcopenshell.api.run(
+            "pset.edit_pset",
+            self.ifc,
+            pset=pset_marking,
+            properties={
+                "Позиция": self.ifc.create_entity("IfcText", "-"),
+                "Обозначение": self.ifc.create_entity("IfcText", gost),
+                "Наименование": self.ifc.create_entity(
+                    "IfcText", str(getattr(product, "Name", ""))
+                ),
+                "Профиль": self.ifc.create_entity("IfcText", f"М{diameter}"),
+            },
+        )
+
+        # 3. Pset "Геометрические параметры"
+        pset_geometry = ifcopenshell.api.run(
+            "pset.add_pset",
+            self.ifc,
+            product=product,
+            name="Геометрические параметры",
+        )
+        ifcopenshell.api.run(
+            "pset.edit_pset",
+            self.ifc,
+            pset=pset_geometry,
+            properties={
+                "Длина": self.ifc.create_entity("IfcText", str(length)),
+            },
+        )
+
+        # 4. Pset "Строительные параметры"
+        pset_construction = ifcopenshell.api.run(
+            "pset.add_pset",
+            self.ifc,
+            product=product,
+            name="Строительные параметры",
+        )
+        ifcopenshell.api.run(
+            "pset.edit_pset",
+            self.ifc,
+            pset=pset_construction,
+            properties={
+                "Материал": self.ifc.create_entity("IfcText", "С"),
+            },
+        )
+
     def _add_element_component_common_pset(self, product):
         """
         Добавление Pset_ElementComponentCommon для IfcMechanicalFastenerType
@@ -533,6 +625,11 @@ class TypeFactory:
 
             # Добавляем Pset ExpCheck_MechanicalFastener для экспертизы МГЭ
             self._add_mge_exp_check_pset(assembly_type)
+
+            # Добавляем PSet для экспертизы СПб ГАУ ЦГЭ
+            self._add_spb_gau_cge_psets(
+                assembly_type, diameter, length, material, "ГОСТ 24379.1-2012"
+            )
 
         # Создаём материал сборки
         # Согласно IFC102: IfcMaterialList deprecated в IFC4
