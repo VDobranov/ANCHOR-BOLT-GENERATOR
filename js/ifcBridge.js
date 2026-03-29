@@ -251,7 +251,8 @@ class IFCBridge {
             const settings = exportSettings || {
                 assembly_class: 'IfcMechanicalFastener',
                 assembly_mode: 'separate',
-                geometry_type: 'solid'
+                geometry_type: 'solid',
+                add_standard_pset: true
             };
 
             // Класс для сборки доступен только при режиме "Вроссыпь"
