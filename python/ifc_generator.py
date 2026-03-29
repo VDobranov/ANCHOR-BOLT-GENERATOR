@@ -201,10 +201,30 @@ class IFCGenerator:
                         # Конвертируем кортеж в список, если нужно
                         if isinstance(has_property_sets, tuple):
                             has_property_sets = list(has_property_sets)
+
+                        # Сначала добавляем PSet экспертиз (начинаются с "МОГЭ_", "СПБ_ГАУ_")
+                        # Затем стандартные PSet (начинаются с "Pset_")
+                        expertise_psets = []
+                        standard_psets = []
+                        other_psets = []
+
                         for pset in has_property_sets:
                             properties = self._extract_properties(pset)
                             if properties:
-                                property_sets.append({"name": pset.Name, "properties": properties})
+                                pset_data = {"name": pset.Name, "properties": properties}
+                                if pset.Name.startswith("МОГЭ_") or pset.Name.startswith(
+                                    "СПБ_ГАУ_"
+                                ):
+                                    expertise_psets.append(pset_data)
+                                elif pset.Name.startswith("Pset_"):
+                                    standard_psets.append(pset_data)
+                                else:
+                                    other_psets.append(pset_data)
+
+                        # Добавляем в порядке: экспертиза, другие, стандартные
+                        property_sets.extend(expertise_psets)
+                        property_sets.extend(other_psets)
+                        property_sets.extend(standard_psets)
 
         return {
             "name": element.Name or element.ObjectType or "Unnamed",

@@ -411,6 +411,7 @@ form.disabled {
 }
 
 .property-key {
+    flex: 2;
     color: var(--secondary-color);
     font-weight: 600;
     flex-shrink: 0;
@@ -418,6 +419,7 @@ form.disabled {
 }
 
 .property-value {
+    flex: 1;
     color: var(--text-color);
     text-align: right;
     white-space: normal;
