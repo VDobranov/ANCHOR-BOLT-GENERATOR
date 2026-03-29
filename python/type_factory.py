@@ -39,6 +39,7 @@ class TypeFactory:
         ifc_doc: IfcDocumentProtocol,
         geometry_type: str = "solid",
         add_standard_pset: bool = True,
+        pset_expertise: str = "none",
     ):
         self.ifc: IfcDocumentProtocol = ifc_doc
         self.types_cache: Dict[Any, Any] = {}
@@ -47,9 +48,44 @@ class TypeFactory:
         self.material_manager = MaterialManager(ifc_doc)
         self.geometry_type = geometry_type  # "solid" или "faceted"
         self.add_standard_pset = add_standard_pset  # Добавлять стандартные PSet
+        self.pset_expertise = (
+            pset_expertise  # Режим экспертизы ('none', 'MGE', 'MOGE', 'SPB_GAU_CGE')
+        )
         # Получаем OwnerHistory из документа
         owner_histories = self.ifc.by_type("IfcOwnerHistory")
         self.owner_history = owner_histories[0] if owner_histories else None
+
+    def _add_moge_ksi_pset(self, product):
+        """
+        Добавление PSet МОГЭ_КСИ для экспертизы МОГЭ
+
+        Args:
+            product: IfcType, для которого добавляется Pset
+        """
+        # Добавляем только для МОГЭ
+        if self.pset_expertise != "MOGE":
+            return
+
+        ifc = get_ifcopenshell()
+
+        # Создаём Pset МОГЭ_КСИ через ifcopenshell.api
+        pset = ifcopenshell.api.run(
+            "pset.add_pset",
+            self.ifc,
+            product=product,
+            name="МОГЭ_КСИ",
+        )
+        # Добавляем свойства
+        ifcopenshell.api.run(
+            "pset.edit_pset",
+            self.ifc,
+            pset=pset,
+            properties={
+                "КСИ Код класса#XNKC0001": "UQA",
+                "КСИ Наименование класса#XNKC0002": "крепежное изделие неразборное",
+                "КСИ Класс строительной информации#XNKC0003": "Com",
+            },
+        )
 
     def _add_element_component_common_pset(self, product):
         """
@@ -412,6 +448,9 @@ class TypeFactory:
 
             # Добавляем Pset_ElementComponentCommon для IfcElementAssemblyType
             self._add_element_component_common_pset(assembly_type)
+
+            # Добавляем Pset МОГЭ_КСИ для экспертизы МОГЭ
+            self._add_moge_ksi_pset(assembly_type)
         else:
             assembly_type = self.ifc.create_entity(
                 "IfcMechanicalFastenerType",
@@ -450,6 +489,9 @@ class TypeFactory:
 
                 # Добавляем Pset_ElementComponentCommon для всех IfcMechanicalFastenerType
                 self._add_element_component_common_pset(assembly_type)
+
+            # Добавляем Pset МОГЭ_КСИ для экспертизы МОГЭ
+            self._add_moge_ksi_pset(assembly_type)
 
         # Создаём материал сборки
         # Согласно IFC102: IfcMaterialList deprecated в IFC4

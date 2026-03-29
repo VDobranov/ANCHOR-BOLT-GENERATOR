@@ -277,7 +277,8 @@ class IFCBridge {
                     settings.get('assembly_class', 'IfcMechanicalFastener'),
                     settings.get('assembly_mode', 'separate'),
                     settings.get('geometry_type', 'solid'),
-                    settings.get('add_standard_pset', True)
+                    settings.get('add_standard_pset', True),
+                    settings.get('pset_expertise', 'none')
                 )
                 (ifc_str, mesh_data)
             `);

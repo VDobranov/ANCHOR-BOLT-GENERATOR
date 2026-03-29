@@ -25,10 +25,14 @@ class InstanceFactory:
         type_factory: Optional[TypeFactoryProtocol] = None,
         geometry_type: str = "solid",
         add_standard_pset: bool = True,
+        pset_expertise: str = "none",
     ):
         self.ifc: IfcDocumentProtocol = ifc_doc
         self.type_factory: TypeFactoryProtocol = type_factory or TypeFactory(
-            ifc_doc, geometry_type=geometry_type, add_standard_pset=add_standard_pset
+            ifc_doc,
+            geometry_type=geometry_type,
+            add_standard_pset=add_standard_pset,
+            pset_expertise=pset_expertise,
         )
         self.material_manager = MaterialManager(ifc_doc)
 
@@ -42,6 +46,7 @@ class InstanceFactory:
         assembly_mode="separate",
         geometry_type="solid",
         add_standard_pset=True,
+        pset_expertise="none",
     ):
         """
         Создание полной сборки анкерного болта
@@ -1055,7 +1060,10 @@ def generate_bolt_assembly(
     ifc_doc = reset_ifc_document()
 
     factory = InstanceFactory(
-        ifc_doc, geometry_type=geometry_type, add_standard_pset=add_standard_pset
+        ifc_doc,
+        geometry_type=geometry_type,
+        add_standard_pset=add_standard_pset,
+        pset_expertise=pset_expertise,
     )
     result = factory.create_bolt_assembly(
         bolt_type=params["bolt_type"],
@@ -1066,6 +1074,7 @@ def generate_bolt_assembly(
         assembly_mode=assembly_mode,
         geometry_type=geometry_type,
         add_standard_pset=add_standard_pset,
+        pset_expertise=pset_expertise,
     )
 
     # Экспорт во временный файл (для совместимости с ifcopenshell.write)
