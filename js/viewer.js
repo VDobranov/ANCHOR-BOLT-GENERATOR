@@ -132,20 +132,22 @@ class IFCViewer {
         const worldDeltaX = deltaX * (frustumWidth / this.canvas.clientWidth);
         const worldDeltaY = -deltaY * (frustumHeight / this.canvas.clientHeight);
 
-        // Перемещение относительно осей камеры, а не мировых осей
+        // Обновляем матрицу камеры для получения актуальных осей
+        this.camera.updateMatrixWorld();
+
+        // Получаем векторы осей камеры из матрицы
         const right = new THREE.Vector3();
         const up = new THREE.Vector3();
 
-        // Получаем правый вектор камеры (для панорамирования влево-вправо)
-        this.camera.getWorldDirection(right);
-        right.cross(this.camera.up).normalize();
+        // Извлекаем оси из матрицы камеры
+        // matrixWorld: column 0 = right, column 1 = up, column 2 = forward
+        right.setFromMatrixColumn(this.camera.matrixWorld, 0);
+        up.setFromMatrixColumn(this.camera.matrixWorld, 1);
 
-        // Получаем верхний вектор камеры (для панорамирования вверх-вниз)
-        up.copy(this.camera.up).normalize();
-
-        // Перемещаем камеру и точку фокуса по осям камеры (инвертировано для естественного ощущения)
-        const panX = right.multiplyScalar(-worldDeltaX);
-        const panY = up.multiplyScalar(-worldDeltaY);
+        // Перемещаем камеру и точку фокуса по осям камеры
+        // Для естественного ощущения: движение мыши вправо = смещение вида вправо
+        const panX = right.multiplyScalar(worldDeltaX);
+        const panY = up.multiplyScalar(worldDeltaY);
 
         this.camera.position.add(panX).add(panY);
         this.focusPoint.add(panX).add(panY);
@@ -156,7 +158,7 @@ class IFCViewer {
         const rotationX = deltaY * this.controls.rotationSpeed;
         const rotationY = deltaX * this.controls.rotationSpeed;
 
-        // Вычисляем текущие углы из позиции камеры, а не из сохранённых значений
+        // Вычисляем текущие углы из позиции камеры
         const offset = new THREE.Vector3().subVectors(this.camera.position, this.focusPoint);
         const distance = offset.length();
 
@@ -164,12 +166,12 @@ class IFCViewer {
         const currentTheta = Math.atan2(offset.x, offset.z);
         const currentPhi = Math.asin(offset.y / distance);
 
-        // Обновляем углы
+        // Обновляем углы (инвертируем для естественного вращения)
         this.controls.currentRotationX = Math.max(
             -Math.PI / 2,
-            Math.min(Math.PI / 2, currentPhi - rotationX)
+            Math.min(Math.PI / 2, currentPhi + rotationX)
         );
-        this.controls.currentRotationY = currentTheta - rotationY;
+        this.controls.currentRotationY = currentTheta + rotationY;
 
         const cosX = Math.cos(this.controls.currentRotationX);
         const sinX = Math.sin(this.controls.currentRotationX);
