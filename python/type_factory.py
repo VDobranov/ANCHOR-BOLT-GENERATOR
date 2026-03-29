@@ -208,14 +208,25 @@ class TypeFactory:
             product=product,
             name="Строительные параметры",
         )
-        ifcopenshell.api.run(
-            "pset.edit_pset",
-            self.ifc,
-            pset=pset_construction,
-            properties={
-                "Материал": self.ifc.create_entity("IfcText", "С"),
-            },
+
+        # Создаём enumeration для материалов
+        enum_material_values = [self.ifc.create_entity("IfcLabel", v) for v in ["С", "А", "Н"]]
+        enum_material = self.ifc.create_entity(
+            "IfcPropertyEnumeration",
+            Name="PEnum_MaterialType",
+            EnumerationValues=enum_material_values,
         )
+
+        # Создаём свойство как IfcPropertyEnumeratedValue
+        prop_material = self.ifc.create_entity(
+            "IfcPropertyEnumeratedValue",
+            Name="Материал",
+            EnumerationValues=[self.ifc.create_entity("IfcLabel", "С")],
+            EnumerationReference=enum_material,
+        )
+
+        # Добавляем свойство в Pset вручную
+        pset_construction.HasProperties = tuple(pset_construction.HasProperties) + (prop_material,)
 
     def _add_element_component_common_pset(self, product):
         """
