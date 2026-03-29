@@ -75,15 +75,19 @@ class TypeFactory:
             product=product,
             name="МОГЭ_КСИ",
         )
-        # Добавляем свойства
+        # Добавляем свойства с типом IfcText
         ifcopenshell.api.run(
             "pset.edit_pset",
             self.ifc,
             pset=pset,
             properties={
-                "КСИ Код класса#XNKC0001": "UQA",
-                "КСИ Наименование класса#XNKC0002": "крепежное изделие неразборное",
-                "КСИ Класс строительной информации#XNKC0003": "Com",
+                "КСИ Код класса#XNKC0001": self.ifc.create_entity("IfcText", "UQA"),
+                "КСИ Наименование класса#XNKC0002": self.ifc.create_entity(
+                    "IfcText", "крепежное изделие неразборное"
+                ),
+                "КСИ Класс строительной информации#XNKC0003": self.ifc.create_entity(
+                    "IfcText", "Com"
+                ),
             },
         )
 
@@ -111,13 +115,13 @@ class TypeFactory:
             product=product,
             name="ExpCheck_MechanicalFastener",
         )
-        # Добавляем свойства
+        # Добавляем свойство с типом IfcText
         ifcopenshell.api.run(
             "pset.edit_pset",
             self.ifc,
             pset=pset,
             properties={
-                "MGE_ElementCode": "ЭЛ 40 45 20 20",
+                "MGE_ElementCode": self.ifc.create_entity("IfcText", "ЭЛ 40 45 20 20"),
             },
         )
 
