@@ -132,10 +132,23 @@ class IFCViewer {
         const worldDeltaX = deltaX * (frustumWidth / this.canvas.clientWidth);
         const worldDeltaY = -deltaY * (frustumHeight / this.canvas.clientHeight);
 
-        this.camera.position.x -= worldDeltaX;
-        this.camera.position.y -= worldDeltaY;
-        this.focusPoint.x -= worldDeltaX;
-        this.focusPoint.y -= worldDeltaY;
+        // Перемещение относительно осей камеры, а не мировых осей
+        const right = new THREE.Vector3();
+        const up = new THREE.Vector3();
+
+        // Получаем правый вектор камеры (для панорамирования влево-вправо)
+        this.camera.getWorldDirection(right);
+        right.cross(this.camera.up).normalize();
+
+        // Получаем верхний вектор камеры (для панорамирования вверх-вниз)
+        up.copy(this.camera.up).normalize();
+
+        // Перемещаем камеру и точку фокуса по осям камеры
+        const panX = right.multiplyScalar(worldDeltaX);
+        const panY = up.multiplyScalar(worldDeltaY);
+
+        this.camera.position.add(panX).add(panY);
+        this.focusPoint.add(panX).add(panY);
         this.camera.lookAt(this.focusPoint);
     }
 
