@@ -182,6 +182,9 @@ class IFCViewer {
         // Обновляем позицию камеры
         this.camera.position.copy(this.focusPoint).add(offset);
         this.camera.lookAt(this.focusPoint);
+
+        // Обновляем матрицу мира для корректной работы pan()
+        this.camera.updateMatrixWorld();
     }
 
     zoom(factor) {
