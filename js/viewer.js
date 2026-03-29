@@ -130,16 +130,12 @@ class IFCViewer {
         const moveSpeedX = frustumWidth / this.canvas.clientWidth;
         const moveSpeedY = frustumHeight / this.canvas.clientHeight;
 
-        // Получаем направление взгляда камеры
-        const forward = new THREE.Vector3();
-        this.camera.getWorldDirection(forward);
+        // Получаем ориентацию камеры через кватернион
+        const quaternion = this.camera.quaternion.clone();
 
-        // Правый вектор = forward × worldUp
-        const right = new THREE.Vector3()
-            .crossVectors(forward, new THREE.Vector3(0, 1, 0))
-            .normalize();
-        // Верхний вектор = right × forward
-        const up = new THREE.Vector3().crossVectors(right, forward).normalize();
+        // Векторы осей камеры в мировых координатах
+        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quaternion);
+        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion);
 
         // Перемещаем камеру и точку фокуса по осям камеры
         const offset = new THREE.Vector3()
