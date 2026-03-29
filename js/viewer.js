@@ -131,19 +131,23 @@ class IFCViewer {
         const moveSpeedX = frustumWidth / this.canvas.clientWidth;
         const moveSpeedY = frustumHeight / this.canvas.clientHeight;
 
-        // Получаем оси камеры из кватерниона
-        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
-        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion);
+        // Вектор от focusPoint к камере
+        const offset = new THREE.Vector3().subVectors(this.camera.position, this.focusPoint);
+
+        // Вычисляем оси камеры из вектора offset
+        const forward = offset.clone().normalize();
+        const right = new THREE.Vector3()
+            .crossVectors(forward, new THREE.Vector3(0, 1, 0))
+            .normalize();
+        const up = new THREE.Vector3().crossVectors(right, forward).normalize();
 
         // Перемещаем камеру и точку фокуса по осям камеры
-        const offset = new THREE.Vector3()
+        const panOffset = new THREE.Vector3()
             .addScaledVector(right, -deltaX * moveSpeedX)
             .addScaledVector(up, deltaY * moveSpeedY);
 
-        this.camera.position.add(offset);
-        this.focusPoint.add(offset);
-        this.camera.lookAt(this.focusPoint);
-        this.camera.updateMatrixWorld();
+        this.camera.position.add(panOffset);
+        this.focusPoint.add(panOffset);
     }
 
     rotate(deltaX, deltaY) {
@@ -153,8 +157,11 @@ class IFCViewer {
         const offset = new THREE.Vector3().subVectors(this.camera.position, this.focusPoint);
         const distance = offset.length();
 
-        // Получаем оси камеры для вращения
-        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.camera.quaternion);
+        // Вычисляем оси камеры из вектора offset
+        const forward = offset.clone().normalize();
+        const right = new THREE.Vector3()
+            .crossVectors(forward, new THREE.Vector3(0, 1, 0))
+            .normalize();
         const up = new THREE.Vector3(0, 1, 0);
 
         // Создаём кватернионы для вращения вокруг осей камеры
@@ -175,7 +182,6 @@ class IFCViewer {
         // Обновляем позицию камеры
         this.camera.position.copy(this.focusPoint).add(offset);
         this.camera.lookAt(this.focusPoint);
-        this.camera.updateMatrixWorld();
     }
 
     zoom(factor) {
