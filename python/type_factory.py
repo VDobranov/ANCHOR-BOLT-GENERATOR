@@ -399,6 +399,9 @@ class TypeFactory:
                 PredefinedType="USERDEFINED",
                 ElementType="ANCHORBOLT",
             )
+
+            # Добавляем Pset_ElementComponentCommon для IfcElementAssemblyType
+            self._add_element_component_common_pset(assembly_type)
         else:
             assembly_type = self.ifc.create_entity(
                 "IfcMechanicalFastenerType",
