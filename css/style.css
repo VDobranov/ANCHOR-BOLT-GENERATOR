@@ -411,7 +411,7 @@ form.disabled {
 }
 
 .property-key {
-    flex: 2;
+    flex: 1;
     color: var(--secondary-color);
     font-weight: 600;
     flex-shrink: 0;
