@@ -34,13 +34,19 @@ class TypeFactory:
     - Геометрия кэшируется по ключу (тип, диаметр, длина)
     """
 
-    def __init__(self, ifc_doc: IfcDocumentProtocol, geometry_type: str = "solid"):
+    def __init__(
+        self,
+        ifc_doc: IfcDocumentProtocol,
+        geometry_type: str = "solid",
+        add_standard_pset: bool = True,
+    ):
         self.ifc: IfcDocumentProtocol = ifc_doc
         self.types_cache: Dict[Any, Any] = {}
         self.representation_maps: Dict[tuple, Any] = {}  # Кэш RepresentationMap по ключу
         self.builder = GeometryBuilder(ifc_doc)
         self.material_manager = MaterialManager(ifc_doc)
         self.geometry_type = geometry_type  # "solid" или "faceted"
+        self.add_standard_pset = add_standard_pset  # Добавлять стандартные PSet
         # Получаем OwnerHistory из документа
         owner_histories = self.ifc.by_type("IfcOwnerHistory")
         self.owner_history = owner_histories[0] if owner_histories else None
@@ -57,6 +63,10 @@ class TypeFactory:
         Args:
             product: IfcMechanicalFastenerType, для которого добавляется Pset
         """
+        # Пропускаем если стандартные PSet отключены
+        if not self.add_standard_pset:
+            return
+
         ifc = get_ifcopenshell()
 
         # Создаём PEnum_ElementStatus enumeration
@@ -412,32 +422,34 @@ class TypeFactory:
             )
 
             # Добавляем Pset_MechanicalFastenerAnchorBolt для IfcMechanicalFastenerType
-            # Получаем длину резьбы
-            thread_length = get_thread_length(diameter, length) or 0
-            protrusion_length = thread_length  # AnchorBoltProtrusionLength = длине резьбы
+            # Только если включены стандартные PSet
+            if self.add_standard_pset:
+                # Получаем длину резьбы
+                thread_length = get_thread_length(diameter, length) or 0
+                protrusion_length = thread_length  # AnchorBoltProtrusionLength = длине резьбы
 
-            # Создаём Pset_MechanicalFastenerAnchorBolt через ifcopenshell.api
-            pset = ifcopenshell.api.run(
-                "pset.add_pset",
-                self.ifc,
-                product=assembly_type,
-                name="Pset_MechanicalFastenerAnchorBolt",
-            )
-            # Добавляем свойства
-            ifcopenshell.api.run(
-                "pset.edit_pset",
-                self.ifc,
-                pset=pset,
-                properties={
-                    "AnchorBoltDiameter": float(diameter),
-                    "AnchorBoltLength": float(length),
-                    "AnchorBoltProtrusionLength": float(protrusion_length),
-                    "AnchorBoltThreadLength": float(thread_length),
-                },
-            )
+                # Создаём Pset_MechanicalFastenerAnchorBolt через ifcopenshell.api
+                pset = ifcopenshell.api.run(
+                    "pset.add_pset",
+                    self.ifc,
+                    product=assembly_type,
+                    name="Pset_MechanicalFastenerAnchorBolt",
+                )
+                # Добавляем свойства
+                ifcopenshell.api.run(
+                    "pset.edit_pset",
+                    self.ifc,
+                    pset=pset,
+                    properties={
+                        "AnchorBoltDiameter": float(diameter),
+                        "AnchorBoltLength": float(length),
+                        "AnchorBoltProtrusionLength": float(protrusion_length),
+                        "AnchorBoltThreadLength": float(thread_length),
+                    },
+                )
 
-            # Добавляем Pset_ElementComponentCommon для всех IfcMechanicalFastenerType
-            self._add_element_component_common_pset(assembly_type)
+                # Добавляем Pset_ElementComponentCommon для всех IfcMechanicalFastenerType
+                self._add_element_component_common_pset(assembly_type)
 
         # Создаём материал сборки
         # Согласно IFC102: IfcMaterialList deprecated в IFC4

@@ -24,10 +24,11 @@ class InstanceFactory:
         ifc_doc: IfcDocumentProtocol,
         type_factory: Optional[TypeFactoryProtocol] = None,
         geometry_type: str = "solid",
+        add_standard_pset: bool = True,
     ):
         self.ifc: IfcDocumentProtocol = ifc_doc
         self.type_factory: TypeFactoryProtocol = type_factory or TypeFactory(
-            ifc_doc, geometry_type=geometry_type
+            ifc_doc, geometry_type=geometry_type, add_standard_pset=add_standard_pset
         )
         self.material_manager = MaterialManager(ifc_doc)
 
@@ -40,6 +41,7 @@ class InstanceFactory:
         assembly_class="IfcMechanicalFastener",
         assembly_mode="separate",
         geometry_type="solid",
+        add_standard_pset=True,
     ):
         """
         Создание полной сборки анкерного болта
@@ -1052,7 +1054,9 @@ def generate_bolt_assembly(
     # Сброс документа: удаление предыдущих болтов
     ifc_doc = reset_ifc_document()
 
-    factory = InstanceFactory(ifc_doc, geometry_type=geometry_type)
+    factory = InstanceFactory(
+        ifc_doc, geometry_type=geometry_type, add_standard_pset=add_standard_pset
+    )
     result = factory.create_bolt_assembly(
         bolt_type=params["bolt_type"],
         diameter=params["diameter"],
@@ -1061,6 +1065,7 @@ def generate_bolt_assembly(
         assembly_class=assembly_class,
         assembly_mode=assembly_mode,
         geometry_type=geometry_type,
+        add_standard_pset=add_standard_pset,
     )
 
     # Экспорт во временный файл (для совместимости с ifcopenshell.write)
