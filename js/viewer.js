@@ -143,9 +143,9 @@ class IFCViewer {
         // Получаем верхний вектор камеры (для панорамирования вверх-вниз)
         up.copy(this.camera.up).normalize();
 
-        // Перемещаем камеру и точку фокуса по осям камеры
-        const panX = right.multiplyScalar(worldDeltaX);
-        const panY = up.multiplyScalar(worldDeltaY);
+        // Перемещаем камеру и точку фокуса по осям камеры (инвертировано для естественного ощущения)
+        const panX = right.multiplyScalar(-worldDeltaX);
+        const panY = up.multiplyScalar(-worldDeltaY);
 
         this.camera.position.add(panX).add(panY);
         this.focusPoint.add(panX).add(panY);
