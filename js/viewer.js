@@ -143,8 +143,8 @@ class IFCViewer {
 
         // Перемещаем камеру и точку фокуса по осям камеры
         const offset = new THREE.Vector3()
-            .addScaledVector(panX, deltaX * moveSpeedX)
-            .addScaledVector(panY, deltaY * moveSpeedY);
+            .addScaledVector(panX, -deltaX * moveSpeedX)
+            .addScaledVector(panY, -deltaY * moveSpeedY);
 
         this.camera.position.add(offset);
         this.focusPoint.add(offset);
