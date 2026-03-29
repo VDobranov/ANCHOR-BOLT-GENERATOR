@@ -197,7 +197,7 @@ class TypeFactory:
             self.ifc,
             pset=pset_geometry,
             properties={
-                "Длина": self.ifc.create_entity("IfcText", str(length)),
+                "Длина": self.ifc.create_entity("IfcLengthMeasure", float(length)),
             },
         )
 
