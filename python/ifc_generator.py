@@ -202,7 +202,7 @@ class IFCGenerator:
                         if isinstance(has_property_sets, tuple):
                             has_property_sets = list(has_property_sets)
 
-                        # Сначала добавляем PSet экспертиз (начинаются с "МОГЭ_", "СПБ_ГАУ_")
+                        # Сначала добавляем PSet экспертиз (начинаются с "МОГЭ_", "СПБ_ГАУ_", "ExpCheck_")
                         # Затем стандартные PSet (начинаются с "Pset_")
                         expertise_psets = []
                         standard_psets = []
@@ -212,9 +212,7 @@ class IFCGenerator:
                             properties = self._extract_properties(pset)
                             if properties:
                                 pset_data = {"name": pset.Name, "properties": properties}
-                                if pset.Name.startswith("МОГЭ_") or pset.Name.startswith(
-                                    "СПБ_ГАУ_"
-                                ):
+                                if pset.Name.startswith(("МОГЭ_", "СПБ_ГАУ_", "ExpCheck_")):
                                     expertise_psets.append(pset_data)
                                 elif pset.Name.startswith("Pset_"):
                                     standard_psets.append(pset_data)
