@@ -211,7 +211,7 @@ class TypeFactory:
 
         # Создаём enumeration для материалов
         enum_material_values = [
-            self.ifc.create_entity("IfcLabel", v) for v in ["Д", "С", "Б", "ЖБ", "К", "АрК"]
+            self.ifc.create_entity("IfcText", v) for v in ["Д", "С", "Б", "ЖБ", "К", "АрК"]
         ]
         enum_material = self.ifc.create_entity(
             "IfcPropertyEnumeration",
@@ -223,7 +223,7 @@ class TypeFactory:
         prop_material = self.ifc.create_entity(
             "IfcPropertyEnumeratedValue",
             Name="Материал",
-            EnumerationValues=[self.ifc.create_entity("IfcLabel", "С")],
+            EnumerationValues=[self.ifc.create_entity("IfcText", "С")],
             EnumerationReference=enum_material,
         )
 
