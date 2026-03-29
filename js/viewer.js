@@ -143,8 +143,8 @@ class IFCViewer {
 
         // Перемещаем камеру и точку фокуса по осям камеры
         const offset = new THREE.Vector3()
-            .addScaledVector(panX, -deltaX * moveSpeedX)
-            .addScaledVector(panY, -deltaY * moveSpeedY);
+            .addScaledVector(panX, deltaX * moveSpeedX)
+            .addScaledVector(panY, deltaY * moveSpeedY);
 
         this.camera.position.add(offset);
         this.focusPoint.add(offset);
@@ -161,7 +161,7 @@ class IFCViewer {
         // Создаём кватернионы для вращения
         const quaternionX = new THREE.Quaternion().setFromAxisAngle(
             new THREE.Vector3(1, 0, 0),
-            -deltaY * rotationSpeed
+            deltaY * rotationSpeed
         );
         const quaternionY = new THREE.Quaternion().setFromAxisAngle(
             new THREE.Vector3(0, 1, 0),
