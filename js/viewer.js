@@ -77,9 +77,7 @@ class IFCViewer {
             lastX: 0,
             lastY: 0,
             panSpeed: 2.0,
-            rotationSpeed: 0.005,
-            currentRotationX: 0,
-            currentRotationY: 0
+            rotationSpeed: 0.005
         };
 
         this.canvas.addEventListener('mousedown', (e) => {
@@ -129,60 +127,60 @@ class IFCViewer {
     pan(deltaX, deltaY) {
         const frustumWidth = this.camera.right - this.camera.left;
         const frustumHeight = this.camera.top - this.camera.bottom;
-        const worldDeltaX = deltaX * (frustumWidth / this.canvas.clientWidth);
-        const worldDeltaY = -deltaY * (frustumHeight / this.canvas.clientHeight);
+        const moveSpeedX = frustumWidth / this.canvas.clientWidth;
+        const moveSpeedY = frustumHeight / this.canvas.clientHeight;
 
         // Обновляем матрицу камеры для получения актуальных осей
         this.camera.updateMatrixWorld();
 
         // Получаем векторы осей камеры из матрицы
-        const right = new THREE.Vector3();
-        const up = new THREE.Vector3();
+        const panX = new THREE.Vector3();
+        const panY = new THREE.Vector3();
 
         // Извлекаем оси из матрицы камеры
-        // matrixWorld: column 0 = right, column 1 = up, column 2 = forward
-        right.setFromMatrixColumn(this.camera.matrixWorld, 0);
-        up.setFromMatrixColumn(this.camera.matrixWorld, 1);
+        panX.setFromMatrixColumn(this.camera.matrixWorld, 0);
+        panY.setFromMatrixColumn(this.camera.matrixWorld, 1);
 
         // Перемещаем камеру и точку фокуса по осям камеры
-        // Для естественного ощущения: движение мыши вправо = смещение вида вправо
-        const panX = right.multiplyScalar(worldDeltaX);
-        const panY = up.multiplyScalar(worldDeltaY);
+        const offset = new THREE.Vector3()
+            .addScaledVector(panX, -deltaX * moveSpeedX)
+            .addScaledVector(panY, -deltaY * moveSpeedY);
 
-        this.camera.position.add(panX).add(panY);
-        this.focusPoint.add(panX).add(panY);
+        this.camera.position.add(offset);
+        this.focusPoint.add(offset);
         this.camera.lookAt(this.focusPoint);
     }
 
     rotate(deltaX, deltaY) {
-        const rotationX = deltaY * this.controls.rotationSpeed;
-        const rotationY = deltaX * this.controls.rotationSpeed;
+        const rotationSpeed = 0.005;
 
-        // Вычисляем текущие углы из позиции камеры
+        // Вектор от focusPoint к камере
         const offset = new THREE.Vector3().subVectors(this.camera.position, this.focusPoint);
         const distance = offset.length();
 
-        // Текущие углы в сферических координатах
-        const currentTheta = Math.atan2(offset.x, offset.z);
-        const currentPhi = Math.asin(offset.y / distance);
-
-        // Обновляем углы (инвертируем для естественного вращения)
-        this.controls.currentRotationX = Math.max(
-            -Math.PI / 2,
-            Math.min(Math.PI / 2, currentPhi + rotationX)
+        // Создаём кватернионы для вращения
+        const quaternionX = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(1, 0, 0),
+            -deltaY * rotationSpeed
         );
-        this.controls.currentRotationY = currentTheta + rotationY;
-
-        const cosX = Math.cos(this.controls.currentRotationX);
-        const sinX = Math.sin(this.controls.currentRotationX);
-        const cosY = Math.cos(this.controls.currentRotationY);
-        const sinY = Math.sin(this.controls.currentRotationY);
-
-        this.camera.position.set(
-            this.focusPoint.x + distance * sinY * cosX,
-            this.focusPoint.y + distance * sinX,
-            this.focusPoint.z + distance * cosY * cosX
+        const quaternionY = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            -deltaX * rotationSpeed
         );
+
+        // Применяем вращение к вектору offset
+        offset.applyQuaternion(quaternionY);
+        offset.applyQuaternion(quaternionX);
+
+        // Ограничиваем вертикальный угол
+        const minPolarAngle = 0.01;
+        const maxPolarAngle = Math.PI - 0.01;
+        const spherical = new THREE.Spherical().setFromVector3(offset);
+        spherical.phi = Math.max(minPolarAngle, Math.min(maxPolarAngle, spherical.phi));
+        offset.setFromSpherical(spherical);
+
+        // Обновляем позицию камеры
+        this.camera.position.copy(this.focusPoint).add(offset);
         this.camera.lookAt(this.focusPoint);
     }
 
@@ -203,9 +201,7 @@ class IFCViewer {
         const savedCameraState = preserveView
             ? {
                   position: this.camera.position.clone(),
-                  focusPoint: this.focusPoint.clone(),
-                  rotationX: this.controls.currentRotationX,
-                  rotationY: this.controls.currentRotationY
+                  focusPoint: this.focusPoint.clone()
               }
             : null;
 
@@ -298,8 +294,6 @@ class IFCViewer {
     restoreCameraState(state) {
         this.camera.position.copy(state.position);
         this.focusPoint.copy(state.focusPoint);
-        this.controls.currentRotationX = state.rotationX;
-        this.controls.currentRotationY = state.rotationY;
         this.camera.lookAt(this.focusPoint);
     }
 
@@ -446,8 +440,6 @@ class IFCViewer {
         this.camera.lookAt(center.x, center.y, center.z);
         this.focusPoint.copy(center);
 
-        // Углы будут вычислены заново при следующем повороте из текущей позиции
-
         const size = box.getSize(new THREE.Vector3());
         const maxSize = Math.max(size.x, size.y) * 0.8;
         const aspect = this.canvas.clientWidth / this.canvas.clientHeight;
@@ -469,24 +461,17 @@ class IFCViewer {
         const offset = new THREE.Vector3().subVectors(this.camera.position, this.focusPoint);
         const distance = offset.length();
 
-        // Вычисляем углы из текущей позиции камеры
-        const currentTheta = Math.atan2(offset.x, offset.z);
-        const currentPhi = Math.asin(offset.y / distance);
+        // Вычисляем текущие углы из позиции камеры
+        const spherical = new THREE.Spherical().setFromVector3(offset);
 
-        // Используем сохранённые углы или вычисленные
-        const rotationX = this.controls.currentRotationX || currentPhi;
-        const rotationY = this.controls.currentRotationY || currentTheta;
+        // Преобразуем в декартовы координаты
+        const newOffset = new THREE.Vector3().setFromSpherical({
+            radius: distance,
+            phi: spherical.phi,
+            theta: spherical.theta
+        });
 
-        const cosX = Math.cos(rotationX);
-        const sinX = Math.sin(rotationX);
-        const cosY = Math.cos(rotationY);
-        const sinY = Math.sin(rotationY);
-
-        this.camera.position.set(
-            this.focusPoint.x + distance * sinY * cosX,
-            this.focusPoint.y + distance * sinX,
-            this.focusPoint.z + distance * cosY * cosX
-        );
+        this.camera.position.copy(this.focusPoint).add(newOffset);
         this.camera.lookAt(this.focusPoint);
     }
 
