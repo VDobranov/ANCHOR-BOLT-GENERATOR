@@ -210,7 +210,9 @@ class TypeFactory:
         )
 
         # Создаём enumeration для материалов
-        enum_material_values = [self.ifc.create_entity("IfcLabel", v) for v in ["С", "А", "Н"]]
+        enum_material_values = [
+            self.ifc.create_entity("IfcLabel", v) for v in ["Д", "С", "Б", "ЖБ", "К", "АрК"]
+        ]
         enum_material = self.ifc.create_entity(
             "IfcPropertyEnumeration",
             Name="PEnum_MaterialType",
