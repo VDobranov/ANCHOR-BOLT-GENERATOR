@@ -156,14 +156,20 @@ class IFCViewer {
         const rotationX = deltaY * this.controls.rotationSpeed;
         const rotationY = deltaX * this.controls.rotationSpeed;
 
-        this.controls.currentRotationX = Math.max(
-            -Math.PI / 2,
-            Math.min(Math.PI / 2, this.controls.currentRotationX - rotationX)
-        );
-        this.controls.currentRotationY -= rotationY;
-
+        // Вычисляем текущие углы из позиции камеры, а не из сохранённых значений
         const offset = new THREE.Vector3().subVectors(this.camera.position, this.focusPoint);
         const distance = offset.length();
+
+        // Текущие углы в сферических координатах
+        const currentTheta = Math.atan2(offset.x, offset.z);
+        const currentPhi = Math.asin(offset.y / distance);
+
+        // Обновляем углы
+        this.controls.currentRotationX = Math.max(
+            -Math.PI / 2,
+            Math.min(Math.PI / 2, currentPhi - rotationX)
+        );
+        this.controls.currentRotationY = currentTheta - rotationY;
 
         const cosX = Math.cos(this.controls.currentRotationX);
         const sinX = Math.sin(this.controls.currentRotationX);
@@ -195,6 +201,7 @@ class IFCViewer {
         const savedCameraState = preserveView
             ? {
                   position: this.camera.position.clone(),
+                  focusPoint: this.focusPoint.clone(),
                   rotationX: this.controls.currentRotationX,
                   rotationY: this.controls.currentRotationY
               }
@@ -288,10 +295,10 @@ class IFCViewer {
      */
     restoreCameraState(state) {
         this.camera.position.copy(state.position);
-        this.focusPoint.set(0, 0, 0);
+        this.focusPoint.copy(state.focusPoint);
         this.controls.currentRotationX = state.rotationX;
         this.controls.currentRotationY = state.rotationY;
-        this.applyCameraRotation();
+        this.camera.lookAt(this.focusPoint);
     }
 
     /**
@@ -429,8 +436,6 @@ class IFCViewer {
         this.meshes.forEach((item) => box.expandByObject(item.mesh));
 
         const center = box.getCenter(new THREE.Vector3());
-        const savedRotationX = this.controls.currentRotationX;
-        const savedRotationY = this.controls.currentRotationY;
 
         const offset = new THREE.Vector3().subVectors(this.camera.position, this.focusPoint);
         const prevDistance = offset.length() || 1000;
@@ -439,8 +444,7 @@ class IFCViewer {
         this.camera.lookAt(center.x, center.y, center.z);
         this.focusPoint.copy(center);
 
-        this.controls.currentRotationX = savedRotationX;
-        this.controls.currentRotationY = savedRotationY;
+        // Углы будут вычислены заново при следующем повороте из текущей позиции
 
         const size = box.getSize(new THREE.Vector3());
         const maxSize = Math.max(size.x, size.y) * 0.8;
@@ -463,10 +467,18 @@ class IFCViewer {
         const offset = new THREE.Vector3().subVectors(this.camera.position, this.focusPoint);
         const distance = offset.length();
 
-        const cosX = Math.cos(this.controls.currentRotationX);
-        const sinX = Math.sin(this.controls.currentRotationX);
-        const cosY = Math.cos(this.controls.currentRotationY);
-        const sinY = Math.sin(this.controls.currentRotationY);
+        // Вычисляем углы из текущей позиции камеры
+        const currentTheta = Math.atan2(offset.x, offset.z);
+        const currentPhi = Math.asin(offset.y / distance);
+
+        // Используем сохранённые углы или вычисленные
+        const rotationX = this.controls.currentRotationX || currentPhi;
+        const rotationY = this.controls.currentRotationY || currentTheta;
+
+        const cosX = Math.cos(rotationX);
+        const sinX = Math.sin(rotationX);
+        const cosY = Math.cos(rotationY);
+        const sinY = Math.sin(rotationY);
 
         this.camera.position.set(
             this.focusPoint.x + distance * sinY * cosX,
