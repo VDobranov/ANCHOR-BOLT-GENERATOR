@@ -167,7 +167,7 @@ class IFCViewer {
         const up = new THREE.Vector3(0, 1, 0);
 
         // Создаём кватернионы для вращения вокруг осей камеры
-        const quaternionX = new THREE.Quaternion().setFromAxisAngle(right, -deltaY * rotationSpeed);
+        const quaternionX = new THREE.Quaternion().setFromAxisAngle(right, deltaY * rotationSpeed);
         const quaternionY = new THREE.Quaternion().setFromAxisAngle(up, -deltaX * rotationSpeed);
 
         // Применяем вращение к вектору offset
