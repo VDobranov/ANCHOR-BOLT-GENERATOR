@@ -23,7 +23,7 @@ class IFCViewer {
         );
         // Аксонометрический вид по умолчанию (изометрия)
         this.camera.position.set(500, 500, 500);
-        this.camera.up.set(0, 0, 1);
+        this.camera.up.set(0, 1, 0);
         this.camera.lookAt(0, 0, 0);
         this.camera.updateMatrixWorld();
 
