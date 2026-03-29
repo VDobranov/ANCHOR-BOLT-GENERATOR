@@ -62,7 +62,8 @@ class IFCViewer {
         directionalLight.shadow.mapSize.height = 2048;
         this.scene.add(directionalLight);
 
-        const gridHelper = new THREE.GridHelper(2000, 20, 0xcccccc, 0xeeeeee);
+        // Сетка с повышенной контрастностью
+        const gridHelper = new THREE.GridHelper(2000, 20, 0x888888, 0xaaaaaa);
         this.scene.add(gridHelper);
 
         const axesHelper = new THREE.AxesHelper(200);
