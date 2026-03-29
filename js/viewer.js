@@ -18,7 +18,7 @@ class IFCViewer {
             frustumSize * aspect,
             -frustumSize,
             frustumSize,
-            0.1,
+            0.01,
             10000
         );
         this.camera.position.set(0, 0, 1000);
