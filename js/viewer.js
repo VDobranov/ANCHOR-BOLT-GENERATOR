@@ -21,9 +21,11 @@ class IFCViewer {
             -10000.0,
             10000
         );
-        this.camera.position.set(0, 0, 1000);
-        this.camera.up.set(0, 1, 0);
+        // Аксонометрический вид по умолчанию (изометрия)
+        this.camera.position.set(500, 500, 500);
+        this.camera.up.set(0, 0, 1);
         this.camera.lookAt(0, 0, 0);
+        this.camera.updateMatrixWorld();
 
         this.renderer = new THREE.WebGLRenderer({
             canvas: canvasElement,
