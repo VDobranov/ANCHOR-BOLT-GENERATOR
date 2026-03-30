@@ -49,7 +49,7 @@ class TypeFactory:
         self.geometry_type = geometry_type  # "solid" или "faceted"
         self.add_standard_pset = add_standard_pset  # Добавлять стандартные PSet
         self.pset_expertise = (
-            pset_expertise  # Режим экспертизы ('none', 'MGE', 'MOGE', 'SPB_GAU_CGE')
+            pset_expertise  # Режим экспертизы ('none', 'MGE', 'MOGE', 'SPB_GAU_CGE', 'UGE_PERM')
         )
         # Получаем OwnerHistory из документа
         owner_histories = self.ifc.by_type("IfcOwnerHistory")
@@ -234,6 +234,48 @@ class TypeFactory:
             pset_construction.HasProperties = tuple(existing_props) + (prop_material,)
         else:
             pset_construction.HasProperties = (prop_material,)
+
+    def _add_uge_perm_pset(self, product, name: str, material: str, mass: float):
+        """
+        Добавление PSet Exp59 для экспертизы УГЭ Пермского края
+
+        Args:
+            product: IfcMechanicalFastenerType, для которого добавляется Pset
+            name: Имя сборки
+            material: Материал (без норматива)
+            mass: Масса болта (кг)
+        """
+        # Добавляем только для УГЭ Пермского края
+        if self.pset_expertise != "UGE_PERM":
+            return
+
+        # Добавляем только для IfcMechanicalFastenerType
+        if not product.is_a("IfcMechanicalFastenerType"):
+            return
+
+        ifc = get_ifcopenshell()
+
+        # Создаём Pset Exp59 через ifcopenshell.api
+        pset = ifcopenshell.api.run(
+            "pset.add_pset",
+            self.ifc,
+            product=product,
+            name="Exp59",
+        )
+        # Добавляем свойства
+        ifcopenshell.api.run(
+            "pset.edit_pset",
+            self.ifc,
+            pset=pset,
+            properties={
+                "Наименование": self.ifc.create_entity("IfcText", name),
+                "Обозначение": self.ifc.create_entity("IfcText", "ГОСТ 24379.1-2012"),
+                "Конструкция": self.ifc.create_entity("IfcText", "-"),
+                "Материал": self.ifc.create_entity("IfcText", material),
+                "Масса": self.ifc.create_entity("IfcReal", mass),
+                "Код КЭЦИМ": self.ifc.create_entity("IfcText", "CIM>AGF"),
+            },
+        )
 
     def _add_element_component_common_pset(self, product):
         """
@@ -638,6 +680,15 @@ class TypeFactory:
             self._add_spb_gau_cge_psets(
                 assembly_type, diameter, length, material, "ГОСТ 24379.1-2012"
             )
+
+            # Добавляем PSet Exp59 для экспертизы УГЭ Пермского края
+            from data.validation import get_bolt_mass
+
+            mass = get_bolt_mass(diameter, length, bolt_type)
+            if mass is not None:
+                # Извлекаем имя материала без норматива (например, "09Г2С" из "09Г2С ГОСТ 19281-2014")
+                material_name_only = material.split()[0] if material else ""
+                self._add_uge_perm_pset(assembly_type, type_name, material_name_only, mass)
 
         # Создаём материал сборки
         # Согласно IFC102: IfcMaterialList deprecated в IFC4

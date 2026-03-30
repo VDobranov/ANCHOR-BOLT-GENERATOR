@@ -205,8 +205,8 @@ class TestIFCValidationPSet:
 
     @pytest.mark.parametrize(
         "pset_expertise",
-        ["MGE", "MOGE", "SPB_GAU_CGE"],
-        ids=["MGE", "MOGE", "SPB_GAU_CGE"],
+        ["MGE", "MOGE", "SPB_GAU_CGE", "UGE_PERM"],
+        ids=["MGE", "MOGE", "SPB_GAU_CGE", "UGE_PERM"],
     )
     def test_bolt_with_expertise_psets(self, pset_expertise):
         """Болт с PSet для экспертизы должен проходить валидацию"""
@@ -260,6 +260,7 @@ class TestIFCValidationExpressRules:
             ("2.1", 24, 500, "separate", "solid", "MGE", "09Г2С"),
             ("2.1", 24, 500, "separate", "solid", "MOGE", "09Г2С"),
             ("2.1", 24, 500, "separate", "solid", "SPB_GAU_CGE", "09Г2С"),
+            ("2.1", 24, 500, "separate", "solid", "UGE_PERM", "09Г2С"),
             # Тип 2.1 - unified/solid
             ("2.1", 24, 500, "unified", "solid", "none", "09Г2С"),
             # Тип 5 - separate/solid
@@ -277,6 +278,7 @@ class TestIFCValidationExpressRules:
             "2.1_M24_separate_solid_MGE",
             "2.1_M24_separate_solid_MOGE",
             "2.1_M24_separate_solid_SPB_GAU_CGE",
+            "2.1_M24_separate_solid_UGE_PERM",
             "2.1_M24_unified_solid",
             "5_M12_separate_solid",
             "1.1_M20_VSt3ps2",
