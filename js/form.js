@@ -164,8 +164,8 @@ class BoltForm {
                     option.textContent = `${l}`;
                     length.appendChild(option);
                 });
-                // Всегда устанавливаем 500 мм при смене типа
-                length.value = '500';
+                // Устанавливаем 500 мм, если доступно, иначе минимальную длину
+                length.value = lengths.includes(500) ? '500' : String(lengths[0]);
             } else {
                 const option = document.createElement('option');
                 option.value = '';

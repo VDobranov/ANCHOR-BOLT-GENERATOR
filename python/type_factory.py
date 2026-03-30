@@ -296,21 +296,11 @@ class TypeFactory:
             HasProperties=[prop_status, prop_delivery, prop_corrosion],
         )
 
-        # Связываем Pset с продуктом через IfcRelDefinesByProperties
-        self.ifc.create_entity(
-            "IfcRelDefinesByProperties",
-            GlobalId=ifc.guid.new(),
-            OwnerHistory=self.owner_history,
-            Name="Pset_ElementComponentCommon_Association",
-            RelatedObjects=[product],
-            RelatingPropertyDefinition=pset_common,
-        )
-
-        # Вручную обновляем HasPropertySets на продукте
-        # ifcopenshell не делает это автоматически при создании IfcRelDefinesByProperties
+        # Связываем Pset с продуктом через HasPropertySets
+        # Для типов (IfcMechanicalFastenerType) используется атрибут HasPropertySets,
+        # а не IfcRelDefinesByProperties (который предназначен для экземпляров)
         existing_psets = getattr(product, "HasPropertySets", None)
         if existing_psets:
-            # Добавляем новый Pset к существующим (кортеж неизменяем, создаём новый)
             product.HasPropertySets = tuple(existing_psets) + (pset_common,)
         else:
             product.HasPropertySets = (pset_common,)
