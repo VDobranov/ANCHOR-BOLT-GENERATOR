@@ -146,6 +146,7 @@ END-ISO-10303-21;
             GlobalId=ifc.guid.new(),
             OwnerHistory=f.owner_history,
             Name="Шаблонная площадка",
+            CompositionType="ELEMENT",
         )
         # Размещение сайта (мировая СК, единичная матрица)
         run("geometry.edit_object_placement", f, product=site, matrix=np.eye(4))
