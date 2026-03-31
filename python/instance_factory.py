@@ -151,8 +151,6 @@ class InstanceFactory:
                 OwnerHistory=owner_history,
                 Name=assembly_type.Name,
                 ObjectPlacement=assembly_placement,
-                NominalDiameter=diameter,
-                NominalLength=length,
             )
         self._add_instance_representation(assembly, assembly_type)
 
@@ -192,8 +190,6 @@ class InstanceFactory:
                 OwnerHistory=owner_history,
                 Name=stud_type.Name,
                 ObjectPlacement=stud_placement,
-                NominalDiameter=diameter,
-                NominalLength=length,
             )
             self._add_instance_representation(stud, stud_type)
             stud_instances.append(stud)
@@ -442,7 +438,6 @@ class InstanceFactory:
             OwnerHistory=owner_history,
             Name=type_obj.Name,
             ObjectPlacement=placement,
-            NominalDiameter=diameter,
         )
         self._add_instance_representation(component, type_obj)
         instances_list.append(component)

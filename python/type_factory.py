@@ -376,6 +376,8 @@ class TypeFactory:
             Name=type_name,
             ElementType="STUD",
             PredefinedType="USERDEFINED",
+            NominalDiameter=diameter,
+            NominalLength=length,
         )
 
         # Делегируем построение геометрии в GeometryBuilder
@@ -638,6 +640,8 @@ class TypeFactory:
                 OwnerHistory=self.owner_history,
                 Name=type_name,
                 PredefinedType="ANCHORBOLT",
+                NominalDiameter=diameter,
+                NominalLength=length,
             )
 
             # Добавляем Pset_MechanicalFastenerAnchorBolt для IfcMechanicalFastenerType
