@@ -447,6 +447,7 @@ class TypeFactory:
             Name=type_name,
             ElementType="NUT",
             PredefinedType="USERDEFINED",
+            NominalDiameter=diameter,
         )
 
         # Делегируем построение геометрии в GeometryBuilder
@@ -506,6 +507,7 @@ class TypeFactory:
             Name=type_name,
             ElementType="WASHER",
             PredefinedType="USERDEFINED",
+            NominalDiameter=diameter,
         )
 
         # Делегируем построение геометрии в GeometryBuilder
@@ -565,6 +567,7 @@ class TypeFactory:
             Name=type_name,
             ElementType="ANCHORPLATE",
             PredefinedType="USERDEFINED",
+            NominalDiameter=diameter,
         )
 
         # Создание геометрии
