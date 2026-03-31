@@ -157,6 +157,7 @@ END-ISO-10303-21;
             GlobalId=ifc.guid.new(),
             OwnerHistory=f.owner_history,
             Name="Шаблонное здание",
+            CompositionType="ELEMENT",
         )
         # Размещение здания (относительно сайта, без смещения)
         run("geometry.edit_object_placement", f, product=building, matrix=np.eye(4))
@@ -168,6 +169,7 @@ END-ISO-10303-21;
             OwnerHistory=f.owner_history,
             Name="Шаблонный этаж",
             Elevation=0.0,
+            CompositionType="ELEMENT",
         )
         # Размещение этажа (относительно здания, без смещения)
         run("geometry.edit_object_placement", f, product=storey, matrix=np.eye(4))
