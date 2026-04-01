@@ -382,6 +382,8 @@ class InstanceFactory:
             "components": components,
             "mesh_data": mesh_data,
             "ifc_doc": self.ifc,
+            "assembly_type": assembly_type,
+            "stud_type": stud_type,
         }
 
     def _create_placement(self, location, axis_down=False, rel_to=None):
