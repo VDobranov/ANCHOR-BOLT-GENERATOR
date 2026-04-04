@@ -4,8 +4,8 @@
 
 const APP_CONFIG = {
     // Pyodide
-    PYODIDE_VERSION: '0.26.0',
-    PYODIDE_URL: 'https://cdn.jsdelivr.net/pyodide/dev/full/pyodide.js',
+    PYODIDE_VERSION: '0.29.3',
+    PYODIDE_URL: 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js',
 
     // Three.js
     THREE_JS_URL: 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',

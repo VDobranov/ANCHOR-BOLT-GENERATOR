@@ -123,10 +123,13 @@ class IFCBridge {
             await micropip.install('typing_extensions')
             print('  Installing numpy...')
             await micropip.install('numpy')
-            print('  Installing shapely...')
-            await micropip.install('shapely')
             print('  ✓ Dependencies installed')
         `);
+
+        // Загрузка shapely через Pyodide (встроенный пакет с C-расширениями)
+        UI.showStatus('Загрузка shapely...', 'info');
+        await this.pyodide.loadPackage('shapely');
+        console.log('✓ shapely loaded via pyodide.loadPackage');
 
         // Установка ifcopenshell
         UI.showStatus('Установка ifcopenshell...', 'info');
